@@ -36,6 +36,28 @@ progress.md
 *.sqlite
 *.sqlite3
 db/migrations/*.sql
+# TLS / SSL 证书及私钥
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cer
+*.der
+# 敏感配置文件
+.env.production
+.env.development
+.env.staging
+.env.test
+# 密钥/凭证目录
+secrets/
+credentials/
+config/auth.json
+token.json
+# 其他敏感数据
+*.dump
+*.sql.gz
+dumps/
 # TypeScript cache
 *.tsbuildinfo
 # Build outputs

@@ -17,7 +17,7 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 app.use(secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"], // needed for SPA
+    scriptSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", "data:", "https:"],
     connectSrc: ["'self'"],
