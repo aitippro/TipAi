@@ -4,6 +4,10 @@ import { env } from "../lib/env";
 import * as schema from "@db/schema";
 import * as relations from "@db/relations";
 
+declare module "better-sqlite3" {
+  // 类型声明由运行时提供，此处仅消除 TypeScript 错误
+}
+
 const fullSchema = { ...schema, ...relations };
 
 let instance: ReturnType<typeof drizzle<typeof fullSchema>>;

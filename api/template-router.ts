@@ -43,7 +43,7 @@ export const templateRouter = createRouter({
         content: input.content,
         tags: input.tags || "",
         isPublic: input.isPublic ? 1 : 0,
-      }).$returningId();
+      }).returning();
       return { id: template.id, success: true };
     }),
 

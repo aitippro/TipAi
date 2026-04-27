@@ -15,7 +15,7 @@ export async function savePromptForgeLibraryItem(
       userId,
       ...input,
     })
-    .$returningId();
+    .returning();
 
   return { id: item.id, success: true };
 }

@@ -177,9 +177,10 @@ export class AIRouter {
    * 做路由决策（不解耦实际调用，用于调试/日志）
    */
   decideRoute(taskType: TaskType, preferredProvider?: string): RoutingDecision {
+    const rules = this.config.routingRules[taskType] || this.config.routingRules.default || [];
     const chain = preferredProvider
-      ? [preferredProvider, ...(this.config.routingRules[taskType] || []).filter((p) => p !== preferredProvider)]
-      : (this.config.routingRules[taskType] || this.config.routingRules.default);
+      ? [preferredProvider, ...rules.filter((p) => p !== preferredProvider)]
+      : rules;
 
     // 过滤出实际可用的 provider
     const availableChain = chain.filter((name) => this.isProviderAvailable(name));

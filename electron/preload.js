@@ -6,6 +6,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 // ==============================
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Platform info (sync, available immediately)
+  platform: process.platform,
+  
   // App info
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
   

@@ -22,13 +22,17 @@ let mainWindow;
 let backendProcess;
 
 function createWindow() {
+  const isMacOS = process.platform === 'darwin';
+  
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset', // macOS-style title bar
-    trafficLightPosition: { x: 16, y: 16 },
+    // macOS: 隐藏标题栏但保留窗口控制按钮区域
+    // Windows: 使用标准标题栏
+    titleBarStyle: isMacOS ? 'hiddenInset' : 'default',
+    trafficLightPosition: isMacOS ? { x: 16, y: 16 } : undefined,
     show: false,
     webPreferences: {
       nodeIntegration: false,
@@ -36,7 +40,11 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       webSecurity: !isDev,
     },
-    backgroundColor: '#fafafa',
+    backgroundColor: isMacOS ? '#00000000' : '#fafafa',
+    // macOS: 启用毛玻璃背景效果
+    vibrancy: isMacOS ? 'sidebar' : undefined,
+    transparent: isMacOS,
+    frame: !isMacOS, // Windows 保留框架
   });
 
   // Load the app
@@ -50,7 +58,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
-    // macOS: animate window appearance
+    // macOS: 动画窗口出现效果
     if (process.platform === 'darwin') {
       mainWindow.setVibrancy('sidebar');
     }
