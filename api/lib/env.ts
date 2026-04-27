@@ -50,4 +50,21 @@ export const env = {
   ownerUnionId: process.env.OWNER_UNION_ID ?? "",
   // Cloud sync (reserved for future)
   cloudSyncUrl: process.env.CLOUD_SYNC_URL || "",
+
+  // AI-1: 多模型 API Key 配置（可选，非必填）
+  // Kimi
+  kimiApiKey: process.env.KIMI_API_KEY || "",
+  kimiModel: process.env.KIMI_MODEL || "moonshot-v1-8k",
+
+  // DeepSeek
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || "",
+  deepseekModel: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+
+  // OpenAI
+  openaiApiKey: process.env.OPENAI_API_KEY || "",
+  openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+
+  // Gemini (Google)
+  geminiApiKey: process.env.GEMINI_API_KEY || "",
+  geminiModel: process.env.GEMINI_MODEL || "gemini-1.5-flash",
 };
