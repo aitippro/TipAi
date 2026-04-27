@@ -287,10 +287,8 @@ export class AIRouter {
       try {
         console.log(`[AI Router] Streaming with ${providerName} for ${taskType}`);
         const generator = provider.streamChat(messages, chatOptions);
-        let totalContent = "";
 
         for await (const chunk of generator) {
-          totalContent += chunk.content;
           yield chunk;
         }
 

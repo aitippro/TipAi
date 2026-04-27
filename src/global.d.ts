@@ -14,10 +14,10 @@ interface ElectronAPI {
   }>;
   
   /** Show save dialog */
-  showSaveDialog: (options: any) => Promise<any>;
+  showSaveDialog: (options: Record<string, unknown>) => Promise<Record<string, unknown>>;
   
   /** Show open dialog */
-  showOpenDialog: (options: any) => Promise<any>;
+  showOpenDialog: (options: Record<string, unknown>) => Promise<Record<string, unknown>>;
   
   /** Open external URL */
   openExternal: (url: string) => Promise<void>;

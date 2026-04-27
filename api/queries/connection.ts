@@ -4,10 +4,6 @@ import { env } from "../lib/env";
 import * as schema from "@db/schema";
 import * as relations from "@db/relations";
 
-declare module "better-sqlite3" {
-  // 类型声明由运行时提供，此处仅消除 TypeScript 错误
-}
-
 const fullSchema = { ...schema, ...relations };
 
 let instance: ReturnType<typeof drizzle<typeof fullSchema>>;
@@ -32,7 +28,7 @@ export function getRawDb(): Database.Database {
 export function closeDb() {
   if (dbInstance) {
     dbInstance.close();
-    dbInstance = undefined as any;
-    instance = undefined as any;
+    dbInstance = undefined as never;
+    instance = undefined as never;
   }
 }

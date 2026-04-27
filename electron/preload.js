@@ -36,10 +36,3 @@ contextBridge.exposeInMainWorld('electronAPI', {
  * @property {() => Promise<string>} getDbPath
  * @property {(url: string) => Promise<{available: boolean, url: string}>} checkRemote
  */
-
-// Declare global for TypeScript
-declare global {
-  interface Window {
-    electronAPI?: ElectronAPI;
-  }
-}

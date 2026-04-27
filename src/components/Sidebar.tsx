@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { Link, useLocation } from "react-router"
+import { useState } from "react"
+import { Link, useLocation, type Location } from "react-router"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -44,22 +44,29 @@ function getPlatform() {
   return 'web'
 }
 
-export default function Sidebar() {
-  const { user, isAuthenticated, logout } = useAuth()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
-  const [platform, setPlatform] = useState('web')
-  const location = useLocation()
+// 侧边栏内容组件
+interface SidebarContentProps {
+  isMobile?: boolean
+  collapsed?: boolean
+  isMacOS: boolean
+  location: Location
+  user: unknown
+  isAuthenticated: boolean
+  logout: () => void
+  setMobileOpen?: (open: boolean) => void
+}
 
-  useEffect(() => {
-    setPlatform(getPlatform())
-  }, [])
-
-  const isMacOS = platform === 'darwin'
-  const sidebarWidth = collapsed ? 72 : 220
-
-  // 侧边栏内容渲染
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+function SidebarContent({ 
+  isMobile = false, 
+  collapsed = false, 
+  isMacOS, 
+  location, 
+  user, 
+  isAuthenticated, 
+  logout,
+  setMobileOpen 
+}: SidebarContentProps) {
+  return (
     <div className="flex flex-col h-full">
       {/* Logo 区域 - macOS 上增加顶部间距给窗口控制按钮 */}
       <div className={`flex items-center gap-3 px-4 ${isMacOS && !isMobile ? 'pt-10' : 'pt-4'} pb-4`}>
@@ -84,7 +91,7 @@ export default function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              onClick={() => isMobile && setMobileOpen(false)}
+              onClick={() => isMobile && setMobileOpen?.(false)}
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                 transition-all duration-200 ease-apple
@@ -163,6 +170,17 @@ export default function Sidebar() {
       </div>
     </div>
   )
+}
+
+export default function Sidebar() {
+  const { user, isAuthenticated, logout } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const [platform] = useState(() => getPlatform())
+  const location = useLocation()
+
+  const isMacOS = platform === 'darwin'
+  const sidebarWidth = collapsed ? 72 : 220
 
   return (
     <>
@@ -171,7 +189,14 @@ export default function Sidebar() {
         className="sidebar-glass fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col transition-all duration-300 ease-apple"
         style={{ width: sidebarWidth }}
       >
-        <SidebarContent />
+        <SidebarContent 
+          collapsed={collapsed}
+          isMacOS={isMacOS}
+          location={location}
+          user={user}
+          isAuthenticated={isAuthenticated}
+          logout={logout}
+        />
         
         {/* 折叠/展开按钮 */}
         <button
@@ -206,7 +231,16 @@ export default function Sidebar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[260px] p-0 sidebar-glass border-r border-border/50">
-              <SidebarContent isMobile />
+              <SidebarContent 
+                isMobile 
+                collapsed={false}
+                isMacOS={isMacOS}
+                location={location}
+                user={user}
+                isAuthenticated={isAuthenticated}
+                logout={logout}
+                setMobileOpen={setMobileOpen}
+              />
             </SheetContent>
           </Sheet>
         </div>
