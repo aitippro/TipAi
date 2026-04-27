@@ -5,6 +5,7 @@ import Library from "./pages/Library"
 import TemplateMarket from "./pages/TemplateMarket"
 import Login from "./pages/Login"
 import NotFound from "./pages/NotFound"
+import About from "./pages/About"
 import Navbar from "./components/Navbar"
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/library" element={<Library />} />
           <Route path="/templates" element={<TemplateMarket />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

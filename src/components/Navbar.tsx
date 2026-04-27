@@ -10,13 +10,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sparkles, BookOpen, User, LogOut, Wand2, Store, Settings, Menu } from "lucide-react"
+import {
+  Sparkles,
+  BookOpen,
+  User,
+  LogOut,
+  Wand2,
+  Store,
+  Settings,
+  Menu,
+  Info
+} from "lucide-react"
 
 const navItems = [
   { path: "/", icon: Sparkles, label: "生成" },
   { path: "/library", icon: BookOpen, label: "库" },
   { path: "/templates", icon: Store, label: "模板" },
   { path: "/settings", icon: Settings, label: "设置" },
+  { path: "/about", icon: Info, label: "关于" },
 ]
 
 export default function Navbar() {
@@ -25,15 +36,15 @@ export default function Navbar() {
   const location = useLocation()
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-100/80">
+    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-apple-gray-5/80">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 hover:opacity-70 transition-opacity">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-70 transition-opacity duration-200 ease-apple">
+            <div className="w-7 h-7 rounded-[0.625rem] bg-apple-blue flex items-center justify-center shadow-apple">
               <Wand2 className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-lg font-semibold text-foreground tracking-tight">
               TipAi
             </span>
           </Link>
@@ -47,10 +58,10 @@ export default function Navbar() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 ease-apple ${
                     isActive
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                      ? "bg-apple-gray-6 text-foreground"
+                      : "text-apple-gray hover:text-foreground hover:bg-apple-gray-6/50"
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
