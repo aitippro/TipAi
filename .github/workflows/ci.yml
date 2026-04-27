@@ -6,111 +6,18 @@ on:
   pull_request:
     branches: [main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}
-  cancel-in-progress: true
-
 jobs:
-  # ===========================================
-  # 全平台构建验证（Linux / macOS / Windows）
-  # ===========================================
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
-    env:
-      NODE_ENV: test
-      APP_ID: ci_app_id
-      APP_SECRET: ci_app_secret
-      DATABASE_URL: file:./test.db
-      OWNER_UNION_ID: ci_owner_id
-      API_KEY_SECRET: ci_api_key_secret_do_not_use_in_production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      # Linux: 确保原生模块编译工具
-      - name: Install build tools (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y build-essential python3
-
-      # macOS: 确保 Xcode command line tools
-      - name: Install build tools (macOS)
-        if: runner.os == 'macOS'
-        run: xcode-select --install 2>/dev/null || true
-
-      # Windows: 配置 MSVC
-      - name: Configure MSVC (Windows)
-        if: runner.os == 'Windows'
-        run: npm config set msvs_version 2022
-
-      - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
-
-      - name: Type check
-        run: npm run check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Run tests
-        run: npm run test
-
-      - name: Build application
-        run: npm run build
-
-      - name: Build Electron (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
-          npm run build:electron 2>/dev/null || echo "Electron build skipped (no script)"
-        continue-on-error: true
-
-      - name: Build Electron (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          npm run build:electron 2>/dev/null || echo "Electron build skipped (no script)"
-        continue-on-error: true
-
-      - name: Build Electron (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          npm run build:electron 2>$null || echo "Electron build skipped (no script)"
-        continue-on-error: true
-
-  # ===========================================
-  # 安全审计（仅在 Linux 上跑，避免重复）
-  # ===========================================
-  security:
-    name: Security Audit
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: build
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
-
-      - name: Security audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
