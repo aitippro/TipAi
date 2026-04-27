@@ -48,14 +48,6 @@
 - 模型选择（kimi / kimi-k2）
 - 温度/长度参数调节
 
-### 5. 安全增强
-- ✅ CORS 白名单校验（生产环境）
-- ✅ 全局 Rate Limiting（30 次/分钟）
-- ✅ AI 端点专项限流（5 次/分钟）
-- ✅ OAuth state HMAC 签名 + nonce
-- ✅ bcrypt 12 rounds 密码哈希
-- ✅ npm audit: **0 vulnerabilities**
-
 ---
 
 ## 🛠️ 技术栈
@@ -151,9 +143,6 @@ npm run lint
 
 # 单元测试
 npm run test
-
-# 安全审计
-npm audit
 ```
 
 ---
@@ -195,7 +184,6 @@ npm audit
 ## 📬 联系与反馈
 
 - Issues: [https://github.com/aitippro/AI-prompt/issues](https://github.com/aitippro/AI-prompt/issues)
-- 安全漏洞报告：请直接联系项目维护者（勿通过公开 Issue）
 
 ---
 
