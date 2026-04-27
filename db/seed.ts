@@ -1,18 +1,27 @@
-import { getDb } from "../api/queries/connection";
+/**
+ * Database Seed Script
+ * Synchronous API for better-sqlite3
+ */
+import { getDb, getRawDb } from "../api/queries/connection";
 import { domainPackages, templates, users } from "./schema";
-import { hashPassword } from "../api/lib/password";
+import { hashPasswordSync } from "../api/lib/password";
 import { eq } from "drizzle-orm";
 
-async function seed() {
+export function seed() {
   const db = getDb();
+  const rawDb = getRawDb();
 
   // Seed admin user (for dev/test environments only)
   if (process.env.NODE_ENV !== "production") {
-    const adminPassword = await hashPassword("admin");
-    const existingAdmin = await db.select().from(users).where(eq(users.username, "admin")).get();
-    
+    const adminPassword = hashPasswordSync("admin");
+    const existingAdmin = db
+      .select()
+      .from(users)
+      .where(eq(users.username, "admin"))
+      .get();
+
     if (!existingAdmin) {
-      await db.insert(users).values({
+      db.insert(users).values({
         unionId: "local:admin",
         username: "admin",
         password: adminPassword,
@@ -20,11 +29,11 @@ async function seed() {
         role: "admin",
       });
     } else {
-      await db.update(users)
+      db.update(users)
         .set({ password: adminPassword, role: "admin" })
         .where(eq(users.username, "admin"));
     }
-    console.log("Seeded admin user (admin/admin) successfully!");
+    console.log("✅ Seeded admin user (admin/admin)");
   }
 
   // Seed domain packages
@@ -80,15 +89,21 @@ async function seed() {
   ];
 
   for (const domain of domains) {
-    const existing = await db.select().from(domainPackages).where(eq(domainPackages.key, domain.key)).get();
+    const existing = db
+      .select()
+      .from(domainPackages)
+      .where(eq(domainPackages.key, domain.key))
+      .get();
+
     if (!existing) {
-      await db.insert(domainPackages).values(domain);
+      db.insert(domainPackages).values(domain);
     } else {
-      await db.update(domainPackages).set(domain).where(eq(domainPackages.key, domain.key));
+      db.update(domainPackages)
+        .set(domain)
+        .where(eq(domainPackages.key, domain.key));
     }
   }
-
-  console.log("Seeded domain packages successfully!");
+  console.log(`✅ Seeded ${domains.length} domain packages`);
 
   // Seed default templates
   const defaultTemplates = [
@@ -253,15 +268,25 @@ Task: 为"{{主题}}"创作一条{{时长}}秒的短视频脚本
   ];
 
   for (const tmpl of defaultTemplates) {
-    const existing = await db.select().from(templates).where(eq(templates.title, tmpl.title)).get();
+    const existing = db
+      .select()
+      .from(templates)
+      .where(eq(templates.title, tmpl.title))
+      .get();
+
     if (!existing) {
-      await db.insert(templates).values(tmpl);
+      db.insert(templates).values(tmpl);
     } else {
-      await db.update(templates).set({ title: tmpl.title }).where(eq(templates.title, tmpl.title));
+      db.update(templates)
+        .set(tmpl)
+        .where(eq(templates.title, tmpl.title));
     }
   }
-
-  console.log("Seeded default templates successfully!");
+  console.log(`✅ Seeded ${defaultTemplates.length} default templates`);
+  console.log("\n🎉 Database seeding completed!");
 }
 
-seed().catch(console.error);
+// CLI usage
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed();
+}
