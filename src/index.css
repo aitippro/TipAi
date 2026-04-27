@@ -4,57 +4,58 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Apple Design System - Light Mode */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 83% 58%;
-    --radius: 0.75rem;
-    --chart-1: 262 83% 58%;
-    --chart-2: 280 65% 60%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 10% 96%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 210 10% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 210 10% 96%;
+    --accent-foreground: 0 0% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 210 100% 50%;
+    --radius: 0.625rem;
+    --chart-1: 210 100% 50%;
+    --chart-2: 200 80% 55%;
     --chart-3: 220 70% 55%;
-    --chart-4: 30 80% 55%;
+    --chart-4: 30 90% 55%;
     --chart-5: 160 60% 45%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 58%;
-    --chart-1: 262 83% 58%;
-    --chart-2: 280 65% 60%;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 210 100% 52%;
+    --chart-1: 210 100% 52%;
+    --chart-2: 200 80% 55%;
     --chart-3: 220 70% 55%;
-    --chart-4: 30 80% 55%;
+    --chart-4: 30 90% 55%;
     --chart-5: 160 60% 45%;
   }
 }
@@ -65,9 +66,16 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -76,88 +84,302 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Glass morphism card style */
+/* =============================================
+   Apple Design System - Glass & Material
+   ============================================= */
+
 .glass-card {
   background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 
+              0 4px 8px rgba(0, 0, 0, 0.04),
+              0 8px 16px rgba(0, 0, 0, 0.02);
 }
 
-/* Code block style */
+.dark .glass-card {
+  background: rgba(28, 28, 30, 0.72);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 
+              0 4px 8px rgba(0, 0, 0, 0.15),
+              0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Material card - subtle elevation */
+.material-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.04),
+              0 2px 4px rgba(0, 0, 0, 0.03),
+              0 4px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.material-card:hover {
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.06),
+              0 4px 8px rgba(0, 0, 0, 0.05),
+              0 8px 16px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.dark .material-card {
+  background: rgba(44, 44, 46, 0.95);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+}
+
+/* =============================================
+   Apple Design System - Typography
+   ============================================= */
+
+.text-hero {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.text-title-1 {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.text-title-2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.text-title-3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+.text-caption {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.text-footnote {
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+/* =============================================
+   Apple Design System - Buttons
+   ============================================= */
+
+.btn-apple {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-apple:hover {
+  filter: brightness(1.1);
+  transform: scale(1.01);
+}
+
+.btn-apple:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+
+.btn-apple-secondary {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.btn-apple-secondary:hover {
+  background: hsl(var(--muted));
+}
+
+/* =============================================
+   Apple Design System - Inputs
+   ============================================= */
+
+.input-apple {
+  @apply rounded-lg border px-3 py-2 text-sm;
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.input-apple:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsla(var(--primary), 0.15);
+}
+
+.dark .input-apple {
+  background: rgba(28, 28, 30, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* =============================================
+   Apple Design System - Sidebar (macOS style)
+   ============================================= */
+
+.sidebar-apple {
+  background: rgba(250, 250, 252, 0.95);
+  border-right: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .sidebar-apple {
+  background: rgba(28, 28, 30, 0.95);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-item {
+  @apply flex items-center gap-2 rounded-md px-3 py-1.5 text-sm;
+  color: hsl(var(--foreground));
+  transition: all 0.15s ease;
+}
+
+.sidebar-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-item.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 500;
+}
+
+.dark .sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* =============================================
+   Code Block - Apple Style
+   ============================================= */
+
 .code-block {
   background: #1c1c1e;
   color: #f5f5f7;
   font-family: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
-/* Apple-style gradient backgrounds */
+/* =============================================
+   Backgrounds
+   ============================================= */
+
 .bg-apple-gradient {
-  background: linear-gradient(180deg, #f5f5f7 0%, #ffffff 50%, #f5f5f7 100%);
+  background: linear-gradient(180deg, #fafafc 0%, #ffffff 50%, #f5f5f7 100%);
 }
 
 .bg-hero-gradient {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
-              linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%);
+  background: radial-gradient(ellipse 80% 50% at 50% -5%, rgba(0, 122, 255, 0.06) 0%, transparent 60%),
+              linear-gradient(180deg, #fafafc 0%, #f5f5f7 100%);
 }
 
-/* Smooth transitions */
+/* =============================================
+   Animations
+   ============================================= */
+
 .transition-apple {
-  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* Input focus glow */
-.input-glow:focus {
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
-}
-
-/* Animated gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Loading shimmer */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.06) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-/* Pulse glow animation */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
-  50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.25); }
-}
-
-.pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-/* Slash command menu */
-.slash-menu {
-  animation: slideUp 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-@keyframes slideUp {
+@keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Float animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 
-.animate-float {
-  animation: float 4s ease-in-out infinite;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+/* =============================================
+   Scrollbar - Apple Style
+   ============================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* =============================================
+   Selection
+   ============================================= */
+
+::selection {
+  background: hsla(var(--primary), 0.2);
+  color: inherit;
+}
+
+/* =============================================
+   Utility
+   ============================================= */
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

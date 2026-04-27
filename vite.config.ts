@@ -11,7 +11,7 @@ export default defineConfig({
     devServer({ entry: "api/boot.ts", exclude: [/^\/(?!api\/).*$/] }),
     inspectAttr(), react()],
   server: {
-    port: 3000,
+    port: 5173,
   },
   resolve: {
     alias: {
@@ -25,5 +25,8 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    // Ensure assets use relative paths for Electron
+    assetsDir: "assets",
   },
+  base: "./", // Relative paths for Electron
 });

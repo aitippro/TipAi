@@ -58,6 +58,16 @@ module.exports = {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        apple: "0 0.5px 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.02)",
+        "apple-lg": "0 0.5px 1px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.05), 0 8px 16px rgba(0, 0, 0, 0.04)",
+        "apple-glow": "0 0 0 3px hsla(var(--primary), 0.15)",
+      },
+      fontFamily: {
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Segoe UI"', '"PingFang SC"', '"Hiragino Sans GB"', '"Microsoft YaHei"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['"SF Mono"', '"SFMono-Regular"', '"Menlo"', '"Monaco"', '"Consolas"', '"Liberation Mono"', '"Courier New"', 'monospace'],
+      },
+      transitionTimingFunction: {
+        apple: "cubic-bezier(0.25, 0.1, 0.25, 1)",
       },
       keyframes: {
         "accordion-down": {

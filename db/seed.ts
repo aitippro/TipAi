@@ -1,6 +1,7 @@
 import { getDb } from "../api/queries/connection";
 import { domainPackages, templates, users } from "./schema";
 import { hashPassword } from "../api/lib/password";
+import { eq } from "drizzle-orm";
 
 async function seed() {
   const db = getDb();
@@ -8,15 +9,21 @@ async function seed() {
   // Seed admin user (for dev/test environments only)
   if (process.env.NODE_ENV !== "production") {
     const adminPassword = await hashPassword("admin");
-    await db.insert(users).values({
-      unionId: "local:admin",
-      username: "admin",
-      password: adminPassword,
-      name: "Administrator",
-      role: "admin",
-    }).onDuplicateKeyUpdate({
-      set: { password: adminPassword, role: "admin" },
-    });
+    const existingAdmin = await db.select().from(users).where(eq(users.username, "admin")).get();
+    
+    if (!existingAdmin) {
+      await db.insert(users).values({
+        unionId: "local:admin",
+        username: "admin",
+        password: adminPassword,
+        name: "Administrator",
+        role: "admin",
+      });
+    } else {
+      await db.update(users)
+        .set({ password: adminPassword, role: "admin" })
+        .where(eq(users.username, "admin"));
+    }
     console.log("Seeded admin user (admin/admin) successfully!");
   }
 
@@ -73,9 +80,12 @@ async function seed() {
   ];
 
   for (const domain of domains) {
-    await db.insert(domainPackages).values(domain).onDuplicateKeyUpdate({
-      set: domain,
-    });
+    const existing = await db.select().from(domainPackages).where(eq(domainPackages.key, domain.key)).get();
+    if (!existing) {
+      await db.insert(domainPackages).values(domain);
+    } else {
+      await db.update(domainPackages).set(domain).where(eq(domainPackages.key, domain.key));
+    }
   }
 
   console.log("Seeded domain packages successfully!");
@@ -243,9 +253,12 @@ Task: 为"{{主题}}"创作一条{{时长}}秒的短视频脚本
   ];
 
   for (const tmpl of defaultTemplates) {
-    await db.insert(templates).values(tmpl).onDuplicateKeyUpdate({
-      set: { title: tmpl.title },
-    });
+    const existing = await db.select().from(templates).where(eq(templates.title, tmpl.title)).get();
+    if (!existing) {
+      await db.insert(templates).values(tmpl);
+    } else {
+      await db.update(templates).set({ title: tmpl.title }).where(eq(templates.title, tmpl.title));
+    }
   }
 
   console.log("Seeded default templates successfully!");

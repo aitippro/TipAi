@@ -1,3 +1,11 @@
+# Development plans - do not push to remote
+task_plan.md
+findings.md
+progress.md
+DEV_TASKS.md
+ROADMAP.md
+PLAN*.md
+roadmap*.md
 # Logs
 logs
 *.log
