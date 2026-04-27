@@ -57,6 +57,9 @@ db/migrations/*.sql
 .env.development
 .env.staging
 .env.test
+.git-credentials
+*.pat
+*.token
 # 密钥/凭证目录
 secrets/
 credentials/
