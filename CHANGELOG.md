@@ -51,7 +51,7 @@
 - React 19 + TypeScript ~5.9
 - Vite 7 + Tailwind CSS 3
 - Hono 4 + tRPC 11
-- Drizzle ORM + MySQL
+- Drizzle ORM + SQLite (better-sqlite3)
 - Vitest 4 测试框架
 
 #### 文档

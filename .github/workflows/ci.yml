@@ -20,7 +20,7 @@ jobs:
       NODE_ENV: test
       APP_ID: ci_app_id
       APP_SECRET: ci_app_secret
-      DATABASE_URL: mysql://ci:ci@localhost:3306/ci_test
+      DATABASE_URL: file:./test.db
       OWNER_UNION_ID: ci_owner_id
       API_KEY_SECRET: ci_api_key_secret_do_not_use_in_production
 
