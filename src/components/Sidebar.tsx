@@ -44,13 +44,19 @@ function getPlatform() {
   return 'web'
 }
 
+// Sidebar 用户信息类型
+interface UserInfo {
+  name?: string | null
+  email?: string | null
+}
+
 // 侧边栏内容组件
 interface SidebarContentProps {
   isMobile?: boolean
   collapsed?: boolean
   isMacOS: boolean
   location: Location
-  user: unknown
+  user: UserInfo | null
   isAuthenticated: boolean
   logout: () => void
   setMobileOpen?: (open: boolean) => void
