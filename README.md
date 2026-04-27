@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/aitippro/AI-prompt/main/assets/logo.svg" width="120" height="120" alt="TipAi Logo">
+
 
 # ✨ TipAi
 
