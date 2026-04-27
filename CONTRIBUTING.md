@@ -13,7 +13,7 @@
   - 问题描述
   - 复现步骤
   - 期望行为 vs 实际行为
-  - 环境信息（浏览器、Node.js 版本等）
+  - 环境信息（操作系统、Node.js 版本、Electron 版本等）
 
 ### 2. 引用勘误 (Attribution Corrections)
 - 如发现 `ATTRIBUTION.md` 中的引用遗漏或错误
@@ -43,10 +43,11 @@
 ## 三、代码风格（仅供内部参考）
 
 本项目技术栈：
-- **前端**: React + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- **后端**: Hono + tRPC + Drizzle ORM
-- **数据库**: MySQL
-- **测试**: Vitest
+- **桌面端**: Electron 35
+- **前端**: React 19 + TypeScript 5.9 + Vite 7 + Tailwind CSS 3 + Apple Design System
+- **后端**: Hono 4 + tRPC 11
+- **数据库**: SQLite (better-sqlite3) + Drizzle ORM
+- **测试**: Vitest 4
 
 提交规范：
 ```
@@ -58,6 +59,8 @@
 - security: 安全修复
 - refactor: 重构
 - test: 测试
+- ui: UI 样式调整
+- electron: Electron 相关
 ```
 
 ---
