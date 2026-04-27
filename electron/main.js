@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
+const { initUpdater, getUpdateMenuItems } = require('./updater');
 
 // ==============================
 // Electron Main Process
@@ -172,6 +173,114 @@ ipcMain.handle('cloud:checkRemote', async (event, url) => {
 });
 
 // ==============================
+// Application Menu (含自动更新菜单)
+// ==============================
+
+function createApplicationMenu() {
+  const isMacOS = process.platform === 'darwin';
+  const updateItems = getUpdateMenuItems();
+
+  const template = [
+    ...(isMacOS
+      ? [
+          {
+            label: app.getName(),
+            submenu: [
+              { role: 'about' },
+              { type: 'separator' },
+              ...updateItems,
+              { type: 'separator' },
+              { role: 'services' },
+              { type: 'separator' },
+              { role: 'hide' },
+              { role: 'hideOthers' },
+              { role: 'unhide' },
+              { type: 'separator' },
+              { role: 'quit' },
+            ],
+          },
+        ]
+      : []),
+    {
+      label: '文件',
+      submenu: [
+        { role: 'close', label: '关闭' },
+      ],
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo', label: '撤销' },
+        { role: 'redo', label: '重做' },
+        { type: 'separator' },
+        { role: 'cut', label: '剪切' },
+        { role: 'copy', label: '复制' },
+        { role: 'paste', label: '粘贴' },
+        ...(isMacOS
+          ? [
+              { role: 'pasteAndMatchStyle' },
+              { role: 'delete' },
+              { role: 'selectAll' },
+              { type: 'separator' },
+              {
+                label: '语音',
+                submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }],
+              },
+            ]
+          : [{ role: 'delete', label: '删除' }, { type: 'separator' }, { role: 'selectAll', label: '全选' }]),
+      ],
+    },
+    {
+      label: '视图',
+      submenu: [
+        { role: 'reload', label: '重新加载' },
+        { role: 'forceReload', label: '强制重新加载' },
+        { role: 'toggleDevTools', label: '开发者工具' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '实际大小' },
+        { role: 'zoomIn', label: '放大' },
+        { role: 'zoomOut', label: '缩小' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '全屏' },
+      ],
+    },
+    {
+      label: '窗口',
+      submenu: [
+        { role: 'minimize', label: '最小化' },
+        { role: 'zoom', label: '缩放' },
+        ...(isMacOS
+          ? [
+              { type: 'separator' },
+              { role: 'front' },
+              { type: 'separator' },
+              { role: 'window' },
+            ]
+          : [{ role: 'close', label: '关闭' }]),
+      ],
+    },
+    {
+      label: '帮助',
+      submenu: [
+        ...(!isMacOS ? updateItems : []),
+        ...(!isMacOS ? [{ type: 'separator' }] : []),
+        {
+          label: 'TipAi 官网',
+          click: () => shell.openExternal('https://github.com/your-github-username/tipai-desktop'),
+        },
+        {
+          label: '查看日志',
+          click: () => shell.openPath(app.getPath('logs')),
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+// ==============================
 // App Lifecycle
 // ==============================
 
@@ -181,6 +290,12 @@ app.whenReady().then(async () => {
     console.log('Backend started on port', backend.port);
     
     createWindow();
+    
+    // 初始化自动更新
+    initUpdater(mainWindow);
+    
+    // 创建应用菜单（包含更新相关菜单项）
+    createApplicationMenu();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

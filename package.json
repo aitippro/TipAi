@@ -21,10 +21,9 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx db/migrate.ts migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx db/seed.ts",
-    "db:migrate": "tsx db/migrate.ts migrate",
     "db:status": "tsx db/migrate.ts status",
     "db:backup": "tsx db/backup.ts backup",
     "db:export-json": "tsx db/backup.ts export-json",
@@ -74,6 +73,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
     "embla-carousel-react": "^8.6.0",
     "hono": "^4.8.3",
     "input-otp": "^1.4.2",
@@ -130,12 +131,14 @@
   "build": {
     "appId": "com.tipai.desktop",
     "productName": "TipAi",
+    "copyright": "Copyright © 2026 TipAi",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "public/**/*",
       "package.json"
     ],
     "extraResources": [
@@ -144,19 +147,31 @@
         "to": "db/migrations"
       }
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "tipai-desktop",
+      "releaseType": "release"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
-      "icon": "assets/icon.icns",
+      "icon": "public/icon.png",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     },
@@ -164,20 +179,39 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "public/icon.ico",
+      "publisherName": "TipAi Team",
+      "verifyUpdateCodeSignature": false,
+      "signingHashAlgorithms": ["sha256"],
+      "certificateFile": null,
+      "certificatePassword": null
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "perMachine": false,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "shortcutName": "TipAi",
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico",
+      "installerHeaderIcon": "public/icon.ico",
+      "uninstallDisplayName": "TipAi Desktop",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     }
   }
 }
