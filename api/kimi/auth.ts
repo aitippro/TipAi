@@ -34,6 +34,9 @@ function verifyState(state: string): { redirectUri: string } | null {
 }
 
 export function buildOAuthUrl(redirectUri: string): string {
+  if (!env.kimiAuthUrl) {
+    throw new Error("KIMI_AUTH_URL is not configured — OAuth login unavailable");
+  }
   const { state } = signState(redirectUri);
   const url = new URL(`${env.kimiAuthUrl}/api/oauth/authorize`);
   url.searchParams.set("client_id", env.appId);
@@ -48,6 +51,9 @@ async function exchangeAuthCode(
   code: string,
   redirectUri: string,
 ): Promise<TokenResponse> {
+  if (!env.kimiAuthUrl) {
+    throw new Error("KIMI_AUTH_URL is not configured");
+  }
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
@@ -147,7 +153,13 @@ export function createOAuthCallbackHandler() {
 
       // Validate redirect_uri against whitelist
       const allowedOrigins = [process.env.APP_URL].filter(Boolean);
-      const redirectOrigin = new URL(redirectUri).origin;
+      let redirectOrigin: string;
+      try {
+        redirectOrigin = new URL(redirectUri).origin;
+      } catch {
+        console.error("[OAuth] Malformed redirect_uri:", redirectUri);
+        return c.json({ error: "Invalid redirect_uri" }, 400);
+      }
       if (!allowedOrigins.includes(redirectOrigin)) {
         console.error("[OAuth] Invalid redirect_uri:", redirectOrigin);
         return c.json({ error: "Invalid redirect_uri" }, 400);
