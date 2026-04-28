@@ -1,7 +1,7 @@
 import { createRouter, authedQuery } from "./middleware";
 import { exportProjectsSchema, exportPromptsSchema } from "./services/export/schemas";
 import { getDb } from "./queries/connection";
-import { projects, projectConversations, projectSummaries, promptForgeLibrary } from "@db/schema";
+import { projects, projectConversations, projectSummaries, promptLibrary } from "@db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 export const exportRouter = createRouter({
@@ -120,23 +120,23 @@ export const exportRouter = createRouter({
       if (input.promptIds && input.promptIds.length > 0) {
         promptList = await db
           .select()
-          .from(promptForgeLibrary)
-          .where(inArray(promptForgeLibrary.id, input.promptIds))
+          .from(promptLibrary)
+          .where(inArray(promptLibrary.id, input.promptIds))
           .all();
       } else {
         promptList = await db
           .select()
-          .from(promptForgeLibrary)
-          .where(eq(promptForgeLibrary.userId, userId))
+          .from(promptLibrary)
+          .where(eq(promptLibrary.userId, userId))
           .all();
       }
 
       const result = promptList.map((p) => ({
         id: p.id,
         title: p.title,
-        content: p.content,
-        description: p.description,
-        framework: p.frameworkKey,
+        content: p.generatedPrompt,
+        description: p.originalIntent || "",
+        framework: p.framework,
         tags: p.tags,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
@@ -147,7 +147,7 @@ export const exportRouter = createRouter({
         for (const p of result) {
           md += `## ${p.title}\n\n`;
           md += `- **框架**: ${p.framework || "通用"}\n`;
-          md += `- **标签**: ${p.tags?.join(", ") || "无"}\n`;
+          md += `- **标签**: ${p.tags || "无"}\n`;
           md += `- **创建时间**: ${p.createdAt}\n\n`;
           md += `### 提示词内容\n\n\`\`\`\n${p.content}\n\`\`\`\n\n`;
           if (p.description) {

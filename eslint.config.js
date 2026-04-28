@@ -23,6 +23,7 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
       }],
       'react-hooks/preserve-manual-memoization': 'off',
     },

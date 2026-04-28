@@ -208,7 +208,7 @@ export class DatabaseBackup {
       const placeholders = columns.map(() => "?").join(", ");
 
       sql += `-- Data for ${table}\n`;
-      const insertStmt = db.prepare(
+      const _insertStmt = db.prepare(
         `INSERT INTO "${table}" (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${placeholders})`
       );
 

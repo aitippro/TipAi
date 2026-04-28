@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 
 import {
   analyzeIntent,
-  generateClarification,
   parseAIJsonResponse,
   toStringArray,
   toStringValue,

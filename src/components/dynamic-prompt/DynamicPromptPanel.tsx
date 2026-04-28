@@ -116,7 +116,7 @@ export default function DynamicPromptPanel({ initialIntent, onPromptGenerated }:
               <span>{control.max ?? 100}</span>
             </div>
             <Slider
-              value={[Number(currentValue) || control.default || 50]}
+              value={[Number(currentValue) || Number(control.default) || 50]}
               min={control.min ?? 0}
               max={control.max ?? 100}
               step={control.step ?? 1}

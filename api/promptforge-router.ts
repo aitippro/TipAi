@@ -29,7 +29,7 @@ import {
   updatePromptForgeSettings,
 } from "./services/promptforge/settings";
 import {
-  generateDynamicPromptOptions,
+  generateDynamicOptions,
   regeneratePrompt as regenerateDynamicPrompt,
 } from "./services/promptforge/dynamic-options";
 
@@ -74,11 +74,11 @@ export const promptForgeRouter = createRouter({
     .input(
       z.object({
         intent: z.string().min(1).max(5000),
-        sessionPreferences: z.record(z.unknown()).optional(),
+        sessionPreferences: z.record(z.string(), z.unknown()).optional(),
       })
     )
     .mutation(({ input, ctx }) =>
-      generateDynamicPromptOptions(ctx.user.id, input.intent, input.sessionPreferences)
+      generateDynamicOptions(ctx.user.id, input.intent, input.sessionPreferences)
     ),
 
   regeneratePrompt: authedQuery
@@ -86,7 +86,7 @@ export const promptForgeRouter = createRouter({
       z.object({
         sessionId: z.string(),
         intent: z.string(),
-        controlValues: z.record(z.unknown()),
+        controlValues: z.record(z.string(), z.unknown()),
       })
     )
     .mutation(({ input, ctx }) =>

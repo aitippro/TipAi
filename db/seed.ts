@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 
 export function seed() {
   const db = getDb();
-  const rawDb = getRawDb();
+  const _rawDb = getRawDb();
 
   // Seed admin user (for dev/test environments only)
   if (process.env.NODE_ENV !== "production") {
