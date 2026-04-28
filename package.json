@@ -149,8 +149,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "your-github-username",
-      "repo": "tipai-desktop",
+      "owner": "aitippro",
+      "repo": "TipAi",
       "releaseType": "release"
     },
     "mac": {
