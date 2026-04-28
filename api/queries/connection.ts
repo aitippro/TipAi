@@ -7,7 +7,7 @@ import * as relations from "@db/relations";
 const fullSchema = { ...schema, ...relations };
 
 let instance: ReturnType<typeof drizzle<typeof fullSchema>>;
-let dbInstance: Database.Database;
+let dbInstance: Database;
 
 export function getDb() {
   if (!instance) {
@@ -18,7 +18,7 @@ export function getDb() {
   return instance;
 }
 
-export function getRawDb(): Database.Database {
+export function getRawDb(): Database {
   if (!dbInstance) {
     getDb();
   }

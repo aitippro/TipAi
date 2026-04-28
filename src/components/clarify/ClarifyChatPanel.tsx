@@ -21,18 +21,21 @@ import type {
 interface ClarifyChatPanelProps {
   projectId: number
   intent: string
+  onClose?: () => void
+  onComplete?: (answers: Record<string, string>, summary: RequirementSummary) => void
 }
 
 function generateMessageId(): string {
   return Math.random().toString(36).substring(2, 9)
 }
 
-export function ClarifyChatPanel({ projectId, intent }: ClarifyChatPanelProps) {
+export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatPanelProps) {
   const [messages, setMessages] = useState<ClarifyMessage[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<ClarifyQuestion | null>(null)
   const [answerText, setAnswerText] = useState("")
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [_turnNumber, setTurnNumber] = useState(0)
   const [summary, setSummary] = useState<RequirementSummary | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -145,7 +148,7 @@ export function ClarifyChatPanel({ projectId, intent }: ClarifyChatPanelProps) {
         content: userMsg.content,
         questionId: currentQuestion.id,
         questionData: currentQuestion as unknown as Record<string, unknown>,
-        answerData,
+        answerData: answerData as unknown as Record<string, unknown>,
         turnNumber,
       })
 
@@ -281,8 +284,9 @@ export function ClarifyChatPanel({ projectId, intent }: ClarifyChatPanelProps) {
       {summary && (
         <SummaryPanel
           summary={summary}
+          onProceed={() => onComplete?.({}, summary)}
           onRegenerate={generateSummaryAndShow}
-          isRegenerating={generateSummaryMutation.isPending}
+          isGenerating={generateSummaryMutation.isPending}
         />
       )}
 

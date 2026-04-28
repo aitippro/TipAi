@@ -8,7 +8,7 @@ export const exportRouter = createRouter({
   // Export projects
   projects: authedQuery
     .input(exportProjectsSchema)
-    .query(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const userId = ctx.user.id;
 
@@ -112,7 +112,7 @@ export const exportRouter = createRouter({
   // Export prompt library
   prompts: authedQuery
     .input(exportPromptsSchema)
-    .query(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const userId = ctx.user.id;
 

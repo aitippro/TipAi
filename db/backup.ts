@@ -283,7 +283,7 @@ export class DatabaseBackup {
           db.exec(`DELETE FROM "${table}";`);
         }
 
-        const columns = Object.keys(rows[0]);
+        const columns = Object.keys(rows[0] as Record<string, unknown>);
         const placeholders = columns.map(() => "?").join(", ");
 
         const stmt = db.prepare(

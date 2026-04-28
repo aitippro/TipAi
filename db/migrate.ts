@@ -16,7 +16,7 @@ interface MigrationRecord {
 }
 
 export class MigrationManager {
-  private db: Database.Database;
+  private db: Database;
   private migrationsDir: string;
 
   constructor(dbPath: string) {
