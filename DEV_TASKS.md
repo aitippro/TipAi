@@ -78,6 +78,13 @@
   - 缓存策略
   - 离线状态提示
 
+- [ ] F6. 动态提示词生成 (Dynamic Prompt Generation)
+  - 需求 → 动态提示词选项生成
+  - 用户选择/修改 → AI 实时重生成
+  - 迭代精修控制 (两层系统: 响应级 + 会话级)
+  - 适配视频剪辑、图像生成等动态需求场景
+  - 参考: Microsoft Dynamic Prompt Middleware (CHIWORK 2025)
+
 ## Phase 3: 云端同步预留 (未来)
 
 - [ ] C1. 云端提示词库接口
