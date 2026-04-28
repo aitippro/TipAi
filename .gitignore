@@ -2,12 +2,14 @@
 .env
 .env.local
 .env.*.local
-# 开发计划文件（经用户允许后已解除忽略）
-# task_plan.md
-# findings.md
-# progress.md
-# DEV_TASKS.md
-# ROADMAP.md
+# 内部开发文档（禁止推送云端）
+DEV_ROLE.md
+DEV_TASKS.md
+HANDOFF.md
+CLAUDE.md
+task_plan.md
+findings.md
+progress.md
 # 调研报告（禁止推送云端）
 RESEARCH_*.md
 research/
