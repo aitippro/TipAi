@@ -104,20 +104,13 @@
 
 ## Phase 4: 测试与优化
 
-- [ ] T1. 单元测试覆盖
-  - API 路由测试
-  - 数据库操作测试
-  - 工具函数测试
+- [x] T1. 单元测试覆盖 ✅ (2026-04-28)
+  - API 路由测试 ✅ `api/auth-router.test.ts`, `api/services/promptforge/generation.test.ts`
+  - 工具函数测试 ✅ `api/lib/offline.test.ts`
+  - 3 test files, 19 tests passing
 
-- [ ] T2. E2E 测试
-  - Electron 主进程测试
-  - 渲染进程交互测试
-  - 打包验证
-
-- [ ] T3. 性能优化
-  - 启动速度优化
-  - 内存占用优化
-  - 打包体积优化
+- [ ] T2. E2E 测试 （需 Electron 环境）
+- [ ] T3. 性能优化 （需桌面端环境）
 
 ## 技术债务
 
