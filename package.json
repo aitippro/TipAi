@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "TipAi Desktop - 本地AI提示词工程工具",
+  "author": "TipAi Team",
   "main": "electron/main.js",
   "homepage": ".",
   "scripts": {
@@ -191,11 +192,7 @@
         }
       ],
       "icon": "public/icon.ico",
-      "publisherName": "TipAi Team",
-      "verifyUpdateCodeSignature": false,
-      "signingHashAlgorithms": ["sha256"],
-      "certificateFile": null,
-      "certificatePassword": null
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": true,
