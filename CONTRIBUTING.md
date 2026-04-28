@@ -1,81 +1,85 @@
-# 贡献指南 (Contributing Guide)
+# 贡献指南
 
-感谢您对 **TipAi** 项目的关注！本项目为个人开发的教育/工具型项目，**不接受外部商业性 Pull Request**，但欢迎以下形式的贡献：
-
----
-
-## 一、我们欢迎的贡献
-
-### 1. Bug 报告 (Bug Reports)
-- 请通过 [Issues](https://github.com/aitippro/AI-prompt/issues) 提交
-- 使用模板：`Bug Report`
-- 必须包含：
-  - 问题描述
-  - 复现步骤
-  - 期望行为 vs 实际行为
-  - 环境信息（操作系统、Node.js 版本、Electron 版本等）
-
-### 2. 引用勘误 (Attribution Corrections)
-- 如发现 `ATTRIBUTION.md` 中的引用遗漏或错误
-- 请通过 [Issues](https://github.com/aitippro/AI-prompt/issues) 提交，标签选 `documentation`
-
-### 3. 文档翻译 (Translations)
-- 仅限 `README.md`、`ATTRIBUTION.md`、`CHANGELOG.md` 等非代码文档
-- 代码逻辑和框架实现不接受外部修改
-
-### 4. 安全报告 (Security Issues)
-- **请勿通过公开 Issue 提交安全漏洞**
-- 请直接联系项目维护者
+欢迎参与 TipAi 项目。
 
 ---
 
-## 二、我们不接受的贡献
+## 接受的贡献
 
-| 类型 | 说明 |
+| 类型 | 途径 |
 |------|------|
-| 商业性 PR | 包含商业产品推广、引流链接、付费功能接入 |
-| 核心代码修改 | 提示词框架逻辑、AI 生成链路、认证系统等核心模块 |
-| 依赖替换 | 更换技术栈、引入新的第三方服务 |
-| 品牌推广 | 在文档中添加公司 Logo、商业标语 |
+| Bug 报告 | [Issues](https://github.com/aitippro/TipAi/issues) |
+| 文档勘误 | Issue 或 PR |
+| 安全漏洞 | 直接联系维护者（勿公开提交） |
 
 ---
 
-## 三、代码风格
+## 不接受的贡献
 
-本项目技术栈：
-- **桌面端**: Electron 35
-- **前端**: React 19 + TypeScript 5.9 + Vite 7 + Tailwind CSS 3 + Apple Design System
-- **后端**: Hono 4 + tRPC 11
-- **数据库**: SQLite (better-sqlite3) + Drizzle ORM
-- **测试**: Vitest 4
+- 核心代码修改（AI 生成链路、认证系统、数据库 schema）
+- 依赖替换或技术栈变更
+- 商业推广内容
 
-提交规范：
+---
+
+## 开发环境
+
+### 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 桌面 | Electron 41 |
+| 前端 | React 19 · TypeScript 5.9 · Vite 7 · Tailwind CSS 3 · shadcn/ui |
+| API | Hono 4 · tRPC 11 |
+| 数据库 | SQLite · Drizzle ORM |
+| 测试 | Vitest 4 |
+| CI | GitHub Actions |
+
+### 开发工作流
+
+本项目使用 **cc-workspace** 多智能体编排工作流：
+
 ```
-<type>: <description>
+需求 → team-lead 制定计划 → implementer 实现 → reviewer 审查 → security-auditor 审计 → 合并
+```
 
-- feat: 新功能
-- fix: 修复
-- docs: 文档
-- security: 安全修复
-- refactor: 重构
-- test: 测试
-- ui: UI 样式调整
-- electron: Electron 相关
+所有代码变更经过 CI 管线验证：
+
+```bash
+npm run check     # tsc -b 类型检查
+npm run lint      # ESLint
+npm run test      # Vitest
+npm run build     # 生产构建
+```
+
+### Commit 规范
+
+```
+feat:    新功能
+fix:     修复
+docs:    文档
+chore:   工程配置
+test:    测试
+security: 安全修复
+refactor: 重构
 ```
 
 ---
 
-## 四、行为准则
+## 代码风格
+
+- TypeScript 严格模式 (`strict: true`)
+- 遵循项目已有的代码模式和架构约定
+- 禁止硬编码密钥、本地路径、IP 地址
+- API Key 通过 AES-256-GCM 加密存储
+- `.claude/` 目录禁止推送
+
+---
+
+## 行为准则
 
 - 尊重开源社区和学术诚信
-- 不得利用本项目进行商业竞争或恶意抄袭
-- 不得将项目代码用于训练商业 AI 模型
+- 不得用于商业竞争或恶意抄袭
+- 不得用于训练商业 AI 模型
 
----
-
-## 五、联系方式
-
-- Issues: [https://github.com/aitippro/AI-prompt/issues](https://github.com/aitippro/AI-prompt/issues)
-- 项目维护者保留所有贡献的审核权和拒绝权
-
-**感谢您的理解与支持！**
+项目维护者保留所有贡献的审核权和拒绝权。
