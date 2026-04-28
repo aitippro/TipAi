@@ -82,10 +82,11 @@
   - 缓存策略
   - 离线状态提示
 
-- [ ] F6. 动态提示词生成 (Dynamic Prompt Generation)
-  - 需求 → 动态提示词选项生成
-  - 用户选择/修改 → AI 实时重生成
-  - 迭代精修控制 (两层系统: 响应级 + 会话级)
+- [x] F6. 动态提示词生成 ✅ (2026-04-28)
+  - 需求 → 动态提示词选项生成 ✅ `api/services/promptforge/dynamic-options.ts`
+  - 用户选择/修改 → AI 实时重生成 ✅ `api/promptforge-router.ts`
+  - 迭代精修控制 (两层系统) ✅ `contracts/dynamic-prompt.ts`
+  - UI 控件面板 ✅ `src/components/dynamic-prompt/DynamicPromptPanel.tsx`
   - 适配视频剪辑、图像生成等动态需求场景
   - 参考: Microsoft Dynamic Prompt Middleware (CHIWORK 2025)
 

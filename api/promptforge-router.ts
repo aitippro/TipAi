@@ -1,4 +1,5 @@
 import { createRouter, publicQuery, authedQuery } from "./middleware";
+import { z } from "zod";
 import {
   getAllFrameworks,
   getFrameworkCount,
@@ -27,6 +28,10 @@ import {
   getPromptForgeSettings,
   updatePromptForgeSettings,
 } from "./services/promptforge/settings";
+import {
+  generateDynamicPromptOptions,
+  regeneratePrompt as regenerateDynamicPrompt,
+} from "./services/promptforge/dynamic-options";
 
 export const promptForgeRouter = createRouter({
   getSettings: authedQuery.query(({ ctx }) => getPromptForgeSettings(ctx.user.id)),
@@ -63,4 +68,32 @@ export const promptForgeRouter = createRouter({
 
   listFrameworks: publicQuery.query(() => getAllFrameworks()),
   getFrameworkCount: publicQuery.query(() => getFrameworkCount()),
+
+  // F6: Dynamic Prompt Generation
+  generateDynamicOptions: authedQuery
+    .input(
+      z.object({
+        intent: z.string().min(1).max(5000),
+        sessionPreferences: z.record(z.unknown()).optional(),
+      })
+    )
+    .mutation(({ input, ctx }) =>
+      generateDynamicPromptOptions(ctx.user.id, input.intent, input.sessionPreferences)
+    ),
+
+  regeneratePrompt: authedQuery
+    .input(
+      z.object({
+        sessionId: z.string(),
+        intent: z.string(),
+        controlValues: z.record(z.unknown()),
+      })
+    )
+    .mutation(({ input, ctx }) =>
+      regenerateDynamicPrompt(ctx.user.id, {
+        sessionId: input.sessionId,
+        intent: input.intent,
+        controlValues: input.controlValues,
+      })
+    ),
 });
