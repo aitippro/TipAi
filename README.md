@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./public/logo.png" alt="TipAi Logo" width="120">
+
 <h1>✨ TipAi</h1>
 
 **智能提示词工程平台 · Electron 桌面端**

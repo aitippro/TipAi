@@ -19,6 +19,9 @@ build/
 coverage/
 .nyc_output/
 *.tsbuildinfo
+release/
+*.exe
+*.blockmap
 # 依赖
 node_modules/
 # 数据库

@@ -80,7 +80,16 @@
 
 ---
 
-## 四、免责声明
+## 五、品牌资产
+
+### TipAi Logo
+- **文件**: `public/logo.png`, `assets/branding/logo.png`
+- **来源**: Logo generated with the assistance of ChatGPT by OpenAI
+- **说明**: 本项目 Logo 由 ChatGPT (OpenAI) 辅助生成，经人工调整后的最终版本。版权归属 TipAi 团队，允许在项目及相关宣传材料中使用。
+
+---
+
+## 六、免责声明
 
 本项目为独立开发的教育/工具型项目，与上述参考项目的作者或维护团队无直接关联。所有框架定义和模板内容均基于公开文献和社区共识，仅供学习和研究使用。
 
