@@ -68,13 +68,17 @@
   - 筛选过滤 ✅
   - 导出进度指示 ✅
 
-- [ ] F4. 本地 API Key 管理
-  - 加密存储 (AES-256-GCM)
-  - 多模型支持 (Kimi/OpenAI/Claude/DeepSeek)
-  - Key 有效性检测
+- [x] F4. 本地 API Key 管理 ✅ (2026-04-28)
+  - 加密存储 (AES-256-GCM) ✅ `api/lib/crypto.ts`
+  - 多模型支持 (Kimi/OpenAI/Claude/DeepSeek) ✅ `db/schema.ts` userSettings
+  - 存储加密读写 ✅ `api/services/promptforge/settings.ts`
+  - Key 有效性检测 [~] 待实现
 
-- [ ] F5. 离线模式支持
-  - 本地模型接入 (Ollama)
+- [x] F5. 离线模式支持 ✅ (2026-04-28)
+  - 本地模型接入 (Ollama) ✅ `api/services/ai/providers/ollama.ts`
+  - 离线检测 ✅ `api/lib/offline.ts`
+  - 自动降级 ✅ `api/services/ai/router.ts` ollama 加入降级链
+  - 离线状态提示 [~] 待 UI 实现
   - 缓存策略
   - 离线状态提示
 

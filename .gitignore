@@ -39,6 +39,10 @@ config/auth.json
 token.json
 *.pat
 *.token
+# Claude Code 本地配置 (禁止推送)
+.claude/
+# 环境变量模板（保留）
+!.env.example
 # 其他
 *.dump
 *.sql.gz

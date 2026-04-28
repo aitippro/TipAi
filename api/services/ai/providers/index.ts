@@ -19,3 +19,7 @@ export {
   GeminiProvider,
   createGeminiProvider,
 } from "./gemini";
+export {
+  OllamaProvider,
+  createOllamaProvider,
+} from "./ollama";

@@ -24,6 +24,7 @@ import {
   createDeepSeekProvider,
   createOpenAIProvider,
   createGeminiProvider,
+  createOllamaProvider,
 } from "./providers";
 
 export type TaskType =
@@ -65,13 +66,13 @@ export interface RouteUsageSummary {
  * 优先级越高，排在越前面
  */
 const DEFAULT_ROUTING_RULES: Record<TaskType, string[]> = {
-  chat: ["kimi", "openai", "deepseek", "gemini"],
-  analysis: ["deepseek", "kimi", "openai", "gemini"],
-  code: ["deepseek", "openai", "kimi", "gemini"],
-  creative: ["openai", "kimi", "deepseek", "gemini"],
-  optimization: ["openai", "deepseek", "kimi", "gemini"],
-  classification: ["kimi", "openai", "deepseek", "gemini"],
-  default: ["kimi", "openai", "deepseek", "gemini"],
+  chat: ["kimi", "openai", "deepseek", "gemini", "ollama"],
+  analysis: ["deepseek", "kimi", "openai", "gemini", "ollama"],
+  code: ["deepseek", "openai", "kimi", "gemini", "ollama"],
+  creative: ["openai", "kimi", "deepseek", "gemini", "ollama"],
+  optimization: ["openai", "deepseek", "kimi", "gemini", "ollama"],
+  classification: ["kimi", "openai", "deepseek", "gemini", "ollama"],
+  default: ["kimi", "openai", "deepseek", "gemini", "ollama"],
 };
 
 /**
@@ -128,6 +129,7 @@ export class AIRouter {
       deepseek: createDeepSeekProvider,
       openai: createOpenAIProvider,
       gemini: createGeminiProvider,
+      ollama: createOllamaProvider,
     };
 
     for (const [name, providerConfig] of Object.entries(this.config.providers)) {
@@ -419,6 +421,11 @@ export function createDefaultRouter(): AIRouter {
         apiKey: process.env.GEMINI_API_KEY || "",
         baseUrl: process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com",
         model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+      },
+      ollama: {
+        apiKey: "", // Ollama runs locally, no API key needed
+        baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+        model: process.env.OLLAMA_MODEL || "llama3.2",
       },
     },
   });

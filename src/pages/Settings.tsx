@@ -18,6 +18,7 @@ const MODELS = [
   { key: "openai", name: "OpenAI", fullName: "OpenAI (GPT-4o)", icon: Globe, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", placeholder: "sk-xxxxxxxxxxxxxxxx" },
   { key: "claude", name: "Claude", fullName: "Claude (Anthropic)", icon: Shield, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", placeholder: "sk-ant-xxxxxxxx" },
   { key: "deepseek", name: "DeepSeek", fullName: "DeepSeek", icon: Database, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", placeholder: "sk-xxxxxxxxxxxxxxxx" },
+  { key: "ollama", name: "Ollama", fullName: "Ollama (本地)", icon: Lock, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", placeholder: "本地服务，无需 Key" },
 ]
 
 const MODEL_SITES: Record<string, string> = {
@@ -25,6 +26,7 @@ const MODEL_SITES: Record<string, string> = {
   openai: "platform.openai.com",
   claude: "console.anthropic.com",
   deepseek: "platform.deepseek.com",
+  ollama: "localhost:11434 (本地服务)",
 }
 
 export default function SettingsPage() {
@@ -51,6 +53,7 @@ export default function SettingsPage() {
 
   const toggleShow = (key: string) => setShowKeys((p) => ({ ...p, [key]: !p[key] }))
   const getKeyStatus = (mk: string): boolean => {
+    if (mk === "ollama") return true // Ollama 本地服务始终可选
     if (!settings) return false
     return !!(settings as Record<string, unknown>)[`has${mk.charAt(0).toUpperCase() + mk.slice(1)}Key`]
   }
