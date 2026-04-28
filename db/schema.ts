@@ -96,6 +96,8 @@ export const projects = sqliteTable("projects", {
   domain: text("domain", { length: 100 }).default("general").notNull(),
   status: text("status", { length: 20, enum: ["draft", "ready", "executing", "completed", "archived"] }).default("draft").notNull(),
   intent: text("intent"),
+  clarificationStatus: text("clarificationStatus", { length: 20, enum: ["pending", "in_progress", "completed"] }).default("pending"),
+  turnCount: integer("turnCount").default(0),
   createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
@@ -149,6 +151,35 @@ export const domainPackages = sqliteTable("domain_packages", {
   createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
+// Project conversations for multi-turn clarification dialogues
+export const projectConversations = sqliteTable("project_conversations", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  projectId: integer("projectId", { mode: "number" }).notNull(),
+  userId: integer("userId", { mode: "number" }).notNull(),
+  role: text("role", { length: 20, enum: ["user", "assistant", "system"] }).notNull(),
+  content: text("content").notNull(),
+  questionId: text("questionId"),
+  questionData: text("questionData"),
+  answerData: text("answerData"),
+  turnNumber: integer("turnNumber").notNull().default(0),
+  createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+// Project summaries for generated requirement summaries
+export const projectSummaries = sqliteTable("project_summaries", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  projectId: integer("projectId", { mode: "number" }).notNull().unique(),
+  userId: integer("userId", { mode: "number" }).notNull(),
+  summary: text("summary").notNull(),
+  requirements: text("requirements"),
+  constraints: text("constraints"),
+  suggestedFrameworks: text("suggestedFrameworks"),
+  rawContext: text("rawContext"),
+  isFinalized: integer("isFinalized").default(0),
+  createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -161,3 +192,5 @@ export type Step = typeof steps.$inferSelect;
 export type PromptOptimization = typeof promptOptimizations.$inferSelect;
 export type Evaluation = typeof evaluations.$inferSelect;
 export type DomainPackage = typeof domainPackages.$inferSelect;
+export type ProjectConversation = typeof projectConversations.$inferSelect;
+export type ProjectSummary = typeof projectSummaries.$inferSelect;

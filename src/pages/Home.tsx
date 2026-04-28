@@ -6,23 +6,19 @@ import GenerateModal from "@/components/GenerateModal"
 import { useAuth } from "@/hooks/useAuth"
 import { trpc } from "@/providers/trpc"
 
-import { ClarificationOverlay } from "@/components/home/ClarificationOverlay"
+import { ClarifyChatPanel } from "@/components/clarify/ClarifyChatPanel"
+import type { RequirementSummary } from "@/components/clarify/types"
 import { HomeHeroSection } from "@/components/home/HomeHeroSection"
 import { HowItWorksSection } from "@/components/home/HowItWorksSection"
 import { SLASH_COMMANDS } from "@/components/home/config"
-import type {
-  ClarificationAnswers,
-  ClarificationQuestion,
-} from "@/components/home/types"
 
 export default function Home() {
   const [intent, setIntent] = useState("")
   const [stepMode, setStepMode] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [pendingAnswers, setPendingAnswers] = useState<ClarificationAnswers>({})
+  const [pendingAnswers, setPendingAnswers] = useState<Record<string, string>>({})
   const [showClarify, setShowClarify] = useState(false)
-  const [clarifyQuestions, setClarifyQuestions] = useState<ClarificationQuestion[]>([])
-  const [clarifyAnswers, setClarifyAnswers] = useState<ClarificationAnswers>({})
+  const [clarifyProjectId, setClarifyProjectId] = useState<number | null>(null)
 
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
@@ -41,66 +37,58 @@ export default function Home() {
     textareaRef.current?.focus()
   }
 
-  // ---- Clarify mutation ----
-  const clarifyMutation = trpc.promptForge.clarify.useMutation({
-    onSuccess: (data) => {
-      try {
-        const d = data as Record<string, unknown>
-        const needs = Boolean(d?.needsClarification)
-        const questions = Array.isArray(d?.questions) ? (d.questions as ClarificationQuestion[]) : []
-        if (needs && questions.length > 0) {
-          setClarifyQuestions(questions)
-          setClarifyAnswers({})
-          setShowClarify(true)
-          return
-        }
-      } catch { /* ignore parse error */ }
-      setPendingAnswers({})
-      setShowModal(true)
-    },
-    onError: () => {
-      setPendingAnswers({})
-      setShowModal(true)
-    },
-  })
+  const createProject = trpc.project.create.useMutation()
+  const updateProject = trpc.project.update.useMutation()
 
-  const handleStartGenerate = useCallback(() => {
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+
+  const handleStartGenerate = useCallback(async () => {
     if (!intent.trim()) { toast.error("请输入你的需求"); return }
     if (!isAuthenticated) { toast.info("请先登录"); navigate("/login"); return }
-    setShowClarify(false)
-    clarifyMutation.mutate({ intent: intent.trim() })
-  }, [intent, isAuthenticated, navigate, clarifyMutation])
 
-  const handleSkipClarify = useCallback(() => {
+    setIsCreatingProject(true)
+    try {
+      // Create a project first
+      const title = intent.trim().length > 30
+        ? intent.trim().substring(0, 30) + "..."
+        : intent.trim()
+
+      const project = await createProject.mutateAsync({
+        title,
+        intent: intent.trim(),
+        domain: undefined,
+      })
+
+      // Update project to in_progress
+      await updateProject.mutateAsync({
+        id: project.id,
+        clarificationStatus: "in_progress",
+      })
+
+      setClarifyProjectId(project.id)
+      setShowClarify(true)
+    } catch (error) {
+      toast.error("创建项目失败，请重试")
+      console.error(error)
+      // Fallback: open modal directly
+      setPendingAnswers({})
+      setShowModal(true)
+    } finally {
+      setIsCreatingProject(false)
+    }
+  }, [intent, isAuthenticated, navigate, createProject, updateProject])
+
+  const handleCloseClarify = useCallback(() => {
     setShowClarify(false)
-    setPendingAnswers({})
-    setShowModal(true)
+    setClarifyProjectId(null)
   }, [])
 
-  const handleClarifyAnswerChange = useCallback((questionId: string, value: string) => {
-    setClarifyAnswers((current) => ({ ...current, [questionId]: value }))
-  }, [])
-
-  const handleSubmitClarify = useCallback(() => {
-    const answers: ClarificationAnswers = {}
-    const missingRequired: string[] = []
-    for (const q of clarifyQuestions) {
-      const isRequired = q.required !== false
-      const val = clarifyAnswers[q.id]?.trim() ?? ""
-      if (val) {
-        answers[q.id] = val
-      } else if (isRequired) {
-        missingRequired.push(q.question)
-      }
-    }
-    if (missingRequired.length > 0) {
-      toast.error(`请回答必填项：${missingRequired.join("、")}`)
-      return
-    }
+  const handleClarifyComplete = useCallback((answers: Record<string, string>, _summary: RequirementSummary) => {
     setShowClarify(false)
+    setClarifyProjectId(null)
     setPendingAnswers(answers)
     setShowModal(true)
-  }, [clarifyAnswers, clarifyQuestions])
+  }, [])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -115,7 +103,7 @@ export default function Home() {
         intent={intent}
         stepMode={stepMode}
         showSlashMenu={showSlashMenu}
-        isGenerating={clarifyMutation.isPending}
+        isGenerating={isCreatingProject}
         filteredSlashCommands={filteredSlashCommands}
         textareaRef={textareaRef}
         onIntentChange={setIntent}
@@ -126,13 +114,12 @@ export default function Home() {
         onStartGenerate={handleStartGenerate}
       />
 
-      {showClarify && (
-        <ClarificationOverlay
-          questions={clarifyQuestions}
-          answers={clarifyAnswers}
-          onAnswerChange={handleClarifyAnswerChange}
-          onSubmit={handleSubmitClarify}
-          onSkip={handleSkipClarify}
+      {showClarify && clarifyProjectId !== null && (
+        <ClarifyChatPanel
+          projectId={clarifyProjectId}
+          intent={intent}
+          onClose={handleCloseClarify}
+          onComplete={handleClarifyComplete}
         />
       )}
 

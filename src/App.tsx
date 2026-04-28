@@ -6,6 +6,8 @@ import TemplateMarket from "./pages/TemplateMarket"
 import Login from "./pages/Login"
 import NotFound from "./pages/NotFound"
 import About from "./pages/About"
+import Projects from "./pages/Projects"
+import ProjectDetail from "./pages/ProjectDetail"
 import Sidebar from "./components/Sidebar"
 
 export default function App() {
@@ -20,6 +22,8 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/library" element={<Library />} />
             <Route path="/templates" element={<TemplateMarket />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />

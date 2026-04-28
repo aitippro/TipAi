@@ -58,7 +58,7 @@ function buildSettingsUpdateData(input: UpdatePromptForgeSettingsInput): Record<
   return updateData;
 }
 
-function resolveStoredApiKey(model: string, settings?: UserSettings): string {
+export function resolveStoredApiKey(model: string, settings?: UserSettings): string {
   if (model === "kimi" && settings?.kimiApiKey) return decrypt(settings.kimiApiKey);
   if (model === "openai" && settings?.openaiApiKey) return decrypt(settings.openaiApiKey);
   if (model === "claude" && settings?.claudeApiKey) return decrypt(settings.claudeApiKey);

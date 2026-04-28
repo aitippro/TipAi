@@ -26,10 +26,12 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  FolderOpen,
 } from "lucide-react"
 
 const navItems = [
   { path: "/", icon: Sparkles, label: "生成" },
+  { path: "/projects", icon: FolderOpen, label: "项目" },
   { path: "/library", icon: BookOpen, label: "库" },
   { path: "/templates", icon: Store, label: "模板" },
   { path: "/settings", icon: Settings, label: "设置" },

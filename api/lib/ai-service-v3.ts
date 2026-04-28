@@ -18,6 +18,13 @@ import type {
   StepDecomposition,
 } from "./ai-service-v3/types";
 
+export {
+  parseAIJsonResponse,
+  toComplexity,
+  toStringArray,
+  toStringValue,
+} from "./ai-service-v3/response-parser";
+
 export type {
   ClarificationQuestion,
   Framework,
