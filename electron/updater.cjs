@@ -15,10 +15,10 @@ let updateInfo = null;
 
 // GitHub Releases 配置（预留）
 // 实际发布时，在 GitHub 创建 Release 并上传 .exe 和 .yml 文件
-const DEFAULT_PUBLISH_CONFIG = {
+const FEED_URL = {
   provider: 'github',
-  owner: 'your-github-username',      // ← 替换为实际 GitHub 用户名
-  repo: 'tipai-desktop',                // ← 替换为实际仓库名
+  owner: 'aitippro',
+  repo: 'TipAi',
   releaseType: 'release',
 };
 
@@ -29,14 +29,13 @@ function initUpdater(window) {
   mainWindow = window;
 
   // 配置更新服务器
-  const publishConfig = getPublishConfig();
   autoUpdater.setFeedURL({
-    provider: publishConfig.provider,
-    owner: publishConfig.owner,
-    repo: publishConfig.repo,
-    releaseType: publishConfig.releaseType,
+    provider: FEED_URL.provider,
+    owner: FEED_URL.owner,
+    repo: FEED_URL.repo,
+    releaseType: FEED_URL.releaseType,
     private: false,
-    token: process.env.GH_TOKEN || undefined, // GitHub Token（私有仓库需要）
+    token: process.env.GH_TOKEN || undefined,
   });
 
   // 开发环境：允许测试更新（需设置 DEV_UPDATE_URL）
@@ -168,7 +167,7 @@ function initUpdater(window) {
   // 获取当前版本信息
   ipcMain.handle('updater:info', () => ({
     currentVersion: autoUpdater.currentVersion?.version || require('../package.json').version,
-    publishConfig,
+    publishConfig: FEED_URL,
     updateDownloaded,
     updateInfo,
   }));
@@ -207,7 +206,7 @@ function getPublishConfig() {
   } catch {
     // fallback
   }
-  return DEFAULT_PUBLISH_CONFIG;
+  return FEED_URL;
 }
 
 // 构建应用菜单的“检查更新”项

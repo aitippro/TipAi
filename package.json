@@ -1,7 +1,7 @@
 {
   "name": "TipAi",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "TipAi Desktop - 本地AI提示词工程工具",
   "author": "TipAi Team",
