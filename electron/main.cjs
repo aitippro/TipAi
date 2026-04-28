@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { fork } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
@@ -94,13 +94,13 @@ function startBackend() {
     return Promise.resolve({ port: 3000 });
   }
 
-  // Production: start Node.js backend
-  const backendPath = path.join(__dirname, '../dist/server.js');
-  
+  // Production: start backend using fork (uses Electron's embedded Node)
+  const backendPath = path.join(__dirname, '../dist/boot.js');
+
   return new Promise((resolve, reject) => {
-    backendProcess = spawn('node', [backendPath], {
+    backendProcess = fork(backendPath, [], {
       env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      silent: true,
     });
 
     backendProcess.stdout.on('data', (data) => {
