@@ -25,6 +25,7 @@ export interface OptimizationResult {
   optimizedPrompt: string;
   improvements: string[];
   technique: string;
+  strategy?: string;
 }
 
 export interface EvaluationResult {
@@ -267,8 +268,9 @@ export async function decomposeTask(intent: string, domain: string, analysis: In
 
 // ---- Single Prompt Optimization ----
 
-export async function optimizePrompt(prompt: string, domain: string): Promise<OptimizationResult> {
-  const systemPrompt = `你是一位顶级提示词工程师（Prompt Engineer）。你的任务是优化用户提供的提示词，使其更加清晰、具体、有效。
+export async function optimizePrompt(prompt: string, domain: string, strategy: "general" | "structured" | "concise" = "general"): Promise<OptimizationResult> {
+  const strategyPrompts: Record<string, string> = {
+    general: `你是一位顶级提示词工程师（Prompt Engineer）。你的任务是优化用户提供的提示词，使其更加清晰、具体、有效。
 
 优化原则（基于CRISPE和CO-STAR框架）：
 1. 角色设定(C/R)：为AI分配明确的专家角色
@@ -283,9 +285,44 @@ export async function optimizePrompt(prompt: string, domain: string): Promise<Op
   "optimizedPrompt": "优化后的完整提示词",
   "improvements": ["改进点1", "改进点2", "改进点3"],
   "technique": "使用的主要技术（如：CRISPE/CO-STAR/Chain-of-Thought）"
-}`;
+}`,
+    structured: `你是一位顶级提示词工程师（Prompt Engineer），专精于结构化提示词设计。你的任务是将用户提供的提示词重构为高度结构化、模块化、可复用的形式。
 
-  const result = await callKimiAPI(systemPrompt, `请优化以下提示词：\n\n${prompt}\n\n领域：${getDomainPackage(domain).name}`, 0.4);
+优化原则（基于Chain-of-Thought + 模块化框架）：
+1. 明确角色定义：设定专业的专家身份
+2. 任务分解：将复杂任务拆分为清晰的步骤或阶段
+3. 输入/输出规范：定义明确的输入格式和期望的输出结构
+4. 思维链引导：在关键推理步骤添加"让我们一步步思考"或类似的引导语
+5. 质量控制：添加自检、验证或评分机制
+6. 可复用性：使提示词具备参数化能力，方便替换变量
+
+返回JSON格式：
+{
+  "optimizedPrompt": "优化后的完整结构化提示词",
+  "improvements": ["改进点1", "改进点2", "改进点3"],
+  "technique": "使用的主要技术（如：Chain-of-Thought / 模块化框架）"
+}`,
+    concise: `你是一位顶级提示词工程师（Prompt Engineer），专精于精简高效提示词设计。你的任务是在保留核心意图的前提下，将用户提供的提示词压缩为最短、最高效的版本。
+
+优化原则（基于Minimal Prompt Engineering）：
+1. 去除冗余：删除所有不必要的修饰词、重复描述和客套话
+2. 保留核心：只保留最关键的角色、任务、约束和输出格式
+3. 关键词优化：使用AI最能理解的精确术语和动词
+4. 结构极简：用列表、符号或短句替代长篇段落
+5. 信息密度：确保每个词都承载有效信息
+6. 目标导向：直奔结果，减少解释性内容
+
+返回JSON格式：
+{
+  "optimizedPrompt": "优化后的精简提示词",
+  "improvements": ["改进点1", "改进点2", "改进点3"],
+  "technique": "使用的主要技术（如：Minimal Prompt / Zero-shot CoT）"
+}`,
+  };
+
+  const systemPrompt = strategyPrompts[strategy] || strategyPrompts.general;
+
+  const result = await callKimiAPI(systemPrompt, `请优化以下提示词：\n\n${prompt}\n\n领域：${getDomainPackage(domain).name}\n\n优化策略：${strategy === "general" ? "通用优化" : strategy === "structured" ? "结构化优化" : "精简优化"}`, 0.4);
 
   if (result) {
     try {
@@ -295,17 +332,28 @@ export async function optimizePrompt(prompt: string, domain: string): Promise<Op
         optimizedPrompt: parsed.optimizedPrompt || result,
         improvements: Array.isArray(parsed.improvements) ? parsed.improvements : ["优化了提示词结构"],
         technique: parsed.technique || "综合优化",
+        strategy,
       };
     } catch {
       // Fall back to the heuristic output below when JSON parsing fails.
     }
   }
 
-  // Fallback
+  const fallbackPrompts: Record<string, string> = {
+    general: `# 角色\n你是一位${getDomainPackage(domain).name}专家。\n\n# 任务\n${prompt}\n\n# 要求\n1. 提供详细、专业的回答\n2. 使用清晰的结构（标题、列表、表格）\n3. 包含具体的案例和数据支撑\n4. 确保内容可直接使用或稍作修改即可使用\n\n# 输出格式\n请按照以下格式输出：\n1. 核心要点\n2. 详细说明\n3. 行动建议`,
+    structured: `# 角色\n你是一位${getDomainPackage(domain).name}专家。\n\n# 任务\n${prompt}\n\n# 执行步骤\n1. 分析问题背景与约束条件\n2. 制定详细的执行计划\n3. 按步骤逐一完成子任务\n4. 整合结果并输出最终答案\n\n# 输出格式\n- 第一步分析：[分析结果]\n- 第二步计划：[执行计划]\n- 第三步执行：[详细过程]\n- 第四步结论：[最终答案]`,
+    concise: `作为${getDomainPackage(domain).name}专家，${prompt}。直接输出要点，无需解释。`,
+  };
+
   return {
-    optimizedPrompt: `# 角色\n你是一位${getDomainPackage(domain).name}专家。\n\n# 任务\n${prompt}\n\n# 要求\n1. 提供详细、专业的回答\n2. 使用清晰的结构（标题、列表、表格）\n3. 包含具体的案例和数据支撑\n4. 确保内容可直接使用或稍作修改即可使用\n\n# 输出格式\n请按照以下格式输出：\n1. 核心要点\n2. 详细说明\n3. 行动建议`,
-    improvements: ["添加了角色设定", "明确了输出格式", "增加了质量要求", "优化了结构"],
-    technique: "CRISPE框架",
+    optimizedPrompt: fallbackPrompts[strategy] || fallbackPrompts.general,
+    improvements: strategy === "structured"
+      ? ["添加了步骤分解", "明确了执行流程", "增加了质量控制机制"]
+      : strategy === "concise"
+        ? ["删除了冗余描述", "保留了核心意图", "压缩了表达长度"]
+        : ["添加了角色设定", "明确了输出格式", "增加了质量要求", "优化了结构"],
+    technique: strategy === "structured" ? "Chain-of-Thought + 模块化" : strategy === "concise" ? "Minimal Prompt" : "CRISPE框架",
+    strategy,
   };
 }
 

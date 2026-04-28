@@ -12,10 +12,11 @@ export const optimizerRouter = createRouter({
       z.object({
         prompt: z.string().min(1).max(5000),
         domain: z.string().default("general"),
+        strategy: z.enum(["general", "structured", "concise"]).default("general"),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const result = await optimizePrompt(input.prompt, input.domain);
+      const result = await optimizePrompt(input.prompt, input.domain, input.strategy);
 
       // Save to history
       const db = getDb();
@@ -25,6 +26,7 @@ export const optimizerRouter = createRouter({
         optimizedPrompt: result.optimizedPrompt,
         improvements: JSON.stringify(result.improvements),
         domain: input.domain,
+        model: "kimi",
       });
 
       return result;

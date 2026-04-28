@@ -1,67 +1,58 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
-import {
-  Send,
-  ChevronRight,
-  Wand2,
-  Sparkles,
-  X,
-  ArrowRight,
-  Loader2,
-} from "lucide-react"
-
+import { useState, useEffect, useRef, useCallback } from "react"
+import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { trpc } from "@/providers/trpc"
-
+import { toast } from "sonner"
+import {
+  Bot,
+  Loader2,
+  CheckCircle2,
+  Send,
+} from "lucide-react"
 import { ClarifyMessageBubble } from "./ClarifyMessageBubble"
 import { SummaryPanel } from "./SummaryPanel"
 import type {
+  ClarifyQuestion,
   ClarifyAnswer,
   ClarifyMessage,
-  ClarifyQuestion,
   RequirementSummary,
 } from "./types"
 
-type ClarifyChatPanelProps = {
+interface ClarifyChatPanelProps {
   projectId: number
   intent: string
-  onClose: () => void
-  onComplete: (answers: Record<string, string>, summary: RequirementSummary) => void
 }
 
-function generateMessageId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+function generateMessageId(): string {
+  return Math.random().toString(36).substring(2, 9)
 }
 
-export function ClarifyChatPanel({
-  projectId,
-  intent,
-  onClose,
-  onComplete,
-}: ClarifyChatPanelProps) {
-  const [messages, setMessages] = useState<ClarifyMessage[]>([
-    {
-      id: generateMessageId(),
-      role: "system",
-      content: "已创建项目并开启需求澄清对话",
-    },
-    {
-      id: generateMessageId(),
-      role: "user",
-      content: intent,
-    },
-  ])
+export function ClarifyChatPanel({ projectId, intent }: ClarifyChatPanelProps) {
+  const [messages, setMessages] = useState<ClarifyMessage[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<ClarifyQuestion | null>(null)
-  const [textAnswer, setTextAnswer] = useState("")
+  const [answerText, setAnswerText] = useState("")
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [summary, setSummary] = useState<RequirementSummary | null>(null)
-  const [turnNumber, setTurnNumber] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const utils = trpc.useUtils()
+  const saveTurn = trpc.project.saveConversationTurn.useMutation()
+  const generateNextQuestion = trpc.project.generateNextQuestion.useMutation()
+  const generateSummaryMutation = trpc.project.generateSummary.useMutation()
+
+  const generateSummaryAndShow = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const result = await generateSummaryMutation.mutateAsync({ projectId })
+      setSummary(result)
+    } catch (error) {
+      toast.error("生成摘要失败")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId, generateSummaryMutation])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -73,15 +64,13 @@ export function ClarifyChatPanel({
     async function init() {
       setIsLoading(true)
       try {
-        // Save initial intent as user turn
         await saveTurn.mutateAsync({
           projectId,
           role: "user",
-          content: intent,
+          content: intent || "（用户初始需求）",
           turnNumber: 0,
         })
 
-        // Get first AI question
         const result = await generateNextQuestion.mutateAsync({ id: projectId })
 
         if (result.needsMoreClarification && result.question) {
@@ -106,7 +95,6 @@ export function ClarifyChatPanel({
           setCurrentQuestion(q)
           setTurnNumber(1)
         } else {
-          // No more questions needed, generate summary
           await generateSummaryAndShow()
         }
       } catch (error) {
@@ -121,70 +109,29 @@ export function ClarifyChatPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, intent])
 
-  const saveTurn = trpc.project.saveConversationTurn.useMutation()
-  const generateNextQuestion = trpc.project.generateNextQuestion.useMutation()
-  const generateSummaryMutation = trpc.project.generateSummary.useMutation()
-  const updateProject = trpc.project.update.useMutation()
-
-  const generateSummaryAndShow = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const result = await generateSummaryMutation.mutateAsync({ projectId })
-      setSummary(result)
-    } catch (error) {
-      toast.error("生成摘要失败")
-      console.error(error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId, generateSummaryMutation])
-
   const handleAnswerSubmit = useCallback(async () => {
     if (!currentQuestion) return
 
     const isText = currentQuestion.type === "text"
-    const isChoice = currentQuestion.type === "choice"
-    const isMultichoice = currentQuestion.type === "multichoice"
+    const isMulti = currentQuestion.type === "multichoice"
 
-    let answerValue = ""
-    let answerData: ClarifyAnswer = {}
-
+    let answerValue: string | undefined
     if (isText) {
-      if (currentQuestion.required && !textAnswer.trim()) {
-        toast.error("请填写回答")
-        return
-      }
-      answerValue = textAnswer.trim()
-      answerData = { value: answerValue }
-    } else if (isChoice) {
-      if (currentQuestion.required && selectedOptions.length === 0) {
-        toast.error("请选择一个选项")
-        return
-      }
-      answerValue = selectedOptions[0] || ""
-      answerData = { selectedOptions: [answerValue] }
-    } else if (isMultichoice) {
-      if (currentQuestion.required && selectedOptions.length === 0) {
-        toast.error("请至少选择一个选项")
-        return
-      }
-      answerValue = selectedOptions.join(", ")
-      answerData = { selectedOptions }
+      answerValue = answerText.trim()
+      if (!answerValue) return
     }
 
-    if (!answerValue && currentQuestion.required) {
-      toast.error("请回答此问题")
-      return
+    const answerData: ClarifyAnswer = {
+      value: answerValue,
+      selectedOptions: isMulti ? selectedOptions : undefined,
     }
 
-    setIsLoading(true)
+    const turnNumber = messages.length + 1
 
-    // Add user answer message
     const userMsg: ClarifyMessage = {
       id: generateMessageId(),
       role: "user",
-      content: answerValue || "（跳过）",
-      questionData: currentQuestion as unknown as Record<string, unknown>,
+      content: isText ? answerText : selectedOptions.join(", "),
       answerData,
       turnNumber,
     }
@@ -192,36 +139,22 @@ export function ClarifyChatPanel({
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      // Save the answer turn
       await saveTurn.mutateAsync({
         projectId,
         role: "user",
-        content: answerValue || "（跳过）",
+        content: userMsg.content,
         questionId: currentQuestion.id,
         questionData: currentQuestion as unknown as Record<string, unknown>,
         answerData,
         turnNumber,
       })
 
-      // Clear inputs
-      setTextAnswer("")
       setSelectedOptions([])
       setCurrentQuestion(null)
+      setAnswerText("")
 
       const nextTurn = turnNumber + 1
-
-      // Add loading indicator
-      const loadingId = generateMessageId()
-      setMessages((prev) => [
-        ...prev,
-        { id: loadingId, role: "assistant", content: "", isLoading: true, turnNumber: nextTurn },
-      ])
-
-      // Get next question
       const result = await generateNextQuestion.mutateAsync({ id: projectId })
-
-      // Remove loading indicator
-      setMessages((prev) => prev.filter((m) => m.id !== loadingId))
 
       if (result.needsMoreClarification && result.question) {
         const q: ClarifyQuestion = {
@@ -245,47 +178,23 @@ export function ClarifyChatPanel({
         setCurrentQuestion(q)
         setTurnNumber(nextTurn)
       } else {
-        // No more questions, update project status and generate summary
-        await updateProject.mutateAsync({
-          id: projectId,
-          clarificationStatus: "completed",
-        })
         await generateSummaryAndShow()
       }
     } catch (error) {
-      toast.error("发送失败，请重试")
+      toast.error("保存回答失败")
       console.error(error)
-      // Remove the user message if failed
-      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id))
-    } finally {
-      setIsLoading(false)
     }
-  }, [
-    currentQuestion,
-    textAnswer,
-    selectedOptions,
-    turnNumber,
-    projectId,
-    saveTurn,
-    generateNextQuestion,
-    updateProject,
-    generateSummaryAndShow,
-  ])
+  }, [currentQuestion, answerText, selectedOptions, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
   const handleSkip = useCallback(async () => {
     if (!currentQuestion) return
-    if (currentQuestion.required) {
-      toast.error("此问题为必填项，不能跳过")
-      return
-    }
 
-    setIsLoading(true)
+    const turnNumber = messages.length + 1
 
     const userMsg: ClarifyMessage = {
       id: generateMessageId(),
       role: "user",
       content: "（跳过）",
-      questionData: currentQuestion as unknown as Record<string, unknown>,
       answerData: {},
       turnNumber,
     }
@@ -331,212 +240,154 @@ export function ClarifyChatPanel({
         setCurrentQuestion(q)
         setTurnNumber(nextTurn)
       } else {
-        await updateProject.mutateAsync({
-          id: projectId,
-          clarificationStatus: "completed",
-        })
         await generateSummaryAndShow()
       }
     } catch (error) {
-      toast.error("跳过失败")
+      toast.error("保存跳过失败")
       console.error(error)
-    } finally {
-      setIsLoading(false)
     }
-  }, [currentQuestion, turnNumber, projectId, saveTurn, generateNextQuestion, updateProject, generateSummaryAndShow])
+  }, [currentQuestion, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
-  const toggleOption = useCallback((option: string) => {
-    setSelectedOptions((prev) => {
-      if (currentQuestion?.type === "choice") {
-        return prev.includes(option) ? [] : [option]
-      }
-      // multichoice
-      return prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
-    })
-  }, [currentQuestion])
+  const toggleOption = (option: string) => {
+    setSelectedOptions((prev) =>
+      prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
+    )
+  }
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        if (currentQuestion?.type === "text" && !isLoading) {
-          handleAnswerSubmit()
-        }
-      }
-    },
-    [currentQuestion, isLoading, handleAnswerSubmit]
-  )
-
-  const handleProceed = useCallback(() => {
-    if (!summary) return
-
-    const answers: Record<string, string> = {}
-    messages.forEach((msg) => {
-      if (msg.role === "user" && msg.questionData?.id && msg.answerData?.value) {
-        answers[msg.questionData.id] = msg.answerData.value
-      }
-    })
-
-    onComplete(answers, summary)
-  }, [messages, summary, onComplete])
-
-  const hasActiveQuestion = currentQuestion !== null && summary === null
+  const canSubmit = () => {
+    if (!currentQuestion) return false
+    if (currentQuestion.type === "text") return answerText.trim().length > 0
+    if (currentQuestion.type === "multichoice") return selectedOptions.length > 0
+    return true
+  }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80"
-      >
-        <div className="flex items-center gap-3"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-sm"
-          >
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-800"
-            >需求澄清对话</h2>
-            <p className="text-xs text-slate-400"
-            >AI 引导式需求收集 · 第 {turnNumber} 轮</p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-        >
-          <X className="w-4 h-4 text-slate-500" />
-        </button>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6"
-      >
-        <div className="max-w-2xl mx-auto space-y-5"
-        >
-          {messages.map((msg) => (
-            <ClarifyMessageBubble key={msg.id} message={msg} />
-          ))}
-          {isLoading && !messages.some((m) => m.isLoading) && (
-            <div className="flex justify-center"
-            >
-              <div className="flex items-center gap-2 text-slate-400 text-sm"
-              >
-                <Loader2 className="w-4 h-4 animate-spin" />
-                AI 正在思考...
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Summary Panel (shown when done) */}
-        {summary && (
-          <div className="max-w-2xl mx-auto mt-6"
-          >
-            <SummaryPanel
-              summary={summary}
-              onProceed={handleProceed}
-              onRegenerate={() => generateSummaryAndShow()}
-              isGenerating={isLoading}
-            />
+    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => (
+          <ClarifyMessageBubble key={msg.id} message={msg} />
+        ))}
+        {isLoading && !currentQuestion && (
+          <div className="flex items-center gap-2 text-slate-400 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>AI 思考中...</span>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      {hasActiveQuestion && (
-        <div className="border-t border-slate-100 bg-white/80 px-4 py-4"
-        >
-          <div className="max-w-2xl mx-auto"
-          >
-            {/* Question indicator */}
-            <div className="flex items-center gap-2 mb-3"
-            >
-              <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-600 text-xs flex items-center justify-center font-medium"
-              >
-                {turnNumber}
-              </span>
-              <span className="text-xs text-slate-400"
-              >
-                {currentQuestion.required ? "必填" : "选填"} · {currentQuestion.type === "choice" ? "单选" : currentQuestion.type === "multichoice" ? "多选" : "问答"}
-              </span>
+      {/* Summary panel */}
+      {summary && (
+        <SummaryPanel
+          summary={summary}
+          onRegenerate={generateSummaryAndShow}
+          isRegenerating={generateSummaryMutation.isPending}
+        />
+      )}
+
+      {/* Input area */}
+      <div className="border-t border-slate-100 p-4 bg-slate-50/50">
+        {currentQuestion ? (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2">
+              <Bot className="w-4 h-4 text-blue-500 mt-1 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-slate-800">{currentQuestion.question}</p>
+                {currentQuestion.why && (
+                  <p className="text-xs text-slate-400 mt-1">{currentQuestion.why}</p>
+                )}
+              </div>
             </div>
 
-            {/* Choice options */}
-            {(currentQuestion.type === "choice" || currentQuestion.type === "multichoice") &&
-              currentQuestion.options && (
-                <div className="flex flex-wrap gap-2 mb-3"
-                >
-                  {currentQuestion.options.map((option) => {
-                    const isSelected = selectedOptions.includes(option)
-                    return (
-                      <button
-                        key={option}
-                        onClick={() => toggleOption(option)}
-                        className={`
-                          px-4 py-2.5 rounded-xl text-sm font-medium transition-all border
-                          ${isSelected
-                            ? "bg-violet-50 border-violet-300 text-violet-700 shadow-sm"
-                            : "bg-white border-slate-200 text-slate-600 hover:border-violet-200 hover:bg-slate-50"
-                          }
-                        `}
-                      >
-                        {option}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-            {/* Text input */}
-            {currentQuestion.type === "text" && (
-              <div className="mb-3"
-              >
-                <Textarea
-                  ref={textareaRef}
-                  value={textAnswer}
-                  onChange={(e) => setTextAnswer(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={currentQuestion.required ? "请输入回答..." : "选填，可留空..."}
-                  className="min-h-[80px] resize-none rounded-xl border-slate-200 focus-visible:ring-violet-200 focus-visible:border-violet-300 bg-white text-sm"
-                />
+            {currentQuestion.type === "choice" && currentQuestion.options && (
+              <div className="grid grid-cols-2 gap-2">
+                {currentQuestion.options.map((option) => (
+                  <Button
+                    key={option}
+                    variant="outline"
+                    className="justify-start text-left h-auto py-2 px-3 rounded-xl"
+                    onClick={() => {
+                      setSelectedOptions([option])
+                      handleAnswerSubmit()
+                    }}
+                  >
+                    {option}
+                  </Button>
+                ))}
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center justify-between"
-            >
-              {!currentQuestion.required && (
+            {currentQuestion.type === "multichoice" && currentQuestion.options && (
+              <div className="space-y-2">
+                {currentQuestion.options.map((option) => (
+                  <Button
+                    key={option}
+                    variant={selectedOptions.includes(option) ? "default" : "outline"}
+                    className="w-full justify-start rounded-xl"
+                    onClick={() => toggleOption(option)}
+                  >
+                    <CheckCircle2
+                      className={`w-4 h-4 mr-2 ${selectedOptions.includes(option) ? "text-white" : "text-slate-300"}`}
+                    />
+                    {option}
+                  </Button>
+                ))}
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSkip}
-                  disabled={isLoading}
-                  className="text-xs text-slate-400 hover:text-slate-600"
-                >
-                  跳过此问题
-                  <ChevronRight className="w-3 h-3 ml-1" />
-                </Button>
-              )}
-              <div className="ml-auto"
-              >
-                <Button
+                  className="w-full rounded-xl"
+                  disabled={!canSubmit()}
                   onClick={handleAnswerSubmit}
-                  disabled={isLoading || (currentQuestion.type === "text" && currentQuestion.required && !textAnswer.trim())}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-violet-200/50"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                  )}
-                  {isLoading ? "处理中..." : turnNumber >= 3 ? "继续" : "回答"}
+                  <Send className="w-4 h-4 mr-2" />
+                  确认选择
                 </Button>
               </div>
-            </div>
+            )}
+
+            {currentQuestion.type === "text" && (
+              <div className="space-y-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={answerText}
+                  onChange={(e) => setAnswerText(e.target.value)}
+                  placeholder="请输入您的回答..."
+                  className="min-h-[80px] rounded-xl resize-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      if (canSubmit()) handleAnswerSubmit()
+                    }
+                  }}
+                />
+                <div className="flex justify-between items-center">
+                  {!currentQuestion.required && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400"
+                      onClick={handleSkip}
+                    >
+                      跳过
+                    </Button>
+                  )}
+                  <Button
+                    className="rounded-xl ml-auto"
+                    disabled={!canSubmit() || isLoading}
+                    onClick={handleAnswerSubmit}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    发送
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center text-sm text-slate-400 py-2">
+            {summary ? "需求澄清已完成 ✓" : "等待 AI 提问..."}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

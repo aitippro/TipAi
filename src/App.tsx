@@ -5,6 +5,7 @@ import Library from "./pages/Library"
 import TemplateMarket from "./pages/TemplateMarket"
 import Login from "./pages/Login"
 import NotFound from "./pages/NotFound"
+import Optimizer from "./pages/Optimizer"
 import About from "./pages/About"
 import Projects from "./pages/Projects"
 import ProjectDetail from "./pages/ProjectDetail"
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/library" element={<Library />} />
             <Route path="/templates" element={<TemplateMarket />} />
+            <Route path="/optimizer" element={<Optimizer />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/login" element={<Login />} />

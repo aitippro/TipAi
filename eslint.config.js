@@ -24,6 +24,7 @@ export default defineConfig([
         argsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
+      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
   {
