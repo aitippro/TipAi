@@ -9,6 +9,7 @@ import Optimizer from "./pages/Optimizer"
 import About from "./pages/About"
 import Projects from "./pages/Projects"
 import ProjectDetail from "./pages/ProjectDetail"
+import Export from "./pages/Export"
 import Sidebar from "./components/Sidebar"
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/optimizer" element={<Optimizer />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/export" element={<Export />} />
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />

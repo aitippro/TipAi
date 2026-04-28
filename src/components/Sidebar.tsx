@@ -28,6 +28,7 @@ import {
   ChevronRight,
   FolderOpen,
   Zap,
+  Download,
 } from "lucide-react"
 
 const navItems = [
@@ -36,6 +37,7 @@ const navItems = [
   { path: "/library", icon: BookOpen, label: "库" },
   { path: "/templates", icon: Store, label: "模板" },
   { path: "/optimizer", icon: Zap, label: "优化" },
+  { path: "/export", icon: Download, label: "导出" },
   { path: "/settings", icon: Settings, label: "设置" },
   { path: "/about", icon: Info, label: "关于" },
 ]
