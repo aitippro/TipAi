@@ -13,6 +13,18 @@ const isDev = !app.isPackaged;
 const userDataPath = app.getPath('userData');
 const dbPath = path.join(userDataPath, 'data.db');
 const BACKEND_PORT = parseInt(process.env.PORT || '3000');
+const LOG_FILE = path.join(userDataPath, 'tipai.log');
+
+// Crash logging
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try { fs.appendFileSync(LOG_FILE, line); } catch {}
+  if (isDev) console.log(msg);
+}
+function logError(msg, err) {
+  log(`ERROR: ${msg}${err ? ' — ' + (err.stack || err.message || err) : ''}`);
+  console.error(msg, err || '');
+}
 
 if (!fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath, { recursive: true });
@@ -195,18 +207,21 @@ function createApplicationMenu() {
 // ==============================
 
 app.whenReady().then(async () => {
+  log('App starting...');
   try {
     await startBackend();
+    log('Backend started');
     createWindow();
     initUpdater(mainWindow);
     createApplicationMenu();
+    log('App ready');
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   } catch (error) {
-    console.error('Failed to start:', error);
-    dialog.showErrorBox('启动失败', error.message);
+    logError('Failed to start', error);
+    dialog.showErrorBox('启动失败', `${error.message}\n\n详细日志: ${LOG_FILE}`);
     app.quit();
   }
 });
@@ -220,4 +235,14 @@ app.on('web-contents-created', (_event, contents) => {
     event.preventDefault();
     shell.openExternal(navigationUrl);
   });
+});
+
+// Catch-all for uncaught errors
+process.on('uncaughtException', (error) => {
+  logError('Uncaught exception', error);
+  dialog.showErrorBox('程序错误', `${error.message}\n\n日志已保存到: ${LOG_FILE}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logError('Unhandled rejection', reason instanceof Error ? reason : new Error(String(reason)));
 });

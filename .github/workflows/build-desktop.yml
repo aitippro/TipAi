@@ -2,11 +2,6 @@ name: Build Desktop
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g. v1.0.0)'
-        required: false
-        default: ''
 
 jobs:
   build-windows:
@@ -19,9 +14,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run build
+      - name: Smoke test backend
+        run: |
+          Start-Process -NoNewWindow -FilePath "node" -ArgumentList "dist/boot.js" -PassThru
+          Start-Sleep -Seconds 5
+          $r = Invoke-WebRequest -Uri "http://localhost:3000/api/trpc/health" -UseBasicParsing -TimeoutSec 10
+          if ($r.StatusCode -ne 200) { throw "Backend not responding" }
+          Write-Host "Backend smoke test passed"
       - run: npm run build:desktop:win -- --publish never
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 0
       - uses: actions/upload-artifact@v4
         with:
           name: TipAi-Windows
@@ -37,9 +38,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run build
+      - name: Smoke test backend
+        run: |
+          node dist/boot.js &
+          sleep 5
+          curl -sf http://localhost:3000/api/trpc/health
+          echo "Backend smoke test passed"
+          kill %1 || true
       - run: npm run build:desktop:mac -- --publish never
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 0
       - uses: actions/upload-artifact@v4
         with:
           name: TipAi-macOS
