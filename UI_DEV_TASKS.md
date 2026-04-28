@@ -246,12 +246,18 @@
 
 ---
 
-## 完成后必须
+## 完成状态
 
-1. **代码检查**: `npm run check` (tsc) + `npm run lint` 全绿
-2. **测试**: 至少运行现有测试 `npm run test`，不引入新错误
-3. **提交**: `git add -A && git commit -m "feat: UI 迭代优化 (U1+U2+U3)" && git push origin main`
-4. **更新本文件**: 完成后将各任务标记为 [x]
+| 任务 | 状态 | 日期 |
+|------|------|------|
+| U1 导航重构 + 工作台 + 工具箱 | [x] 已完成 | 2026-04-28 |
+| U2 Home 首屏重设计 | [x] 已完成 | 2026-04-28 |
+| U3 全局搜索 + 空状态 + 快捷键 | [x] 已完成 | 2026-04-28 |
+
+- `npm run check` ✅ tsc -b 0 errors
+- `npm run lint` ✅ 0 warnings
+- `npm run test` ✅ 19 passed
+- 已推送到 origin/main (commit: 073aee1)
 
 ---
 
