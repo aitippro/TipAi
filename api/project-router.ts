@@ -22,6 +22,14 @@ import {
   deleteProjectSchema,
   getProjectSchema,
 } from "./services/projects/schemas";
+import { z } from "zod";
+import {
+  getProjectPipeline,
+  moveStepStage,
+  linkParentStep,
+  getChildSteps,
+  createLifecycleStep,
+} from "./services/projects/lifecycle";
 
 export const projectRouter = createRouter({
   // List all projects for the user
@@ -122,4 +130,46 @@ export const projectRouter = createRouter({
 
       return result;
     }),
+
+  // F7: Prompt Lifecycle Management
+  getPipeline: authedQuery
+    .input(getProjectSchema)
+    .query(({ input }) => getProjectPipeline(input.id)),
+
+  createStep: authedQuery
+    .input(
+      z.object({
+        projectId: z.number(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        prompt: z.string().min(1),
+        stage: z.enum(["clarify", "design", "implement", "test", "deploy", "maintain"]),
+        parentStepId: z.number().optional(),
+        model: z.string().optional(),
+        temperature: z.number().optional(),
+      })
+    )
+    .mutation(({ input }) => createLifecycleStep(input)),
+
+  moveStep: authedQuery
+    .input(
+      z.object({
+        stepId: z.number(),
+        toStage: z.enum(["clarify", "design", "implement", "test", "deploy", "maintain"]),
+      })
+    )
+    .mutation(({ input }) => moveStepStage(input.stepId, input.toStage)),
+
+  linkStep: authedQuery
+    .input(
+      z.object({
+        stepId: z.number(),
+        parentStepId: z.number(),
+      })
+    )
+    .mutation(({ input }) => linkParentStep(input.stepId, input.parentStepId)),
+
+  getChildSteps: authedQuery
+    .input(z.object({ stepId: z.number() }))
+    .query(({ input }) => getChildSteps(input.stepId)),
 });
