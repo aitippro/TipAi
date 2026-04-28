@@ -179,33 +179,12 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
           "target": "portable",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
       "icon": "public/icon.ico",
       "verifyUpdateCodeSignature": false
-    },
-    "nsis": {
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false,
-      "perMachine": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "TipAi",
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
-      "uninstallDisplayName": "TipAi Desktop",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
