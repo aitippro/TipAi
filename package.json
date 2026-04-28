@@ -5,7 +5,7 @@
   "type": "module",
   "description": "TipAi Desktop - 本地AI提示词工程工具",
   "author": "TipAi Team",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "homepage": ".",
   "scripts": {
     "dev": "vite",

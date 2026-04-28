@@ -3,7 +3,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
-const { initUpdater, getUpdateMenuItems } = require('./updater');
+const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
 // ==============================
 // Electron Main Process
@@ -38,7 +38,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       webSecurity: !isDev,
     },
     backgroundColor: isMacOS ? '#00000000' : '#fafafa',
