@@ -11,14 +11,6 @@ export function required(name: string): string {
   return value;
 }
 
-function requiredInProduction(name: string): string {
-  const value = process.env[name];
-  if (!value && process.env.NODE_ENV === "production") {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value ?? "";
-}
-
 // Desktop app: use SQLite in user data directory
 // Web app: use DATABASE_URL from env
 function getDatabaseUrl(): string {
@@ -45,8 +37,8 @@ export const env = {
   appSecret: process.env.APP_SECRET || "tipai-desktop-secret",
   isProduction: process.env.NODE_ENV === "production",
   databaseUrl: getDatabaseUrl(),
-  kimiAuthUrl: requiredInProduction("KIMI_AUTH_URL"),
-  kimiOpenUrl: requiredInProduction("KIMI_OPEN_URL"),
+  kimiAuthUrl: process.env.KIMI_AUTH_URL || "", // Optional: only needed for Kimi OAuth login
+  kimiOpenUrl: process.env.KIMI_OPEN_URL || "https://api.moonshot.cn",
   ownerUnionId: process.env.OWNER_UNION_ID ?? "",
   // Cloud sync (reserved for future)
   cloudSyncUrl: process.env.CLOUD_SYNC_URL || "",
