@@ -20,7 +20,6 @@ import {
   User,
   LogOut,
   Wand2,
-  Store,
   Settings,
   Menu,
   Info,
@@ -28,16 +27,13 @@ import {
   ChevronRight,
   FolderOpen,
   Zap,
-  Download,
 } from "lucide-react"
 
 const navItems = [
-  { path: "/", icon: Sparkles, label: "生成" },
-  { path: "/projects", icon: FolderOpen, label: "项目" },
-  { path: "/library", icon: BookOpen, label: "库" },
-  { path: "/templates", icon: Store, label: "模板" },
-  { path: "/optimizer", icon: Zap, label: "优化" },
-  { path: "/export", icon: Download, label: "导出" },
+  { path: "/", icon: Sparkles, label: "开始" },
+  { path: "/workspace", icon: FolderOpen, label: "工作台" },
+  { path: "/library", icon: BookOpen, label: "资源" },
+  { path: "/toolbox", icon: Zap, label: "工具箱" },
   { path: "/settings", icon: Settings, label: "设置" },
   { path: "/about", icon: Info, label: "关于" },
 ]

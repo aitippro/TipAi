@@ -10,7 +10,40 @@ import { ClarifyChatPanel } from "@/components/clarify/ClarifyChatPanel"
 import type { RequirementSummary } from "@/components/clarify/types"
 import { HomeHeroSection } from "@/components/home/HomeHeroSection"
 import { HowItWorksSection } from "@/components/home/HowItWorksSection"
+import { SceneCards } from "@/components/home/SceneCards"
 import { SLASH_COMMANDS } from "@/components/home/config"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { FolderOpen } from "lucide-react"
+import { Link } from "react-router"
+
+function RecentProjects() {
+  const { data: projects } = trpc.project.list.useQuery(undefined, {
+    enabled: true,
+  });
+
+  if (!projects || projects.length === 0) return null;
+
+  const recent = projects.slice(0, 4);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {recent.map((p) => (
+        <Link key={p.id} to={`/workspace`}>
+          <Card className="border-0 shadow-sm rounded-2xl bg-white/80 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="p-4 flex items-center gap-3">
+              <FolderOpen className="w-5 h-5 text-violet-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{p.title}</p>
+                <p className="text-xs text-slate-400">{p.domain}</p>
+              </div>
+              <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
   const [intent, setIntent] = useState("")
@@ -113,6 +146,18 @@ export default function Home() {
         onStepModeToggle={() => setStepMode((current) => !current)}
         onStartGenerate={handleStartGenerate}
       />
+
+      {/* Scene cards */}
+      <div className="max-w-3xl mx-auto px-6 mt-10">
+        <p className="text-sm font-medium text-slate-500 mb-4 text-center">快速开始</p>
+        <SceneCards onSelect={setIntent} />
+      </div>
+
+      {/* Recent projects */}
+      <div className="max-w-3xl mx-auto px-6 mt-12 pb-12">
+        <p className="text-sm font-medium text-slate-500 mb-4">最近项目</p>
+        <RecentProjects />
+      </div>
 
       {showClarify && clarifyProjectId !== null && (
         <ClarifyChatPanel

@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Routes, Route } from "react-router"
 import Home from "./pages/Home"
 import Settings from "./pages/Settings"
@@ -10,17 +11,29 @@ import About from "./pages/About"
 import Projects from "./pages/Projects"
 import ProjectDetail from "./pages/ProjectDetail"
 import Export from "./pages/Export"
+import Workspace from "./pages/Workspace"
+import Toolbox from "./pages/Toolbox"
 import Sidebar from "./components/Sidebar"
+import { CommandPalette } from "./components/search/CommandPalette"
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
 export default function App() {
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useKeyboardShortcuts([
+    { key: "k", metaKey: true, handler: () => setSearchOpen(true) },
+  ])
+
   return (
     <div className="min-h-screen bg-background antialiased flex">
       <Sidebar />
-      {/* 主内容区 - 桌面端留出侧边栏宽度，移动端留出顶部导航栏高度 */}
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <main className="flex-1 min-h-screen md:ml-[220px] pt-14 md:pt-0 transition-all duration-300 ease-apple">
         <div className="h-full">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/workspace" element={<Workspace />} />
+            <Route path="/toolbox" element={<Toolbox />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/library" element={<Library />} />
             <Route path="/templates" element={<TemplateMarket />} />
