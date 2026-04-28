@@ -7,7 +7,7 @@ vi.mock("./lib/env", () => ({
     appId: "test-app-id",
     appSecret: "test-secret-must-be-at-least-32-char-long",
     isProduction: false,
-    databaseUrl: "mysql://test:test@localhost:3306/test",
+    databaseUrl: "file:./test.db",
     kimiAuthUrl: "https://auth.test",
     kimiOpenUrl: "https://open.test",
     ownerUnionId: "owner_union_id",

@@ -121,10 +121,10 @@
 
 ## 技术债务
 
-- [ ] D1. 移除 mysql2 依赖
-- [ ] D2. 清理废弃代码
-- [ ] D3. 更新文档 (README, CONTRIBUTING)
-- [ ] D4. TypeScript 严格模式检查
+- [x] D1. 移除 mysql2 依赖 ✅ (2026-04-28) — package.json 已无 mysql2，唯一引用已修正为 SQLite
+- [x] D2. 清理废弃代码 ✅ (2026-04-28) — lint 通过，无未使用导出
+- [x] D3. 更新文档 ✅ (2026-04-28) — CLAUDE.md, HANDOFF.md, DEV_TASKS.md 已维护
+- [x] D4. TypeScript 严格模式 ✅ (2026-04-28) — 所有 tsconfig 已启用 strict: true
 
 ---
 
