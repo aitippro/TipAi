@@ -20,61 +20,42 @@ const queryClient = new QueryClient({
   },
 });
 
-interface ElectronAPI {
-  platform?: string;
-  fetch(path: string, opts: { method: string; headers: Record<string, string>; body: string | null }): Promise<{ status: number; statusText: string; headers: Record<string, string>; body: string }>;
-}
-declare global { interface Window { electronAPI?: ElectronAPI } }
-
-// Custom fetch: uses Electron IPC in desktop, HTTP in browser
-function createFetch() {
-  const isElectron = typeof window !== 'undefined' && window.electronAPI?.fetch;
-
-  if (isElectron) {
-    return async function ipcFetch(input: RequestInfo | URL, init?: RequestInit) {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.pathname + input.search : (input as Request).url;
-      const method = init?.method || 'GET';
-      const headers: Record<string, string> = {};
-      if (init?.headers) {
-        if (init.headers instanceof Headers) {
-          init.headers.forEach((v, k) => { headers[k] = v; });
-        } else if (Array.isArray(init.headers)) {
-          init.headers.forEach(([k, v]) => { headers[k] = v; });
-        } else {
-          Object.assign(headers, init.headers);
-        }
-      }
-      const body = init?.body ? (typeof init.body === 'string' ? init.body : await (init.body as Blob).text()) : null;
-
-      const result = await window.electronAPI!.fetch(url, { method, headers, body });
-      return new Response(result.body, {
-        status: result.status,
-        statusText: result.statusText,
-        headers: new Headers(result.headers),
-      });
-    };
+// IPC fetch for Electron, HTTP fetch for browser — checked at call time
+const customFetch: typeof globalThis.fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : (input instanceof URL ? input.pathname + input.search : (input as Request).url);
+  const method = init?.method || 'GET';
+  const headers: Record<string, string> = {};
+  if (init?.headers) {
+    const h = init.headers;
+    if (h instanceof Headers) { h.forEach((v, k) => { headers[k] = v; }); }
+    else if (Array.isArray(h)) { h.forEach(([k, v]) => { headers[k] = v; }); }
+    else { Object.assign(headers, h); }
+  }
+  let body: string | null = null;
+  if (init?.body) {
+    if (typeof init.body === 'string') body = init.body;
+    else if (init.body instanceof FormData) body = new URLSearchParams(init.body as any).toString();
+    else body = await (init.body as Blob).text();
   }
 
-  return (input: RequestInfo | URL, init?: RequestInit) =>
-    globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
-}
+  // Use Electron IPC if available
+  if ((window as any).electronAPI?.fetch) {
+    const r = await (window as any).electronAPI.fetch(url, { method, headers, body });
+    return new Response(r.body, { status: r.status, statusText: r.statusText, headers: new Headers(r.headers) });
+  }
+
+  // Browser mode
+  return globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
+};
 
 const trpcClient = trpc.createClient({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      fetch: createFetch(),
-    }),
-  ],
+  links: [httpBatchLink({ url: "/api/trpc", transformer: superjson, fetch: customFetch })],
 });
 
 export function TRPCProvider({ children }: { children: ReactNode }) {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </trpc.Provider>
   );
 }
