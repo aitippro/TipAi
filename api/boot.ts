@@ -130,7 +130,7 @@ if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_ELECTRON) {
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");
-  serve({ fetch: app.fetch, port }, () => {
+  serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
 }

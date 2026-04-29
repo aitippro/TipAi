@@ -90,7 +90,7 @@ async function startBackend() {
   serveStaticFiles(app);
 
   return new Promise((resolve, reject) => {
-    const server = serve({ fetch: app.fetch, port: 0 }, () => {
+    const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' }, () => {
       const addr = server.address();
       if (addr && typeof addr === 'object') {
         backendPort = addr.port;
