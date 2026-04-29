@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  ci:
+    name: CI Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  release-windows:
+    name: Windows Release
+    needs: ci
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Smoke test
+        run: |
+          $proc = Start-Process -NoNewWindow -FilePath "node" -ArgumentList "dist/boot.js" -PassThru
+          for ($i = 0; $i -lt 10; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $r = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -UseBasicParsing -TimeoutSec 3
+              if ($r.StatusCode -eq 200) { Write-Host "OK"; break }
+            } catch {}
+          }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+      - run: npm run build:desktop:win -- --publish never
+      - uses: actions/upload-artifact@v4
+        with: { name: TipAi-Windows-Portable, path: release/*.exe }
+
+  release-macos:
+    name: macOS Release
+    needs: ci
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Smoke test
+        run: |
+          node dist/boot.js &
+          for i in $(seq 1 10); do sleep 2; curl -sf http://localhost:3000/api/health && echo "OK" && break; done
+          kill %1 2>/dev/null || true
+      - run: npm run build:desktop:mac -- --publish never
+      - uses: actions/upload-artifact@v4
+        with: { name: TipAi-macOS, path: release/*.dmg }

@@ -10,10 +10,15 @@ const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 // ==============================
 
 const isDev = !app.isPackaged;
-const userDataPath = app.getPath('userData');
-const dbPath = path.join(userDataPath, 'data.db');
+// Portable mode: store everything in app directory
+const appDir = isDev ? __dirname : path.dirname(app.getPath('exe'));
+const dataDir = path.join(appDir, 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const dbPath = path.join(dataDir, 'tipai.db');
 const BACKEND_PORT = parseInt(process.env.PORT || '3000');
-const LOG_FILE = path.join(userDataPath, 'tipai.log');
+const LOG_FILE = path.join(dataDir, 'tipai.log');
+const EXPORT_DIR = path.join(dataDir, 'exports');
+if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
 // Crash logging
 function log(msg) {
@@ -26,8 +31,8 @@ function logError(msg, err) {
   console.error(msg, err || '');
 }
 
-if (!fs.existsSync(userDataPath)) {
-  fs.mkdirSync(userDataPath, { recursive: true });
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
 }
 
 let mainWindow;
@@ -102,7 +107,7 @@ ipcMain.handle('app:getInfo', () => ({
   version: app.getVersion(),
   platform: process.platform,
   dbPath,
-  userDataPath,
+  dataDir,
   isDev,
 }));
 
