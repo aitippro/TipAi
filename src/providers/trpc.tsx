@@ -21,6 +21,7 @@ const queryClient = new QueryClient({
 });
 
 interface ElectronAPI {
+  platform?: string;
   fetch(path: string, opts: { method: string; headers: Record<string, string>; body: string | null }): Promise<{ status: number; statusText: string; headers: Record<string, string>; body: string }>;
 }
 declare global { interface Window { electronAPI?: ElectronAPI } }
