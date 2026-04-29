@@ -20,9 +20,14 @@ const queryClient = new QueryClient({
   },
 });
 
+interface ElectronAPI {
+  fetch(path: string, opts: { method: string; headers: Record<string, string>; body: string | null }): Promise<{ status: number; statusText: string; headers: Record<string, string>; body: string }>;
+}
+declare global { interface Window { electronAPI?: ElectronAPI } }
+
 // Custom fetch: uses Electron IPC in desktop, HTTP in browser
 function createFetch() {
-  const isElectron = typeof window !== 'undefined' && (window as any).electronAPI?.fetch;
+  const isElectron = typeof window !== 'undefined' && window.electronAPI?.fetch;
 
   if (isElectron) {
     return async function ipcFetch(input: RequestInfo | URL, init?: RequestInit) {
@@ -40,7 +45,7 @@ function createFetch() {
       }
       const body = init?.body ? (typeof init.body === 'string' ? init.body : await (init.body as Blob).text()) : null;
 
-      const result = await (window as any).electronAPI.fetch(url, { method, headers, body });
+      const result = await window.electronAPI!.fetch(url, { method, headers, body });
       return new Response(result.body, {
         status: result.status,
         statusText: result.statusText,
