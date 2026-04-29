@@ -246,7 +246,17 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
+  process.exit(0);
+});
+
+app.on('before-quit', () => {
+  mainWindow = null;
+});
+
+// Force cleanup on all exits
+process.on('exit', () => {
+  try { require('child_process').execSync('taskkill /F /IM TipAi.exe /T 2>nul'); } catch {}
 });
 
 app.on('web-contents-created', (_event, contents) => {
