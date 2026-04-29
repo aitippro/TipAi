@@ -120,10 +120,11 @@ app.use("/api/trpc/*", async (c) => {
 app.get("/api/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
+export { serveStaticFiles } from "./lib/vite";
 export default app;
 
-// Start HTTP server only in non-IPC mode (standalone, not Electron)
-if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_IPC_MODE) {
+// Auto-start server in standalone mode (not dev, not Electron-managed)
+if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_ELECTRON) {
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
