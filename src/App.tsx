@@ -54,7 +54,7 @@ export default function App() {
       <div className={`flex flex-1 transition-all duration-700 ease-apple ${appReady ? "opacity-100" : "opacity-0"}`}>
         <Sidebar />
         <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
-        <main className="flex-1 h-screen overflow-hidden md:ml-[220px] pt-14 md:pt-0">
+        <main className="flex-1 min-h-screen md:ml-[220px] pt-14 md:pt-0 pb-8">
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />

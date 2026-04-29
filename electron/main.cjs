@@ -15,10 +15,24 @@ const appDir = isDev ? __dirname : path.dirname(app.getPath('exe'));
 const dataDir = path.join(appDir, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'tipai.db');
-const BACKEND_PORT = parseInt(process.env.PORT || '3000');
 const LOG_FILE = path.join(dataDir, 'tipai.log');
 const EXPORT_DIR = path.join(dataDir, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
+
+// Find available port (try 3000-3010)
+function findPort(start = 3000) {
+  const net = require('net');
+  for (let p = start; p < start + 10; p++) {
+    try {
+      const s = new net.Server();
+      s.listen(p);
+      s.close();
+      return p;
+    } catch {}
+  }
+  return start;
+}
+const BACKEND_PORT = findPort(parseInt(process.env.PORT || '3000'));
 
 // Crash logging
 function log(msg) {
