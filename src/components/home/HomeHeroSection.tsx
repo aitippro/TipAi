@@ -57,7 +57,7 @@ export function HomeHeroSection({
         </p>
 
         <div className="relative max-w-2xl mx-auto">
-          <div className="glass-card rounded-3xl shadow-2xl shadow-slate-200/40 overflow-hidden">
+          <div className="glass-card rounded-3xl shadow-2xl shadow-slate-200/40">
             <div className="p-6 pb-3">
               <Textarea
                 ref={textareaRef}

@@ -1,30 +1,23 @@
-import { useState, useEffect, lazy, Suspense } from "react"
+import { useState, useEffect } from "react"
 import { Routes, Route } from "react-router"
+import Home from "./pages/Home"
+import Settings from "./pages/Settings"
+import Library from "./pages/Library"
+import TemplateMarket from "./pages/TemplateMarket"
+import Login from "./pages/Login"
+import NotFound from "./pages/NotFound"
+import Optimizer from "./pages/Optimizer"
+import About from "./pages/About"
+import Projects from "./pages/Projects"
+import ProjectDetail from "./pages/ProjectDetail"
+import Export from "./pages/Export"
+import Workspace from "./pages/Workspace"
+import Toolbox from "./pages/Toolbox"
 import Sidebar from "./components/Sidebar"
 import { CommandPalette } from "./components/search/CommandPalette"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { Onboarding } from "./components/Onboarding"
 import { isFirstLaunch, markOnboarded } from "./lib/onboarding"
-import { Spinner } from "./components/ui/spinner"
-
-// Lazy-load pages for code splitting (reduces initial bundle)
-const Home = lazy(() => import("./pages/Home"))
-const Settings = lazy(() => import("./pages/Settings"))
-const Library = lazy(() => import("./pages/Library"))
-const TemplateMarket = lazy(() => import("./pages/TemplateMarket"))
-const Login = lazy(() => import("./pages/Login"))
-const NotFound = lazy(() => import("./pages/NotFound"))
-const Optimizer = lazy(() => import("./pages/Optimizer"))
-const About = lazy(() => import("./pages/About"))
-const Projects = lazy(() => import("./pages/Projects"))
-const ProjectDetail = lazy(() => import("./pages/ProjectDetail"))
-const Export = lazy(() => import("./pages/Export"))
-const Workspace = lazy(() => import("./pages/Workspace"))
-const Toolbox = lazy(() => import("./pages/Toolbox"))
-
-function PageLoader() {
-  return <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
-}
 
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -39,7 +32,6 @@ export default function App() {
     const t1 = setTimeout(() => {
       if (isFirstLaunch()) {
         setShowOnboarding(true)
-        // appReady stays false until onboarding completes
       } else {
         setAppReady(true)
       }
@@ -47,15 +39,21 @@ export default function App() {
     return () => clearTimeout(t1)
   }, [])
 
+  const handleOnboardingComplete = () => {
+    markOnboarded()
+    setShowOnboarding(false)
+    setAppReady(true)
+  }
+
   return (
     <div className="min-h-screen bg-background antialiased flex">
-      {showOnboarding && <Onboarding onComplete={() => { markOnboarded(); setShowOnboarding(false); setAppReady(true) }} />}
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
 
-      <div className={`flex flex-1 transition-all duration-700 ease-apple ${appReady ? "opacity-100" : "opacity-0"}`}>
+      <div className={`flex flex-1 transition-opacity duration-500 ${appReady ? "opacity-100" : "opacity-0"}`}>
         <Sidebar />
         <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
         <main className="flex-1 min-h-screen md:ml-[220px] pt-14 md:pt-0 pb-8">
-          <Suspense fallback={<PageLoader />}>
+          <div className="h-full">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/workspace" element={<Workspace />} />
@@ -71,7 +69,7 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Suspense>
+          </div>
         </main>
       </div>
     </div>

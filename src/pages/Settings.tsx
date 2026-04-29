@@ -41,12 +41,15 @@ export default function SettingsPage() {
   })
 
   const handleSave = () => {
-    const payload: Record<string, string | undefined> = { defaultModel }
+    const payload: Record<string, string> = { defaultModel }
     MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
-    updateMutation.mutate(payload)
+    if (Object.keys(payload).length > 0) {
+      updateMutation.mutate(payload)
+    }
     localStorage.setItem("tipai_global_prompt", globalPrompt)
     localStorage.setItem("tipai_cloud_sync", String(cloudSync))
     localStorage.setItem("tipai_theme", theme)
+    toast.success("本地设置已保存")
   }
 
   const toggleShow = (k: string) => setShowKeys((p) => ({ ...p, [k]: !p[k] }))
