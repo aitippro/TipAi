@@ -166,14 +166,15 @@ describe("auth-router", () => {
       expect(setCookie).toContain("Max-Age=604800"); // 7 days
     });
 
-    it("throws FORBIDDEN in production", async () => {
+    it("creates demo user in production (local mode)", async () => {
       env.isProduction = true;
+      const demoUser: User = { id: 99, unionId: "demo-user-abcdef", username: null, password: null, name: "演示用户", email: null, avatar: null, role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignInAt: new Date() };
+      vi.mocked(upsertUser).mockResolvedValue(undefined);
+      vi.mocked(findUserByUnionId).mockResolvedValue(demoUser);
+      vi.mocked(signSessionToken).mockResolvedValue("demo-jwt-token");
       const caller = authRouter.createCaller(mockContext());
-      await expect(caller.demoLogin()).rejects.toBeInstanceOf(TRPCError);
-      await expect(caller.demoLogin()).rejects.toMatchObject({
-        code: "FORBIDDEN",
-        message: "Demo login disabled in production",
-      });
+      const result = await caller.demoLogin();
+      expect(result.success).toBe(true);
     });
 
     it("throws internal error when demo user creation fails", async () => {
@@ -275,15 +276,15 @@ describe("auth-router", () => {
       });
     });
 
-    it("throws FORBIDDEN in production", async () => {
+    it("processes local login in production (local mode)", async () => {
       env.isProduction = true;
+      const mockUser: User = { id: 1, unionId: "local", username: "devuser", password: "hashed_password", name: "Dev", email: null, avatar: null, role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignInAt: new Date() };
+      vi.mocked(findUserByUsername).mockResolvedValue(mockUser);
+      vi.mocked(verifyPassword).mockResolvedValue(true);
+      vi.mocked(signSessionToken).mockResolvedValue("jwt");
       const caller = authRouter.createCaller(mockContext());
-      await expect(
-        caller.localLogin({ username: "devuser", password: "any" }),
-      ).rejects.toMatchObject({
-        code: "FORBIDDEN",
-        message: "Local login disabled in production",
-      });
+      const result = await caller.localLogin({ username: "devuser", password: "correct" });
+      expect(result.success).toBe(true);
     });
 
     it("rejects input schema violations", async () => {
