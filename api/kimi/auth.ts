@@ -34,11 +34,11 @@ function verifyState(state: string): { redirectUri: string } | null {
 }
 
 export function buildOAuthUrl(redirectUri: string): string {
-  if (!env.kimiAuthUrl) {
+  if (!process.env.KIMI_AUTH_URL || "") {
     throw new Error("KIMI_AUTH_URL is not configured — OAuth login unavailable");
   }
   const { state } = signState(redirectUri);
-  const url = new URL(`${env.kimiAuthUrl}/api/oauth/authorize`);
+  const url = new URL(`${process.env.KIMI_AUTH_URL || ""}/api/oauth/authorize`);
   url.searchParams.set("client_id", env.appId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
@@ -51,7 +51,7 @@ async function exchangeAuthCode(
   code: string,
   redirectUri: string,
 ): Promise<TokenResponse> {
-  if (!env.kimiAuthUrl) {
+  if (!process.env.KIMI_AUTH_URL || "") {
     throw new Error("KIMI_AUTH_URL is not configured");
   }
   const body = new URLSearchParams({
@@ -62,7 +62,7 @@ async function exchangeAuthCode(
     client_secret: env.appSecret,
   });
 
-  const resp = await fetch(`${env.kimiAuthUrl}/api/oauth/token`, {
+  const resp = await fetch(`${process.env.KIMI_AUTH_URL || ""}/api/oauth/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -80,11 +80,11 @@ let _jwks: ReturnType<typeof jose.createRemoteJWKSet> | null = null;
 
 function getJwks() {
   if (!_jwks) {
-    if (!env.kimiAuthUrl) {
+    if (!process.env.KIMI_AUTH_URL || "") {
       throw new Error("KIMI_AUTH_URL is not configured");
     }
     _jwks = jose.createRemoteJWKSet(
-      new URL(`${env.kimiAuthUrl}/api/.well-known/jwks.json`),
+      new URL(`${process.env.KIMI_AUTH_URL || ""}/api/.well-known/jwks.json`),
     );
   }
   return _jwks;

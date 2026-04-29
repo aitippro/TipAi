@@ -1,5 +1,3 @@
-import { env } from "./env";
-
 export interface DecomposedStep {
   title: string;
   description: string;
@@ -199,7 +197,7 @@ async function callKimiAPI(
   }
 
   try {
-    const apiUrl = `${env.kimiOpenUrl}/v1/chat/completions`;
+    const apiUrl = `https://api.moonshot.cn/v1/chat/completions`;
 
     const response = await fetch(apiUrl, {
       method: "POST",

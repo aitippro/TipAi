@@ -8,8 +8,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
-import { createOAuthCallbackHandler, buildOAuthUrl } from "./kimi/auth";
-import { Paths } from "@contracts/constants";
+
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -46,23 +45,6 @@ app.use("/api/*", cors({
 
 // Body size limit - 5MB for API requests (generous but safe)
 app.use("/api/*", bodyLimit({ maxSize: 5 * 1024 * 1024 }));
-
-// OAuth URL generator (signed state with CSRF nonce)
-app.get("/api/oauth/url", (c) => {
-  const redirectUri = c.req.query("redirect_uri");
-  if (!redirectUri) {
-    return c.json({ error: "redirect_uri is required" }, 400);
-  }
-  try {
-    const url = buildOAuthUrl(redirectUri);
-    return c.json({ url });
-  } catch {
-    return c.json({ error: "Failed to build OAuth URL" }, 500);
-  }
-});
-
-// OAuth callback
-app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 
 // Rate limiting middleware (in-memory, per IP)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();

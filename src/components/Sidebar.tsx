@@ -18,7 +18,6 @@ import {
   Sparkles,
   BookOpen,
   User,
-  LogOut,
   Wand2,
   Settings,
   Menu,
@@ -60,7 +59,6 @@ interface SidebarContentProps {
   location: Location
   user: UserInfo | null
   isAuthenticated: boolean
-  logout: () => void
   setMobileOpen?: (open: boolean) => void
 }
 
@@ -68,11 +66,10 @@ function SidebarContent({
   isMobile = false, 
   collapsed = false, 
   isMacOS, 
-  location, 
-  user, 
-  isAuthenticated, 
-  logout,
-  setMobileOpen 
+  location,
+  user,
+  isAuthenticated,
+  setMobileOpen
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
@@ -152,12 +149,10 @@ function SidebarContent({
               side={collapsed ? "right" : "top"}
               className="w-48 rounded-xl shadow-xl border-border/50"
             >
-              <DropdownMenuItem 
-                onClick={logout} 
-                className="text-red-500 cursor-pointer rounded-lg mx-1 my-1 hover:bg-red-50 focus:bg-red-50"
+              <DropdownMenuItem
+                className="text-slate-400 cursor-default rounded-lg mx-1 my-1"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                退出登录
+                本地模式
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -181,7 +176,7 @@ function SidebarContent({
 }
 
 export default function Sidebar() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [platform] = useState(() => getPlatform())
@@ -203,7 +198,6 @@ export default function Sidebar() {
           location={location}
           user={user}
           isAuthenticated={isAuthenticated}
-          logout={logout}
         />
         
         {/* 折叠/展开按钮 */}
@@ -246,8 +240,7 @@ export default function Sidebar() {
                 location={location}
                 user={user}
                 isAuthenticated={isAuthenticated}
-                logout={logout}
-                setMobileOpen={setMobileOpen}
+                      setMobileOpen={setMobileOpen}
               />
             </SheetContent>
           </Sheet>

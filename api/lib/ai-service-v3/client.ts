@@ -1,11 +1,9 @@
-import { env } from "../env";
-
 const MODEL_CONFIGS: Record<
   string,
   { baseUrl: string; modelId: string; name: string }
 > = {
   kimi: {
-    baseUrl: env.kimiOpenUrl + "/v1/chat/completions",
+    baseUrl: "https://api.moonshot.cn/v1/chat/completions",
     modelId: "moonshot-v1-8k",
     name: "Kimi",
   },

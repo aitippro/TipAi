@@ -1,5 +1,3 @@
-import { env } from "./env";
-
 // ============================================
 // TipAi v2 - Enhanced AI Service
 // ============================================
@@ -167,7 +165,7 @@ async function callKimiAPI(systemPrompt: string, userMessage: string, temperatur
   const apiKey = process.env.KIMI_API_KEY || "";
   if (!apiKey) { console.warn("KIMI_API_KEY not set"); return null; }
   try {
-    const response = await fetch(`${env.kimiOpenUrl}/v1/chat/completions`, {
+    const response = await fetch(`https://api.moonshot.cn/v1/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({

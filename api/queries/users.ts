@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import * as schema from "@db/schema";
 import type { InsertUser } from "@db/schema";
 import { getDb } from "./connection";
-import { env } from "../lib/env";
 
 export async function findUserByUnionId(unionId: string) {
   const rows = await getDb()
@@ -29,11 +28,8 @@ export async function upsertUser(data: InsertUser) {
     ...data,
   };
 
-  if (
-    values.role === undefined &&
-    values.unionId &&
-    values.unionId === env.ownerUnionId
-  ) {
+  // Local mode: first user is admin
+  if (values.role === undefined && values.unionId) {
     values.role = "admin";
     updateSet.role = "admin";
   }

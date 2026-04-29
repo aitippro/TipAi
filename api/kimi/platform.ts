@@ -1,12 +1,13 @@
-import { env } from "../lib/env";
 import type { UserProfile } from "./types";
+
+const KIMI_OPEN_URL = "https://api.moonshot.cn";
 
 async function kimiRequest<T>(
   path: string,
   token: string,
   init?: RequestInit,
 ): Promise<T | null> {
-  const resp = await fetch(`${env.kimiOpenUrl}${path}`, {
+  const resp = await fetch(`${KIMI_OPEN_URL}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",

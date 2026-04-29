@@ -14,7 +14,6 @@ import {
   Sparkles,
   BookOpen,
   User,
-  LogOut,
   Wand2,
   Store,
   Settings,
@@ -31,7 +30,7 @@ const navItems = [
 ]
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
@@ -94,9 +93,8 @@ export default function Navbar() {
                       <span className="text-xs text-slate-400">{user?.email || ""}</span>
                     </div>
                   </div>
-                  <DropdownMenuItem onClick={logout} className="text-red-500 cursor-pointer rounded-xl mx-1 my-1 hover:bg-red-50 focus:bg-red-50">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    退出登录
+                  <DropdownMenuItem className="text-slate-400 cursor-default rounded-xl mx-1 my-1">
+                    本地模式
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
