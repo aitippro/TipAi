@@ -13,20 +13,15 @@ import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16; // 128-bit IV for GCM
 const TAG_LENGTH = 16; // 128-bit auth tag
-import { env } from "./env";
 
 const SECRET = process.env.API_KEY_SECRET;
 const RUNTIME_FALLBACK_KEY = SECRET ? null : randomBytes(32);
 
-if (!SECRET && env.isProduction) {
-  throw new Error("API_KEY_SECRET is required in production");
-}
-
 if (!SECRET) {
   console.warn(
     "[SECURITY] API_KEY_SECRET environment variable is not set. " +
-    "Using an ephemeral development-only fallback key. " +
-    "Stored API keys will not survive a restart without API_KEY_SECRET."
+    "Using a runtime-generated encryption key. " +
+    "Set API_KEY_SECRET to persist encrypted keys across app restarts."
   );
 }
 
