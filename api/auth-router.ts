@@ -30,13 +30,6 @@ export const authRouter = createRouter({
   
   // Demo login for non-localhost environments (deployed sites)
   demoLogin: publicQuery.mutation(async ({ ctx }) => {
-    if (env.isProduction) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Demo login disabled in production",
-      });
-    }
-
     const demoUnionId = "demo-user-" + Math.random().toString(36).slice(2, 10);
     await upsertUser({
       unionId: demoUnionId,
@@ -76,13 +69,6 @@ export const authRouter = createRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (env.isProduction) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Local login disabled in production",
-        });
-      }
-
       const user = await findUserByUsername(input.username);
       if (!user || !user.password) {
         throw new TRPCError({
