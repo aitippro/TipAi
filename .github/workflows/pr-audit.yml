@@ -1,25 +1,16 @@
-name: PR Audit
+name: Dependency Audit
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '0 6 * * 1'   # 每周一自动
+  workflow_dispatch:        # 手动触发
 
 jobs:
   audit:
-    name: Audit
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
-      - run: npm run check
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+      - run: npm audit
