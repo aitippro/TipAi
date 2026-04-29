@@ -151,11 +151,13 @@ CI 管线：`tsc -b` → `eslint` → `vitest` → `build`
 
 | 文档 | 说明 |
 |------|------|
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本记录 |
-| [ATTRIBUTION.md](./ATTRIBUTION.md) | 致谢与引用 |
 | [LICENSE.md](./LICENSE.md) | 许可协议 |
-| [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md) | 安全检查清单 |
+| [贡献指南](./docs/CONTRIBUTING.md) | 如何贡献 |
+| [版本记录](./docs/CHANGELOG.md) | 变更日志 |
+| [致谢引用](./docs/ATTRIBUTION.md) | 论文与框架来源 |
+| [安全检查](./docs/SECURITY_CHECKLIST.md) | 安全清单 |
+| [路线图](./docs/ROADMAP.md) | 未来规划 |
+| [迭代计划](./docs/ITERATION_PROGRESS.md) | 开发进度 |
 
 ---
 
