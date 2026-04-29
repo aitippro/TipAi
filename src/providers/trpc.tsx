@@ -34,13 +34,14 @@ const customFetch: typeof globalThis.fetch = async (input, init) => {
   let body: string | null = null;
   if (init?.body) {
     if (typeof init.body === 'string') body = init.body;
-    else if (init.body instanceof FormData) body = new URLSearchParams(init.body as any).toString();
-    else body = await (init.body as Blob).text();
+    else if (init.body instanceof FormData) body = new URLSearchParams([...(init.body as unknown as [string, string][])]).toString();
+    else body = await (init.body as ReadableStream<Uint8Array>).getReader().read().then(r => r.value ? new TextDecoder().decode(r.value) : '');
   }
 
   // Use Electron IPC if available
-  if ((window as any).electronAPI?.fetch) {
-    const r = await (window as any).electronAPI.fetch(url, { method, headers, body });
+  const api = window.electronAPI;
+  if (api?.fetch) {
+    const r = await api.fetch(url, { method, headers, body });
     return new Response(r.body, { status: r.status, statusText: r.statusText, headers: new Headers(r.headers) });
   }
 
