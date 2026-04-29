@@ -43,6 +43,10 @@ jobs:
       - run: npm run build:desktop:win -- --publish never
       - uses: actions/upload-artifact@v4
         with: { name: TipAi-Windows-Portable, path: release/*.exe }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   release-macos:
     name: macOS Release
@@ -62,3 +66,7 @@ jobs:
       - run: npm run build:desktop:mac -- --publish never
       - uses: actions/upload-artifact@v4
         with: { name: TipAi-macOS, path: release/*.dmg }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.dmg
+          token: ${{ secrets.GITHUB_TOKEN }}
