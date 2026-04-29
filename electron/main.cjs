@@ -1,16 +1,15 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { pathToFileURL } = require('url');
+const { pathToFileURL, fileURLToPath } = require('url');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
 // ==============================
-// Electron Main Process
-// TipAi Desktop App
+// TipAi Desktop — IPC Architecture
+// No HTTP port needed in production
 // ==============================
 
 const isDev = !app.isPackaged;
-// Portable mode: store everything in app directory
 const appDir = isDev ? __dirname : path.dirname(app.getPath('exe'));
 const dataDir = path.join(appDir, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
@@ -19,22 +18,9 @@ const LOG_FILE = path.join(dataDir, 'tipai.log');
 const EXPORT_DIR = path.join(dataDir, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
-// Find available port (try 3000-3010)
-function findPort(start = 3000) {
-  const net = require('net');
-  for (let p = start; p < start + 10; p++) {
-    try {
-      const s = new net.Server();
-      s.listen(p);
-      s.close();
-      return p;
-    } catch {}
-  }
-  return start;
-}
-const BACKEND_PORT = findPort(parseInt(process.env.PORT || '3000'));
+let mainWindow;
+let honoApp = null;
 
-// Crash logging
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   try { fs.appendFileSync(LOG_FILE, line); } catch {}
@@ -45,20 +31,10 @@ function logError(msg, err) {
   console.error(msg, err || '');
 }
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-let mainWindow;
-
 function createWindow() {
   const isMacOS = process.platform === 'darwin';
-
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    width: 1280, height: 800, minWidth: 900, minHeight: 600,
     titleBarStyle: isMacOS ? 'hiddenInset' : 'default',
     show: false,
     webPreferences: {
@@ -76,202 +52,134 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(`http://localhost:${BACKEND_PORT}`);
+    mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
+  mainWindow.once('ready-to-show', () => mainWindow.show());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// Start backend in-process: set env, import ESM module (it auto-starts server)
+// IPC: Handle all API requests — replaces HTTP server
+ipcMain.handle('api:fetch', async (_event, reqData) => {
+  if (!honoApp) return { status: 503, body: 'Backend not ready' };
+  try {
+    const url = `http://localhost${reqData.path}`;
+    const req = new Request(url, {
+      method: reqData.method || 'GET',
+      headers: new Headers(reqData.headers || {}),
+      body: reqData.body ? reqData.body : undefined,
+    });
+    const res = await honoApp.fetch(req);
+    const body = await res.text();
+    return {
+      status: res.status,
+      statusText: res.statusText,
+      headers: Object.fromEntries(res.headers.entries()),
+      body,
+    };
+  } catch (err) {
+    logError('IPC api error', err);
+    return { status: 500, body: String(err) };
+  }
+});
+
+// Start backend — import Hono app, DO NOT start HTTP server
 async function startBackend() {
   process.env.NODE_ENV = isDev ? 'development' : 'production';
   process.env.DATABASE_URL = `file:${dbPath}`;
   process.env.APP_ID = process.env.APP_ID || 'tipai-desktop';
   process.env.APP_SECRET = process.env.APP_SECRET || 'tipai-desktop-secret';
-  process.env.APP_URL = `http://localhost:${BACKEND_PORT}`;
-  process.env.PORT = String(BACKEND_PORT);
+  process.env.APP_URL = 'http://localhost:0';
+  process.env.TIPAI_IPC_MODE = '1'; // Signal boot.ts: no HTTP server needed
 
   if (isDev) {
     process.env.VITE_DEV_SERVER_URL = 'http://localhost:5173';
     return;
   }
 
-  // Dynamic import ESM from CJS — boot.js auto-starts Hono server
   const bootPath = path.join(__dirname, '../dist/boot.js');
   const bootUrl = pathToFileURL(bootPath).href;
-  await import(bootUrl);
+  const mod = await import(bootUrl);
+  honoApp = mod.default;
+  log('Backend ready (IPC mode — no port)');
 }
 
-// ==============================
-// IPC Handlers
-// ==============================
-
+// IPC handlers
 ipcMain.handle('app:getInfo', () => ({
-  version: app.getVersion(),
-  platform: process.platform,
-  dbPath,
-  dataDir,
-  isDev,
+  version: app.getVersion(), platform: process.platform,
+  dbPath, dataDir, isDev,
 }));
-
-ipcMain.handle('dialog:showSave', async (_event, options) => {
-  return dialog.showSaveDialog(mainWindow, options);
-});
-
-ipcMain.handle('dialog:showOpen', async (_event, options) => {
-  return dialog.showOpenDialog(mainWindow, options);
-});
-
-ipcMain.handle('shell:openExternal', async (_event, url) => {
-  await shell.openExternal(url);
-});
-
+ipcMain.handle('dialog:showSave', async (_e, opts) => dialog.showSaveDialog(mainWindow, opts));
+ipcMain.handle('dialog:showOpen', async (_e, opts) => dialog.showOpenDialog(mainWindow, opts));
+ipcMain.handle('shell:openExternal', async (_e, url) => shell.openExternal(url));
 ipcMain.handle('db:getPath', () => dbPath);
-
-ipcMain.handle('cloud:checkRemote', async (_event, url) => {
-  try {
-    const response = await fetch(url + '/api/health', {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000),
-    });
-    return { available: response.ok, url };
-  } catch {
-    return { available: false, url };
-  }
-});
-
-// ==============================
-// Application Menu
-// ==============================
 
 function createApplicationMenu() {
   const isMacOS = process.platform === 'darwin';
   const updateItems = getUpdateMenuItems();
-
   const template = [
-    ...(isMacOS
-      ? [{
-          label: app.getName(),
-          submenu: [
-            { role: 'about' },
-            { type: 'separator' },
-            ...updateItems,
-            { type: 'separator' },
-            { role: 'services' },
-            { type: 'separator' },
-            { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
-            { type: 'separator' },
-            { role: 'quit' },
-          ],
-        }]
-      : []),
+    ...(isMacOS ? [{ label: app.getName(), submenu: [
+      { role: 'about' }, { type: 'separator' }, ...updateItems, { type: 'separator' },
+      { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' },
+      { role: 'unhide' }, { type: 'separator' }, { role: 'quit' },
+    ]}] : []),
     { label: '文件', submenu: [{ role: 'close', label: '关闭' }] },
-    {
-      label: '编辑',
-      submenu: [
-        { role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' },
-        { type: 'separator' },
-        { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' }, { role: 'paste', label: '粘贴' },
-        ...(isMacOS
-          ? [{ role: 'pasteAndMatchStyle' }, { role: 'delete' }, { role: 'selectAll' },
-             { type: 'separator' }, { label: '语音', submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }] }]
-          : [{ role: 'delete', label: '删除' }, { type: 'separator' }, { role: 'selectAll', label: '全选' }]),
-      ],
-    },
-    {
-      label: '视图',
-      submenu: [
-        { role: 'reload', label: '重新加载' }, { role: 'forceReload', label: '强制重新加载' },
-        { role: 'toggleDevTools', label: '开发者工具' }, { type: 'separator' },
-        { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' },
-        { type: 'separator' }, { role: 'togglefullscreen', label: '全屏' },
-      ],
-    },
-    {
-      label: '窗口',
-      submenu: [
-        { role: 'minimize', label: '最小化' }, { role: 'zoom', label: '缩放' },
-        ...(isMacOS
-          ? [{ type: 'separator' }, { role: 'front' }, { type: 'separator' }, { role: 'window' }]
-          : [{ role: 'close', label: '关闭' }]),
-      ],
-    },
-    {
-      label: '帮助',
-      submenu: [
-        ...(!isMacOS ? updateItems : []),
-        ...(!isMacOS ? [{ type: 'separator' }] : []),
-        { label: 'TipAi 官网', click: () => shell.openExternal('https://github.com/aitippro/TipAi') },
-        { label: '查看日志', click: () => shell.openPath(app.getPath('logs')) },
-      ],
-    },
+    { label: '编辑', submenu: [
+      { role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' }, { type: 'separator' },
+      { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' }, { role: 'paste', label: '粘贴' },
+      ...(isMacOS ? [{ role: 'pasteAndMatchStyle' }, { role: 'delete' }, { role: 'selectAll' },
+        { type: 'separator' }, { label: '语音', submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }] }]
+        : [{ role: 'delete', label: '删除' }, { type: 'separator' }, { role: 'selectAll', label: '全选' }]),
+    ]},
+    { label: '视图', submenu: [
+      { role: 'reload', label: '重新加载' }, { role: 'forceReload', label: '强制重新加载' },
+      { role: 'toggleDevTools', label: '开发者工具' }, { type: 'separator' },
+      { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' },
+      { role: 'zoomOut', label: '缩小' }, { type: 'separator' }, { role: 'togglefullscreen', label: '全屏' },
+    ]},
+    { label: '窗口', submenu: [
+      { role: 'minimize', label: '最小化' }, { role: 'zoom', label: '缩放' },
+      ...(isMacOS ? [{ type: 'separator' }, { role: 'front' }, { type: 'separator' }, { role: 'window' }]
+        : [{ role: 'close', label: '关闭' }]),
+    ]},
+    { label: '帮助', submenu: [
+      ...(!isMacOS ? updateItems : []), ...(!isMacOS ? [{ type: 'separator' }] : []),
+      { label: 'TipAi 官网', click: () => shell.openExternal('https://github.com/aitippro/TipAi') },
+      { label: '查看日志', click: () => shell.openPath(app.getPath('logs')) },
+    ]},
   ];
-
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 // ==============================
-// App Lifecycle
-// ==============================
-
 app.whenReady().then(async () => {
-  log('App starting...');
+  log('Starting...');
   try {
     await startBackend();
-    log('Backend started');
     createWindow();
     initUpdater(mainWindow);
     createApplicationMenu();
-    log('App ready');
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
-  } catch (error) {
-    logError('Failed to start', error);
-    dialog.showErrorBox('启动失败', `${error.message}\n\n详细日志: ${LOG_FILE}`);
+    log('Ready (IPC mode)');
+    app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  } catch (err) {
+    logError('Failed to start', err);
+    dialog.showErrorBox('启动失败', `${err.message}\n\n日志: ${LOG_FILE}`);
     app.quit();
   }
 });
 
-app.on('window-all-closed', () => {
-  app.quit();
-  process.exit(0);
+app.on('window-all-closed', () => { app.quit(); process.exit(0); });
+app.on('web-contents-created', (_e, contents) => {
+  contents.on('new-window', (e, url) => { e.preventDefault(); shell.openExternal(url); });
 });
 
-app.on('before-quit', () => {
-  mainWindow = null;
-});
-
-// Force cleanup on all exits
-process.on('exit', () => {
-  try { require('child_process').execSync('taskkill /F /IM TipAi.exe /T 2>nul'); } catch {}
-});
-
-app.on('web-contents-created', (_event, contents) => {
-  contents.on('new-window', (event, navigationUrl) => {
-    event.preventDefault();
-    shell.openExternal(navigationUrl);
-  });
-});
-
-// Catch-all for uncaught errors
-process.on('uncaughtException', (error) => {
-  logError('Uncaught exception', error);
-  dialog.showErrorBox('程序错误', `${error.message}\n\n日志已保存到: ${LOG_FILE}`);
-});
-
-process.on('unhandledRejection', (reason) => {
-  logError('Unhandled rejection', reason instanceof Error ? reason : new Error(String(reason)));
+process.on('uncaughtException', (err) => {
+  logError('Uncaught', err);
+  dialog.showErrorBox('程序错误', `${err.message}\n\n日志: ${LOG_FILE}`);
 });

@@ -122,8 +122,8 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 export default app;
 
-// Always start production server when this file is executed directly (not via Vite dev server)
-if (!process.env.VITE_DEV_SERVER_URL) {
+// Start HTTP server only in non-IPC mode (standalone, not Electron)
+if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_IPC_MODE) {
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
