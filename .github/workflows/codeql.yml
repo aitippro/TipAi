@@ -15,4 +15,3 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci
       - run: npm audit
-      - run: npx audit-ci --moderate 2>/dev/null || echo "audit-ci not available, npm audit done"
