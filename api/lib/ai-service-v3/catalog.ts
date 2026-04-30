@@ -696,6 +696,494 @@ Output:
 2. 为什么这个提示词有效的解释（3-5点）
 3. 使用建议（如何根据具体岗位调整）`,
   },
+  "security-audit": {
+    name: "安全审计",
+    nameEn: "Security Audit",
+    description: "系统化安全评估框架，适用于漏洞扫描、合规检查、风险分析",
+    bestFor: [
+      "security-audit",
+      "compliance",
+      "vulnerability-assessment",
+      "risk-analysis",
+      "penetration-testing",
+    ],
+    components: [
+      "Scope(范围)",
+      "Assets(资产)",
+      "Threats(威胁)",
+      "Findings(发现)",
+      "Recommendations(建议)",
+      "Remediation(修复)",
+    ],
+    template: `Scope: {{审计范围——系统/模块/时间周期}}
+Assets: {{资产清单——需要保护的资源/数据/接口}}
+Threats: {{威胁模型——已知风险/攻击向量/合规要求}}
+Findings: {{审计发现——按严重程度分类的问题}}
+Recommendations: {{修复建议——优先级排序的解决方案}}
+Remediation: {{修复计划——时间表/责任人/验证方式}}`,
+    example: `Scope: 对电商平台的支付模块进行安全审计，覆盖API接口、数据库、第三方支付集成
+Assets: 
+- 用户支付信息（PCI DSS范围）
+- 订单交易记录
+- 支付网关API密钥
+- 退款/对账接口
+Threats:
+- OWASP API Top 10（ especially BOLA, Broken Auth）
+- 支付欺诈和退款滥用
+- 数据泄露（符合GDPR/PCI DSS）
+Findings:
+- [高危] 订单查询接口未做速率限制，可被暴力遍历（IDOR风险）
+- [中危] 支付回调未验证签名，存在伪造回调风险
+- [低危] 日志中记录了完整的卡号PAN，违反PCI DSS
+Recommendations:
+1. 订单接口添加用户级权限校验+速率限制（P0，3天）
+2. 支付回调增加HMAC-SHA256签名验证（P0，5天）
+3. 日志脱敏处理，仅保留卡号后4位（P1，2周）
+Remediation:
+- 负责人：安全团队+后端团队
+- 验证：渗透测试复测+代码审计
+- 时间表：高危问题1周内修复，中危2周内，低危1个月内`,
+  },
+  "multi-translate": {
+    name: "跨文化翻译",
+    nameEn: "Cross-Cultural Translate",
+    description: "超越字面翻译的跨文化本地化框架，适配语境、习惯和文化差异",
+    bestFor: [
+      "translation",
+      "localization",
+      "multilingual",
+      "content-adaptation",
+      "global-marketing",
+    ],
+    components: [
+      "Source(源内容)",
+      "Target(目标市场)",
+      "Context(语境)",
+      "Tone(语气)",
+      "Cultural(文化)",
+      "Output(输出)",
+    ],
+    template: `Source: {{原始内容——待翻译的文本/段落/文档}}
+Target: {{目标语言和市场——如"日本B2B SaaS市场"}}
+Context: {{使用场景——产品界面/营销文案/法律条款/客服话术}}
+Tone: {{语气要求——正式/ casual /幽默/权威}}
+Cultural: {{文化适配要点——禁忌/双关/本地习惯表达/度量单位}}
+Output: {{输出格式——对照表/纯译文/注释版}}`,
+    example: `Source: "Get started for free. No credit card required. Upgrade anytime."
+Target: 日本B2B SaaS市场（面向中小企业主）
+Context: SaaS产品首页CTA按钮文案
+Tone: 专业、礼貌、值得信赖，略带紧迫感但不过度推销
+Cultural: 
+- 避免"免费"过于直接的表述，日本人更信任"お試し"（试用）概念
+- "credit card"直译生硬，改用"お支払い情報の登録不要"
+- "Upgrade anytime"强调灵活性而非催促，用"いつでもご変更いただけます"
+Output: 
+| 原文 | 译文 | 备注 |
+|------|------|------|
+| Get started for free | 無料でお試し開始 | 弱化"免费"，强调"试用" |
+| No credit card required | お支払い情報の登録は不要です | 更礼貌的商务表达 |
+| Upgrade anytime | いつでもプラン変更が可能です | 强调用户主导权 |`,
+  },
+  "scientific-experiment": {
+    name: "实验设计",
+    nameEn: "Scientific Experiment",
+    description: "严谨的科研实验设计框架，覆盖假设、变量控制、方法论和结果分析",
+    bestFor: [
+      "scientific-research",
+      "experiment-design",
+      "hypothesis-testing",
+      "data-analysis",
+      "academic-writing",
+    ],
+    components: [
+      "Hypothesis(假设)",
+      "Variables(变量)",
+      "Methodology(方法)",
+      "Protocol(协议)",
+      "Analysis(分析)",
+      "Conclusion(结论)",
+    ],
+    template: `Hypothesis: {{研究假设——可证伪的预测}}
+Variables:
+- Independent(自变量): {{你主动改变的变量}}
+- Dependent(因变量): {{你测量的结果}}
+- Controlled(控制变量): {{保持不变的变量}}
+Methodology: {{研究方法——实验/调查/模拟/文献综述}}
+Protocol: {{实验步骤——详细操作流程}}
+Analysis: {{数据分析计划——统计方法/工具/显著性水平}}
+Conclusion: {{预期结论——如何判断假设成立/不成立}}`,
+    example: `Hypothesis: 将个性化推荐算法从协同过滤升级为深度学习模型，可使电商转化率提升至少15%
+Variables:
+- Independent: 推荐算法类型（协同过滤 vs 深度神经网络）
+- Dependent: 转化率（点击购买/浏览商品）、用户停留时长、客单价
+- Controlled: 流量来源比例、商品池、UI布局、促销活动
+Methodology: A/B测试（随机对照实验），持续4周
+Protocol:
+1. 将用户随机分为两组（各50%，n≥10000）
+2. 对照组使用现有协同过滤算法
+3. 实验组使用新DNN模型（Embedding+注意力机制）
+4. 每日监控核心指标，第7天进行中期分析
+5. 第28天完成最终数据收集
+Analysis: 
+- 统计方法：双样本t检验比较转化率差异
+- 显著性水平：α=0.05
+- 工具：Python(scipy.stats) + 内部数据平台
+- 额外分析：分群分析（新老用户/高价值用户）
+Conclusion: 若实验组转化率提升≥15%且p<0.05，则接受假设并全量上线；若提升5-15%，评估ROI后再决定；若<5%，分析模型缺陷并回退`,
+  },
+  "medical-diagnosis": {
+    name: "临床辅助",
+    nameEn: "Clinical Assist",
+    description: "结构化临床分析框架，辅助鉴别诊断、检查规划和治疗方案评估（非替代医生）",
+    bestFor: [
+      "medical-diagnosis",
+      "clinical-decision",
+      "case-analysis",
+      "treatment-planning",
+      "health-education",
+    ],
+    components: [
+      "History(病史)",
+      "Symptoms(症状)",
+      "Differential(鉴别诊断)",
+      "Tests(检查建议)",
+      "Analysis(分析)",
+      "Plan(方案)",
+    ],
+    template: `History: {{患者基本信息和病史——年龄/性别/既往病史/用药史/过敏史}}
+Symptoms: {{主诉和现病史——症状描述/持续时间/严重程度/加重缓解因素}}
+Differential: {{鉴别诊断——按可能性排序的候选疾病，含支持点和排除点}}
+Tests: {{建议检查——确诊所需的实验室/影像/功能检查}}
+Analysis: {{综合分析——最可能的诊断及依据，不确定性说明}}
+Plan: {{管理方案——治疗原则/用药建议/随访计划/转诊指征}}`,
+    example: `History: 52岁男性，高血压病史5年（服用氨氯地平），2型糖尿病3年（服用二甲双胍），无药物过敏，父亲有冠心病史
+Symptoms: 
+- 主诉：胸骨后压榨性疼痛3小时，放射至左肩
+- 现病史：今晨散步时突发胸痛，伴出汗、恶心，休息未缓解
+- 无呼吸困难、无晕厥
+Differential:
+1. 急性冠脉综合征（STEMI/NSTEMI）— 支持：典型胸痛、放射痛、出汗；排除需ECG+肌钙蛋白
+2. 主动脉夹层 — 支持：高血压病史；不支持：疼痛性质为压榨非撕裂、无背部放射
+3. 肺栓塞 — 支持：出汗、恶心；不支持：无呼吸困难、无DVT危险因素
+4. 胃食管反流 — 不支持：休息不缓解、伴出汗（血管迷走症状）
+Tests:
+- 紧急：12导联ECG、肌钙蛋白I/T、心肌酶谱、血常规、电解质
+- 后续：超声心动图、冠脉CTA（如ECG无ST抬高但肌钙蛋白阳性）
+Analysis: 
+- 最可能诊断：急性冠脉综合征（NSTEMI可能性大，需ECG确认是否STEMI）
+- 依据：典型缺血性胸痛三联征（胸骨后、压榨性、放射左肩）+ 血管迷走症状
+- 不确定性：需等待ECG和肌钙蛋白结果区分UA/NSTEMI/STEMI
+Plan:
+- 立即：阿司匹林300mg嚼服（如无禁忌）、建立静脉通路、心电监护
+- 治疗：根据ECG结果决定是否急诊PCI；NSTEMI高危者48小时内冠脉造影
+- 随访：出院后心内科门诊，双联抗血小板12个月，血脂目标LDL-C<1.4
+- 转诊指征：ECG示ST抬高→立即启动胸痛中心绿色通道`,
+  },
+  "legal-analysis": {
+    name: "法律分析",
+    nameEn: "Legal Analysis",
+    description: "结构化法律研究框架，适用于案例检索、法规解读、合同审查和合规评估",
+    bestFor: [
+      "legal-research",
+      "case-analysis",
+      "contract-review",
+      "regulatory-compliance",
+      "risk-assessment",
+    ],
+    components: [
+      "Issue(争议焦点)",
+      "Rules(法规依据)",
+      "Facts(事实梳理)",
+      "Analysis(法律分析)",
+      "Conclusion(结论)",
+      "Recommendation(建议)",
+    ],
+    template: `Issue: {{法律争议焦点——需要解决的核心法律问题}}
+Rules: {{适用法规——法律条文/司法解释/判例/行业规范}}
+Facts: {{关键事实——时间线/当事人/行为/证据}}
+Analysis: {{法律分析——要件分析/责任认定/风险点识别}}
+Conclusion: {{结论——法律意见/责任判断/结果预测}}
+Recommendation: {{行动建议——具体措施/风险防范/争议解决路径}}`,
+    example: `Issue: 员工离职后利用前雇主客户名单开展竞争业务，是否构成商业秘密侵权？公司可主张哪些救济？
+Rules:
+- 《反不正当竞争法》第9条（商业秘密定义及侵权行为）
+- 《最高人民法院关于审理侵犯商业秘密民事案件适用法律若干问题的规定》
+- 判例：(2021)最高法知民终XXX号（客户名单构成商业秘密的认定标准）
+Facts:
+- 员工A任职销售总监3年，签署保密协议和竞业限制协议（期限2年，补偿金按月支付）
+- A离职后1个月内成立竞争公司，6个月内签约原公司15家客户（占原公司该类客户30%）
+- 原公司客户名单包含联系方式、交易习惯、价格敏感度等深度信息，存储于CRM系统并有权限控制
+Analysis:
+1. 客户名单是否构成商业秘密？
+   - 秘密性：深度信息非公开渠道可获取 ✓
+   - 价值性：能带来竞争优势和交易机会 ✓
+   - 保密措施：CRM权限控制+保密协议 ✓
+   → 构成商业秘密
+2. 员工行为是否构成侵权？
+   - 违反保密义务，使用/披露商业秘密 ✓
+   - 明知或应知商业秘密仍获取/使用 ✓
+3. 竞业限制是否同时适用？
+   - 公司已支付补偿金，协议有效
+   - 可同时主张违约责任和侵权责任
+Conclusion:
+- 客户名单构成商业秘密，员工行为构成侵权
+- 可同时提起违约之诉（竞业限制）和侵权之诉（商业秘密）
+- 预估可主张损害赔偿（实际损失或侵权获利）
+Recommendation:
+1. 立即：申请行为保全（禁止继续接触客户）、证据保全（冻结CRM操作日志）
+2. 诉讼：向知识产权法院提起商业秘密侵权诉讼+竞业限制违约仲裁
+3. 取证：委托公证处对竞争公司网站、客户变动进行证据固定
+4. 预防：完善离职审计流程，核心岗位增加脱密期管理`,
+  },
+  "persona-plus": {
+    name: "角色增强",
+    nameEn: "Persona Plus",
+    description: "深度角色扮演框架，支持多角色对话、性格层次和动态情感变化",
+    bestFor: [
+      "roleplay",
+      "creative-writing",
+      "storytelling",
+      "education",
+      "therapy",
+      "interview-practice",
+    ],
+    components: [
+      "Identity(身份)",
+      "Background(背景)",
+      "Personality(性格)",
+      "Voice(表达方式)",
+      "Goals(目标)",
+      "Constraints(约束)",
+    ],
+    template: `Identity: {{角色身份——姓名/职业/年龄/社会地位}}
+Background: {{详细背景——成长经历/教育/关键人生事件/当前处境}}
+Personality: {{性格特征——核心特质/优缺点/MBTI/九型人格倾向}}
+Voice: {{表达方式——口头禅/语气/语言风格/身体语言/反应模式}}
+Goals: {{角色目标——短期动机/长期追求/隐藏 agenda}}
+Constraints: {{行为约束——不能做的事/不能说的话/底线/偏见}}`,
+    example: `Identity: 李建国，58岁，传统制造业企业老板，家族企业第二代继承人
+Background: 
+- 18岁进父亲工厂从基层干起，35岁接班
+- 工厂从30人发展到800人，主营精密五金件
+- 近两年订单下滑30%，儿子留学回来要推动数字化转型，两人冲突不断
+- 信奉"实实在在做事"，对互联网和AI持怀疑态度
+Personality:
+- 核心特质：务实、固执、重人情、面子观念强
+- 优点：决策果断、对老员工有情有义、产品质量控
+- 缺点：难以接受新事物、容易情绪化、独裁式管理
+- 倾向：ESTJ，压力下的反应是强化控制
+Voice:
+- 口头禅："我做了三十年了...""你们年轻人懂什么""钱不是大风刮来的"
+- 语气：嗓门大、语速快、激动时拍桌子
+- 身体语言：习惯性叉腰、皱眉、点烟思考
+Goals:
+- 表面：保住工厂不倒，维持现有订单
+- 深层：证明自己的能力，不想在儿子面前"输了"
+- 隐藏：害怕被时代淘汰，但绝不承认
+Constraints:
+- 绝不会在员工面前承认错误或示弱
+- 不谈 emotions，认为"男人流血不流泪"
+- 不裁员（对老员工承诺过），即使亏损
+- 绝不接受完全关闭工厂的任何建议`,
+  },
+  "compare-contrast": {
+    name: "对比分析",
+    nameEn: "Compare & Contrast",
+    description: "简洁高效的对比框架，适用于方案评估、产品选型、优劣势分析",
+    bestFor: [
+      "comparison",
+      "decision-making",
+      "product-evaluation",
+      "proposal-review",
+      "vendor-selection",
+    ],
+    components: [
+      "Subject A(对象A)",
+      "Subject B(对象B)",
+      "Criteria(标准)",
+      "Comparison(对比)",
+      "Verdict(结论)",
+    ],
+    template: `Subject A: {{第一个比较对象——方案/产品/观点}}
+Subject B: {{第二个比较对象}}
+Criteria: {{评估标准——按重要性排序的对比维度}}
+Comparison: {{逐项对比——相同点/不同点/优劣势}}
+Verdict: {{结论——推荐选择及理由/适用场景建议}}`,
+    example: `Subject A: 自建 Kubernetes 集群（on-premise）
+Subject B: 托管云服务（AWS EKS / Azure AKS）
+Criteria: 成本、运维复杂度、扩展性、安全性、合规要求
+Comparison:
+| 维度 | 自建K8s | 托管EKS/AKS |
+|------|---------|-------------|
+| 初期成本 | 高（硬件+团队） | 低（按量付费） |
+| 运维复杂度 | 高（需专职SRE团队） | 低（托管控制平面） |
+| 扩展性 | 灵活但慢（采购周期） | 快（自动扩缩容） |
+| 定制化 | 完全可控 | 受限于云厂商能力 |
+| 合规 | 适合数据不出境场景 | 需评估云厂商认证 |
+
+相同点：都支持容器编排、服务发现、负载均衡
+不同点：责任边界（自建全栈负责 vs 云厂商管控制平面）
+Verdict:
+- 推荐托管云：初创公司/快速迭代场景/无专职运维团队
+- 推荐自建：金融/政府等强合规场景/已有成熟运维团队/成本优化到极致
+- 混合方案：核心系统自建，边缘/非核心用托管（渐进式迁移）`,
+  },
+  brainstorming: {
+    name: "头脑风暴",
+    nameEn: "Brainstorming",
+    description: "创意发散框架，快速生成大量想法并进行初步筛选",
+    bestFor: [
+      "ideation",
+      "creative-thinking",
+      "problem-solving",
+      "innovation",
+      "workshop",
+    ],
+    components: [
+      "Challenge(挑战)",
+      "Diverge(发散)",
+      "Cluster(聚类)",
+      "Evaluate(评估)",
+      "Select(选择)",
+    ],
+    template: `Challenge: {{核心挑战——需要解决什么问题/达成什么目标}}
+Diverge: {{发散阶段——尽可能多的想法，不评判}}
+Cluster: {{聚类——将相似想法归类/命名}}
+Evaluate: {{评估——对每个类别的可行性/影响力/成本打分}}
+Select: {{选择——Top 3优先级想法及下一步行动}}`,
+    example: `Challenge: 如何让我们SaaS产品的免费用户转化率从5%提升到15%？
+Diverge:
+1. 在免费版中增加"限时解锁"高级功能体验
+2. 推出推荐奖励：推荐1人双方各得1个月高级版
+3. 优化 onboarding，在Day 3推送价值提醒
+4. 为接近用量上限的用户发个性化升级建议
+5. 增加社区功能，付费用户专属社群
+6. 推出"团队版"最低档位，降低决策门槛
+7. AI助手功能仅限付费版
+8. 提供按月付费选项（现为仅年付）
+9. 增加退款保障（30天无理由）
+10. 与互补产品联合促销
+11. 免费用户到期前7天每日邮件提醒
+12. 增加客户成功案例在app内展示
+Cluster:
+- 产品机制类：#1, #3, #7, #12（改变产品本身）
+- 定价策略类：#6, #8, #9, #10（改变价格和购买方式）
+- 增长营销类：#2, #4, #5, #11（推广和运营手段）
+Evaluate:
+| 类别 | 可行性 | 影响力 | 成本 | 总分 |
+|------|--------|--------|------|------|
+| 产品机制 | 7 | 9 | 6 | 22 |
+| 定价策略 | 9 | 7 | 5 | 21 |
+| 增长营销 | 8 | 6 | 7 | 21 |
+Select:
+1. 优化onboarding + 用量上限提醒（产品机制，预期+3%转化）
+2. 推出月付选项 + 团队版入门档位（定价策略，预期+2.5%转化）
+3. 推荐奖励计划（增长营销，预期+1.5%转化）
+下一步：两周内完成onboarding优化A/B测试设计`,
+  },
+  "crisis-response": {
+    name: "危机应对",
+    nameEn: "Crisis Response",
+    description: "系统化危机管理框架，适用于公关危机、安全事件、运营故障等紧急场景",
+    bestFor: [
+      "crisis-management",
+      "pr-response",
+      "incident-handling",
+      "damage-control",
+      "stakeholder-communication",
+    ],
+    components: [
+      "Situation(现状)",
+      "Stakeholders(利益相关方)",
+      "Response(应对策略)",
+      "Messaging(信息传递)",
+      "Timeline(时间线)",
+      "Recovery(恢复计划)",
+    ],
+    template: `Situation: {{危机现状——发生了什么/影响范围/已知事实/未知信息}}
+Stakeholders: {{利益相关方——受影响的群体及其关切点}}
+Response: {{应对策略——立即措施/短期行动/长期修复}}
+Messaging: {{信息传递——对外声明口径/对内沟通/社交媒体回应}}
+Timeline: {{时间线——关键节点和deadline}}
+Recovery: {{恢复计划——如何重建信任/预防措施}}`,
+    example: `Situation: 
+- 事件：某SaaS公司数据库配置错误导致2000家企业客户数据可公开访问，持续72小时
+- 影响：约50万条用户记录（邮箱、公司名、部分手机号）暴露
+- 已知：错误配置源于上周部署的缓存优化，安全团队已修复
+- 未知：是否有恶意爬取，是否已有数据泄露利用
+Stakeholders:
+- 客户：数据安全担忧、合规风险（GDPR/SOX）、业务影响
+- 媒体：放大报道倾向、竞品可能利用
+- 员工：士气、对管理层的信任
+- 投资者：股价/估值影响、监管调查风险
+- 监管：可能的数据保护调查
+Response:
+- 立即（0-4h）：修复漏洞、启动内部调查、通知核心客户
+- 短期（24h）：发布公开声明、向监管机构报备、提供信用监控服务
+- 长期（1-4周）：第三方安全审计、完善DevSecOps流程、客户补偿方案
+Messaging:
+- 对外："我们发现了配置问题并已立即修复。初步调查显示未发生恶意利用。我们正在通知受影响用户并提供支持。"
+- 对内：透明沟通事件原因、不追究个人责任、强调系统性改进
+- 社交媒体：主动在Twitter/微博发布，避免被动回应，每条回复2小时内
+Timeline:
+- T+4h: CEO邮件通知所有客户
+- T+24h: 公开博客文章 + 媒体QA准备
+- T+72h: 第三方审计启动
+- T+2周: 安全改进报告发布
+- T+1月: 客户回访和满意度调查
+Recovery:
+- 信任重建：邀请客户参与安全改进委员会、定期发布透明度报告
+- 预防：引入自动化安全配置检查、渗透测试常态化、红蓝对抗演练`,
+  },
+  "data-storytelling": {
+    name: "数据叙事",
+    nameEn: "Data Storytelling",
+    description: "将数据转化为引人入胜的故事，适合汇报、演讲、洞察传达",
+    bestFor: [
+      "data-presentation",
+      "business-report",
+      "insight-communication",
+      "executive-summary",
+      "dashboard-narrative",
+    ],
+    components: [
+      "Audience(受众)",
+      "Hook(钩子)",
+      "Data(数据)",
+      "Insight(洞察)",
+      "Visual(可视化)",
+      "Action(行动)",
+    ],
+    template: `Audience: {{受众画像——决策者/执行层/外部客户/技术团队}}
+Hook: {{钩子——吸引注意力的核心发现或反差}}
+Data: {{数据支撑——关键指标/趋势/对比/异常点}}
+Insight: {{洞察——数据背后的"so what"——原因/影响/机会}}
+Visual: {{可视化建议——图表类型/叙事顺序/强调重点}}
+Action: {{行动呼吁——基于数据的明确建议}}`,
+    example: `Audience: 公司高管团队（CEO、CFO、COO），非技术背景，关注ROI和增长
+Hook: "我们的获客成本在过去6个月上升了47%，但有一个渠道的成本反而下降了60%——这是扭转局面的关键"
+Data:
+- 整体CAC从￥320上升到￥470（+47%）
+- 付费搜索CAC从￥280涨到￥520（+86%）
+- 内容营销CAC从￥450降到￥180（-60%）
+- 内容营销带来的MQL占比从15%提升到35%
+- 但内容营销团队只有3人，产能已饱和
+Insight:
+- 付费搜索竞争加剧（竞品涌入+关键词涨价）是CAC上升主因
+- 内容营销展现杠杆效应：高信任度内容降低决策摩擦，带来更高转化
+- 机会窗口：如果增加内容产能，理论上可将整体CAC降低20-30%
+- 风险：内容见效周期3-6个月，需要短期和长期策略平衡
+Visual:
+1. 瀑布图：CAC构成变化（展示各渠道贡献）
+2. 趋势线：6个月CAC走势（突出拐点）
+3. 气泡图：各渠道成本vs量vs增长率（发现内容营销"低垂果实"）
+4. 对比柱图：当前vs预测（增加内容投入后的情景分析）
+Action:
+- 立即：将内容营销团队从3人扩至6人（预算￥150万/年）
+- 短期（1月）：启动高管内容IP计划，CEO每周1篇行业洞察
+- 中期（3月）：建立内容中台，支持销售团队个性化内容库
+- 预期：Q4整体CAC降至￥380，内容渠道占比提升至50%`,
+  },
 };
 
 export function recommendFramework(
@@ -731,7 +1219,7 @@ export function recommendFramework(
       score += 3;
     }
 
-    if (complexity === "simple" && ["rtf", "care", "ape", "tag"].includes(key)) {
+    if (complexity === "simple" && ["rtf", "care", "ape", "tag", "compare-contrast", "brainstorming"].includes(key)) {
       score += 2;
     }
 
@@ -746,6 +1234,10 @@ export function recommendFramework(
         "bab",
         "smart",
         "prompt",
+        "multi-translate",
+        "persona-plus",
+        "crisis-response",
+        "data-storytelling",
       ].includes(key)
     ) {
       score += 2;
@@ -761,6 +1253,10 @@ export function recommendFramework(
         "ape-optimized",
         "self-refine",
         "meta-prompting",
+        "security-audit",
+        "scientific-experiment",
+        "medical-diagnosis",
+        "legal-analysis",
       ].includes(key)
     ) {
       score += 2;
