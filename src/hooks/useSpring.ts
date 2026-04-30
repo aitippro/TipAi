@@ -1,0 +1,57 @@
+import { useEffect, useRef, useState } from "react";
+import { SPRINGS, solveSpring, type SpringConfig, type SpringPreset } from "@/lib/animation/springs";
+
+interface UseSpringOptions {
+  from?: number;
+  to: number;
+  config?: SpringConfig | SpringPreset;
+  onRest?: () => void;
+}
+
+/**
+ * useSpring — React Hook 返回弹簧动画当前值
+ */
+export function useSpringValue({ from = 0, to, config = "smooth", onRest }: UseSpringOptions) {
+  const resolved = typeof config === "string" ? SPRINGS[config] : config;
+  const [value, setValue] = useState(from);
+  const velocityRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const result = solveSpring(value, to, velocityRef.current, resolved, 1 / 60);
+      velocityRef.current = result.velocity;
+
+      if (result.settled) {
+        setValue(to);
+        onRest?.();
+        return;
+      }
+
+      setValue(result.value);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [to, resolved.stiffness, resolved.damping, resolved.mass]);
+
+  return value;
+}
+
+/**
+ * useAnimatedValue — 支持任意值的弹簧动画（通过插值）
+ */
+export function useAnimatedValue<T extends number | string>(
+  target: T,
+  config?: SpringConfig | SpringPreset
+): T {
+  if (typeof target === "number") {
+    return useSpringValue({ to: target, config }) as T;
+  }
+  return target;
+}

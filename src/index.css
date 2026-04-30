@@ -517,6 +517,17 @@ html {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(40); opacity: 0; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
 
 /* Animation utility classes */
 .animate-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -529,6 +540,8 @@ html {
   animation: shimmer 2s infinite;
 }
 .animate-float { animation: float 3s ease-in-out infinite; }
+.animate-shake { animation: shake 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-ripple { animation: ripple 0.6s ease-out forwards; }
 
 /* Stagger children */
 .stagger-1 > *:nth-child(1) { animation-delay: 0ms; }
