@@ -1,4 +1,4 @@
-import { Skeleton } from "./ui/skeleton";
+import { Skeleton } from "./ui/Skeleton";
 
 export function AuthLayoutSkeleton() {
   return (
