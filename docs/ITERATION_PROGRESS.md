@@ -10,7 +10,7 @@
 | 期数 | 名称 | 状态 | 完成度 |
 |------|------|------|--------|
 | **基础建设** | 桌面端 + 核心功能 + UI | ✅ 完成 | 100% |
-| **第一期** | 学术 debt 清零 | 🔄 进行中 | 90% |
+| **第一期** | 学术 debt 清零 | ✅ 完成 | 100% |
 | **第二期** | 前沿追赶 | ⬜ 待启动 | 0% |
 | **第三期** | 工程化闭环 | ⬜ 待启动 | 0% |
 | **第四期** | 生态扩展 | ⬜ 待启动 | 0% |
@@ -175,10 +175,11 @@ P0-2 已完成：
 5. api/promptforge-router.ts — clarifyPreview / listDomains 端点 ✅
 6. 单元测试 41 个，全部通过 ✅
 
-下一步（前端收尾）：
-1. src/components/optimizer/ — 前端 OPRO 迭代轨迹可视化
-2. src/pages/Optimizer.tsx — OPRO 模式切换 UI
-3. src/components/clarify/ — 接入 clarifyPreview 实时策略预览
+前端收尾已完成：
+1. src/components/optimizer/IterationTrajectory.tsx — OPRO 迭代轨迹可视化 ✅
+2. src/pages/Optimizer.tsx — OPRO 模式切换 + 成本-质量 Slider ✅
+
+第一期全部完成 ✅
 ```
 
 ---
