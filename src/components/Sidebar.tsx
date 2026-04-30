@@ -38,6 +38,7 @@ import {
   Activity,
   Users,
   GraduationCap,
+  Globe,
 } from "lucide-react"
 
 // ============================================================================
@@ -71,6 +72,7 @@ const NAV_GROUPS = [
       { path: "/drift", icon: Activity, label: "漂移检测" },
       { path: "/swarm", icon: Users, label: "Agent Swarm" },
       { path: "/academic", icon: GraduationCap, label: "学术合作" },
+      { path: "/api-docs", icon: Globe, label: "API 文档" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },
