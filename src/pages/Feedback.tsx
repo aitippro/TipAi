@@ -272,7 +272,7 @@ export default function FeedbackPage() {
                     </span>
                   </div>
                   <span className="text-xs text-slate-400">
-                    {new Date(item.createdAt).toLocaleDateString("zh-CN")}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString("zh-CN") : "—"}
                   </span>
                 </div>
               ))}

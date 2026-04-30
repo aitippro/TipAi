@@ -34,7 +34,7 @@ export const academicRouter = createRouter({
             description: z.string(),
             prompt: z.string(),
             output: z.string(),
-            parameters: z.record(z.union([z.string(), z.number()])).default({}),
+            parameters: z.record(z.string(), z.union([z.string(), z.number()])).default({}),
           }),
         ),
       }),

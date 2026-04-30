@@ -8,8 +8,6 @@ import {
   setTotGenerator,
   setTotEvaluator,
   flattenTreeLevels,
-  DEFAULT_TOT_CONFIG,
-  type TreeOfThoughtsResult,
 } from "./tree-of-thoughts";
 
 // ============================================================================

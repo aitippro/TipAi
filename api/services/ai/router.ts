@@ -148,7 +148,7 @@ export class AIRouter {
       maxRetries: config.maxRetries ?? 2,
       trackUsage: config.trackUsage ?? true,
       enableDecodeLayer: config.enableDecodeLayer ?? true,
-      defaultDecodeStrategy: config.defaultDecodeStrategy,
+      defaultDecodeStrategy: config.defaultDecodeStrategy ?? ("sampling" as unknown as DecodeStrategy),
     };
 
     this.initProviders();

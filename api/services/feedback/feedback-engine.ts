@@ -9,7 +9,7 @@
 
 import { getDb } from "../../queries/connection";
 import { evaluations } from "@db/schema";
-import { desc, eq, avg, count, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export type FeedbackDimension = "clarity" | "relevance" | "completeness" | "actionability" | "overall";
 
@@ -36,7 +36,7 @@ export interface FeedbackHistoryItem {
   dimension: FeedbackDimension;
   score: number;
   feedback: string | null;
-  createdAt: Date;
+  createdAt: Date | null;
 }
 
 const DIMENSION_LABELS: Record<FeedbackDimension, string> = {
@@ -143,7 +143,7 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
   for (const dim of dims) {
     const dimRows = rows
       .filter((r) => r.dimension === dim)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
 
     if (dimRows.length < 4) {
       trends[dim] = "stable";

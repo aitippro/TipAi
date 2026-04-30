@@ -376,3 +376,15 @@ export function getGraphStats(): {
     hybridPatterns: COMPLEMENTARY_PAIRS.length + UPGRADE_PATHS.length,
   };
 }
+
+export function getFrameworkGraphData(): {
+  nodes: FrameworkNode[];
+  relations: FrameworkRelation[];
+  stats: ReturnType<typeof getGraphStats>;
+} {
+  return {
+    nodes: getFrameworkNodes(),
+    relations: getFrameworkRelations(),
+    stats: getGraphStats(),
+  };
+}

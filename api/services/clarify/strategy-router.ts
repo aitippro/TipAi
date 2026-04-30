@@ -224,10 +224,10 @@ export function generateClarifyStrategy(
  * 生成追问列表
  */
 function generateFollowUpQuestions(
-  classification: ClassificationResult,
+  _classification: ClassificationResult,
   knowledge: DomainKnowledge,
   missingInfo: string[],
-  existingAnswers: Record<string, string>,
+  _existingAnswers: Record<string, string>,
 ): string[] {
   const questions: string[] = [];
 

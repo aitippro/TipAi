@@ -90,8 +90,6 @@ export function createAgent(role: AgentRole, id?: string): Agent {
 // ============================================================================
 
 function simulateAgentWork(agent: Agent, input: string): { output: string; timeMs: number } {
-  const start = Date.now();
-
   // 基于角色的模拟输出
   const outputs: Record<AgentRole, string> = {
     planner: `📋 规划结果：\n1. 分析需求: "${input.substring(0, 30)}..."\n2. 分解为 3 个子任务\n3. 确定执行顺序和依赖\n4. 识别潜在风险点`,
@@ -155,12 +153,12 @@ export async function runSwarm(
     }
   } else if (mode === "parallel") {
     // 并行模式：所有代理同时执行不同方面
-    const parallelTasks = agents.map((agent) => ({
+    const parallelTasks: SwarmTask[] = agents.map((agent) => ({
       id: `${taskId}-${agent.role}`,
       description: `${agent.name} 并行处理 ${description}`,
       assignedTo: agent.role,
       input: description,
-      status: "running" as const,
+      status: "running",
       startedAt: Date.now(),
     }));
     tasks.push(...parallelTasks);

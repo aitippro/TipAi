@@ -260,7 +260,7 @@ function findBestPath(tree: Record<string, ThoughtNode>, rootId: string): Though
 /** 将树扁平化为层级结构（用于前端渲染） */
 export function flattenTreeLevels(
   tree: Record<string, ThoughtNode>,
-  rootId: string,
+  _rootId: string,
 ): ThoughtNode[][] {
   const maxDepth = Math.max(0, ...Object.values(tree).map((n) => n.depth));
   const levels: ThoughtNode[][] = [];

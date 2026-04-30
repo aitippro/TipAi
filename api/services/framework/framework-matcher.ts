@@ -17,7 +17,6 @@ import {
   getHybridRecommendations,
   type FrameworkNode,
   type FrameworkRelation,
-  type HybridRecommendation,
 } from "./framework-graph";
 import { FRAMEWORKS, getFrameworkByKey } from "../../lib/ai-service-v3/catalog";
 

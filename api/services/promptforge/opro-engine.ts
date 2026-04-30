@@ -157,7 +157,7 @@ ${domain || "通用任务"}
 /**
  * 解析 meta-prompt 返回的 candidates
  */
-function parseCandidates(raw: string, iteration: number): Array<{ prompt: string; strategy: string }> {
+function parseCandidates(raw: string, _iteration: number): Array<{ prompt: string; strategy: string }> {
   try {
     const cleaned = raw.replace(/^```json\s*|\s*```$/g, "").trim();
     const parsed = JSON.parse(cleaned) as Array<Record<string, unknown>>;
