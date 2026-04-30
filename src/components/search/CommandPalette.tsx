@@ -1,147 +1,123 @@
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { useNavigate } from "react-router";
-import { trpc } from "@/providers/trpc";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Search, FolderOpen, Plus, Zap, Download, Settings,
-} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Sparkles, FileText, Settings, Download, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
+interface CommandItem {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  shortcut?: string;
+  action: () => void;
 }
 
-const QUICK_ACTIONS = [
-  { label: "创建新项目", icon: Plus, shortcut: "N", action: "/" },
-  { label: "打开工作台", icon: FolderOpen, shortcut: "W", action: "/workspace" },
-  { label: "打开工具箱", icon: Zap, shortcut: "T", action: "/toolbox" },
-  { label: "批量导出", icon: Download, shortcut: "E", action: "/export" },
-  { label: "设置", icon: Settings, shortcut: ",", action: "/settings" },
-];
-
-export const CommandPalette = memo(function CommandPalette({ open, onClose }: Props) {
+/**
+ * CommandPalette — 全局搜索面板 (Cmd+K)
+ * 支持项目/提示词/模板搜索 + 快捷操作
+ */
+export function CommandPalette({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const [query, setQuery] = useState("");
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const navigate = useNavigate();
+  const [selected, setSelected] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: projects } = trpc.project.list.useQuery(undefined, { enabled: open });
+  const commands: CommandItem[] = [
+    { id: "new", icon: <Plus className="w-4 h-4" />, label: "新建项目", shortcut: "⌘N", action: () => window.location.href = "/" },
+    { id: "optimize", icon: <Sparkles className="w-4 h-4" />, label: "打开优化器", shortcut: "⌘O", action: () => window.location.href = "/optimizer" },
+    { id: "export", icon: <Download className="w-4 h-4" />, label: "批量导出", shortcut: "⌘E", action: () => window.location.href = "/export" },
+    { id: "library", icon: <FileText className="w-4 h-4" />, label: "提示词库", action: () => window.location.href = "/library" },
+    { id: "settings", icon: <Settings className="w-4 h-4" />, label: "设置", action: () => window.location.href = "/settings" },
+  ];
 
-  const filteredActions = useMemo(() =>
-    QUICK_ACTIONS.filter(
-      (a) => !query || a.label.toLowerCase().includes(query.toLowerCase())
-    ), [query]);
-  const filteredProjects = useMemo(() =>
-    (projects || []).filter(
-      (p) => !query || p.title.toLowerCase().includes(query.toLowerCase())
-    ), [projects, query]);
-
-  const totalItems = useMemo(() =>
-    filteredActions.length + filteredProjects.length,
-    [filteredActions, filteredProjects]);
-
-  const executeAction = useCallback((idx: number) => {
-    if (idx < filteredActions.length) {
-      navigate(filteredActions[idx].action);
-    } else {
-      navigate(`/workspace`);
-    }
-    onClose();
-  }, [filteredActions, navigate, onClose]);
-
-  const handleClose = useCallback(() => {
-    setQuery("");
-    setSelectedIdx(0);
-    onClose();
-  }, [onClose]);
-
-  const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
-    setSelectedIdx(0);
-  }, []);
+  const filtered = commands.filter((c) =>
+    c.label.toLowerCase().includes(query.toLowerCase())
+  );
 
   useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (!open) return;
-      if (e.key === "Escape") { handleClose(); return; }
-      if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, totalItems - 1)); return; }
-      if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)); return; }
-      if (e.key === "Enter" && totalItems > 0) { e.preventDefault(); executeAction(selectedIdx); }
+    if (open) {
+      setQuery("");
+      setSelected(0);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }, [open]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!open) return;
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "ArrowDown") { setSelected((s) => Math.min(s + 1, filtered.length - 1)); e.preventDefault(); }
+      if (e.key === "ArrowUp") { setSelected((s) => Math.max(s - 1, 0)); e.preventDefault(); }
+      if (e.key === "Enter") { filtered[selected]?.action(); onClose(); }
+    };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [open, handleClose, totalItems, selectedIdx, executeAction]);
-
-  if (!open) return null;
+  }, [open, filtered, selected, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={handleClose} />
-      <Card className="relative w-full max-w-lg mx-4 border-0 shadow-2xl rounded-2xl bg-white/95 backdrop-blur-md overflow-hidden">
-        <CardContent className="p-0">
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-            <Search className="w-4 h-4 text-slate-400" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => handleQueryChange(e.target.value)}
-              placeholder="搜索项目、操作..."
-              className="border-0 shadow-none focus-visible:ring-0 p-0 h-auto text-sm"
-            />
-            <kbd className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">ESC</kbd>
-          </div>
-
-          <div className="max-h-80 overflow-y-auto p-2">
-            {filteredActions.length > 0 && (
-              <div className="mb-1">
-                <p className="text-[10px] text-slate-400 px-2 py-1 uppercase tracking-wider">快捷操作</p>
-                {filteredActions.map((action, i) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.label}
-                      onClick={() => executeAction(i)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedIdx === i ? "bg-violet-50 text-violet-700" : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="flex-1 text-left">{action.label}</span>
-                      <kbd className="text-[10px] text-slate-400">⌘{action.shortcut}</kbd>
-                    </button>
-                  );
-                })}
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ scale: 0.85, y: 30, rotateX: 8 }}
+            animate={{ scale: 1, y: 0, rotateX: 0 }}
+            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg z-[61]"
+            style={{ perspective: 800 }}
+          >
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                <Search className="w-5 h-5 text-gray-400" />
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setSelected(0); }}
+                  placeholder="搜索项目、提示词、模板..."
+                  className="flex-1 bg-transparent outline-none text-sm"
+                />
+                <kbd className="px-2 py-0.5 text-xs bg-gray-100 rounded-md text-gray-500">ESC</kbd>
               </div>
-            )}
-
-            {filteredProjects.length > 0 && (
-              <div>
-                <p className="text-[10px] text-slate-400 px-2 py-1 uppercase tracking-wider">项目</p>
-                {filteredProjects.map((p, i) => {
-                  const idx = filteredActions.length + i;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => executeAction(idx)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedIdx === idx ? "bg-violet-50 text-violet-700" : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <FolderOpen className="w-4 h-4 text-violet-400" />
-                      <span className="flex-1 text-left truncate">{p.title}</span>
-                      <span className="text-[10px] text-slate-400">{p.domain}</span>
-                    </button>
-                  );
-                })}
+              <div className="max-h-80 overflow-y-auto py-2">
+                {filtered.map((cmd, i) => (
+                  <motion.button
+                    key={cmd.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02 }}
+                    onClick={() => { cmd.action(); onClose(); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                      selected === i ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"
+                    )}
+                    onMouseEnter={() => setSelected(i)}
+                  >
+                    {cmd.icon}
+                    <span className="flex-1 text-sm">{cmd.label}</span>
+                    {cmd.shortcut && (
+                      <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 rounded text-gray-500">{cmd.shortcut}</kbd>
+                    )}
+                  </motion.button>
+                ))}
+                {filtered.length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm text-gray-400">未找到匹配项</div>
+                )}
               </div>
-            )}
-
-            {totalItems === 0 && (
-              <p className="text-sm text-slate-400 text-center py-8">无匹配结果</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
-});
+}

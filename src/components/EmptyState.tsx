@@ -1,27 +1,46 @@
-import type { LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   title: string;
   description: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  action?: { label: string; onClick: () => void };
+  className?: string;
 }
 
-export function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+/**
+ * EmptyState — 统一空状态组件
+ * 每种空状态有独特图标 + 引导按钮
+ */
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className="text-center py-16 px-6">
-      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-        <Icon className="w-7 h-7 text-slate-400" />
-      </div>
-      <h3 className="text-base font-semibold text-slate-700 mb-1">{title}</h3>
-      <p className="text-sm text-slate-400 max-w-sm mx-auto mb-6">{description}</p>
-      {actionLabel && onAction && (
-        <Button onClick={onAction} className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600">
-          {actionLabel}
-        </Button>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+      className={cn(
+        "flex flex-col items-center justify-center text-center py-16 px-6",
+        className
       )}
-    </div>
+    >
+      <motion.div
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        className="w-20 h-20 rounded-full bg-gradient-to-br from-apple-blue/20 to-apple-purple/20 flex items-center justify-center mb-4"
+      >
+        <div className="text-apple-blue">{icon}</div>
+      </motion.div>
+      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-xs mb-6">{description}</p>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:brightness-110 transition-all active:scale-[0.96]"
+        >
+          {action.label}
+        </button>
+      )}
+    </motion.div>
   );
 }
