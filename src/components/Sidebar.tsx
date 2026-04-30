@@ -37,6 +37,7 @@ import {
   BarChart3,
   Activity,
   Users,
+  GraduationCap,
 } from "lucide-react"
 
 // ============================================================================
@@ -69,6 +70,7 @@ const NAV_GROUPS = [
       { path: "/feedback", icon: BarChart3, label: "反馈闭环" },
       { path: "/drift", icon: Activity, label: "漂移检测" },
       { path: "/swarm", icon: Users, label: "Agent Swarm" },
+      { path: "/academic", icon: GraduationCap, label: "学术合作" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },

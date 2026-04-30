@@ -30,6 +30,7 @@ const QualityGate = lazy(() => import("./pages/QualityGate"))
 const Feedback = lazy(() => import("./pages/Feedback"))
 const DriftDetection = lazy(() => import("./pages/DriftDetection"))
 const AgentSwarm = lazy(() => import("./pages/AgentSwarm"))
+const Academic = lazy(() => import("./pages/Academic"))
 
 function PageFallback() {
   return (

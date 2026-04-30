@@ -11,6 +11,7 @@ import { qualityGateRouter } from "./services/quality/gate-router";
 import { driftRouter } from "./services/quality/drift-router";
 import { feedbackRouter } from "./services/feedback/feedback-router";
 import { swarmRouter } from "./services/agent/swarm-router";
+import { academicRouter } from "./services/academic/academic-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -28,6 +29,7 @@ export const appRouter = createRouter({
   drift: driftRouter,
   feedback: feedbackRouter,
   swarm: swarmRouter,
+  academic: academicRouter,
 });
 
 export type AppRouter = typeof appRouter;
