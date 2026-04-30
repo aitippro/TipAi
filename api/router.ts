@@ -5,6 +5,7 @@ import { projectRouter } from "./project-router";
 import { optimizerRouter } from "./optimizer-router";
 import { exportRouter } from "./export-router";
 import { frameworkRouter } from "./services/framework";
+import { totRouter } from "./services/ai/tot-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -16,6 +17,7 @@ export const appRouter = createRouter({
   optimizer: optimizerRouter,
   export: exportRouter,
   framework: frameworkRouter,
+  tot: totRouter,
 });
 
 export type AppRouter = typeof appRouter;

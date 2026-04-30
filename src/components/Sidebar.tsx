@@ -31,6 +31,7 @@ import {
   PenTool,
   Download,
   BrainCircuit,
+  GitBranch,
 } from "lucide-react"
 
 // ============================================================================
@@ -57,6 +58,7 @@ const NAV_GROUPS = [
     items: [
       { path: "/optimizer", icon: PenTool, label: "优化器" },
       { path: "/frameworks", icon: BrainCircuit, label: "框架匹配" },
+      { path: "/tot", icon: GitBranch, label: "ToT 推理" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },

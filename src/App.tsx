@@ -24,6 +24,7 @@ const Workspace = lazy(() => import("./pages/Workspace"))
 const Toolbox = lazy(() => import("./pages/Toolbox"))
 const Logs = lazy(() => import("./pages/Logs"))
 const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
+const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
 
 function PageFallback() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
                       <Route path="/about" element={<About />} />
                       <Route path="/logs" element={<Logs />} />
                       <Route path="/frameworks" element={<FrameworkMatch />} />
+                      <Route path="/tot" element={<TreeOfThoughts />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </PageTransition>
