@@ -8,6 +8,7 @@ import { frameworkRouter } from "./services/framework";
 import { totRouter } from "./services/ai/tot-router";
 import { multimodalRouter } from "./services/multimodal/multimodal-router";
 import { qualityGateRouter } from "./services/quality/gate-router";
+import { driftRouter } from "./services/quality/drift-router";
 import { feedbackRouter } from "./services/feedback/feedback-router";
 import { createRouter, publicQuery } from "./middleware";
 
@@ -23,6 +24,7 @@ export const appRouter = createRouter({
   tot: totRouter,
   multimodal: multimodalRouter,
   qualityGate: qualityGateRouter,
+  drift: driftRouter,
   feedback: feedbackRouter,
 });
 

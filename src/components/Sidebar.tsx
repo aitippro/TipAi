@@ -35,6 +35,7 @@ import {
   Image,
   ShieldCheck,
   BarChart3,
+  Activity,
 } from "lucide-react"
 
 // ============================================================================
@@ -65,6 +66,7 @@ const NAV_GROUPS = [
       { path: "/multimodal", icon: Image, label: "多模态" },
       { path: "/quality-gate", icon: ShieldCheck, label: "质量门禁" },
       { path: "/feedback", icon: BarChart3, label: "反馈闭环" },
+      { path: "/drift", icon: Activity, label: "漂移检测" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },

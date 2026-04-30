@@ -28,6 +28,7 @@ const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
 const Multimodal = lazy(() => import("./pages/Multimodal"))
 const QualityGate = lazy(() => import("./pages/QualityGate"))
 const Feedback = lazy(() => import("./pages/Feedback"))
+const DriftDetection = lazy(() => import("./pages/DriftDetection"))
 
 function PageFallback() {
   return (
