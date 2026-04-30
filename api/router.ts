@@ -10,6 +10,7 @@ import { multimodalRouter } from "./services/multimodal/multimodal-router";
 import { qualityGateRouter } from "./services/quality/gate-router";
 import { driftRouter } from "./services/quality/drift-router";
 import { feedbackRouter } from "./services/feedback/feedback-router";
+import { swarmRouter } from "./services/agent/swarm-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -26,6 +27,7 @@ export const appRouter = createRouter({
   qualityGate: qualityGateRouter,
   drift: driftRouter,
   feedback: feedbackRouter,
+  swarm: swarmRouter,
 });
 
 export type AppRouter = typeof appRouter;
