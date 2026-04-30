@@ -33,6 +33,7 @@ import {
   BrainCircuit,
   GitBranch,
   Image,
+  ShieldCheck,
 } from "lucide-react"
 
 // ============================================================================
@@ -61,6 +62,7 @@ const NAV_GROUPS = [
       { path: "/frameworks", icon: BrainCircuit, label: "框架匹配" },
       { path: "/tot", icon: GitBranch, label: "ToT 推理" },
       { path: "/multimodal", icon: Image, label: "多模态" },
+      { path: "/quality-gate", icon: ShieldCheck, label: "质量门禁" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },
