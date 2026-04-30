@@ -26,6 +26,7 @@ const Workspace = lazy(() => import("./pages/Workspace"))
 const Toolbox = lazy(() => import("./pages/Toolbox"))
 const Logs = lazy(() => import("./pages/Logs"))
 const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
+const Profile = lazy(() => import("./pages/Profile"))
 const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
 const Multimodal = lazy(() => import("./pages/Multimodal"))
 const QualityGate = lazy(() => import("./pages/QualityGate"))
@@ -93,6 +94,7 @@ export default function App() {
                       <Route path="/export" element={<Export />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/about" element={<About />} />
+                      <Route path="/profile" element={<Profile />} />
                       <Route path="/logs" element={<Logs />} />
                       <Route path="/frameworks" element={<FrameworkMatch />} />
                       <Route path="/tot" element={<TreeOfThoughts />} />
