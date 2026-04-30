@@ -10,7 +10,7 @@
 | 期数 | 名称 | 状态 | 完成度 |
 |------|------|------|--------|
 | **基础建设** | 桌面端 + 核心功能 + UI | ✅ 完成 | 100% |
-| **第一期** | 学术 debt 清零 | 🔄 进行中 | 15% |
+| **第一期** | 学术 debt 清零 | 🔄 进行中 | 55% |
 | **第二期** | 前沿追赶 | ⬜ 待启动 | 0% |
 | **第三期** | 工程化闭环 | ⬜ 待启动 | 0% |
 | **第四期** | 生态扩展 | ⬜ 待启动 | 0% |
@@ -64,12 +64,12 @@
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
-| Self-Consistency 实现 | 🔴 未开始 | 多路径采样 + 投票 |
-| Decode 策略配置器 | 🔴 未开始 | greedy/sampling/SC 可切换 |
-| Confidence 显示 | 🔴 未开始 | 可靠性分数 |
-| 成本-质量 UI | 🔴 未开始 | Slider + 实时计算 |
+| Self-Consistency 实现 | ✅ 完成 | 多路径采样 + 投票，支持 exact/normalized/semantic 三种投票算法 |
+| Decode 策略配置器 | ✅ 完成 | greedy/sampling/SC 可切换，任务类型自动推荐策略 |
+| Confidence 显示 | ✅ 完成 | 可靠性分数（0-1），随响应 raw._confidence 透出 |
+| 成本-质量 UI | 🟡 基础完成 | 成本估算 API `estimateCost()` + `estimateTaskCost()`，前端 Slider 待接入 |
 
-**当前状态**：greedy decode，无采样策略。
+**当前状态**：`api/services/ai/decoding-strategies.ts` + `self-consistency.ts` 已上线，AIRouter 集成完毕。流式模式自动降级为 sampling。
 
 ---
 
@@ -122,7 +122,7 @@
 | Zero-shot | ✅ v1.0 | `api/services/promptforge/generation.ts` |
 | Few-shot | ✅ v1.0 | `src/pages/TemplateMarket.tsx` |
 | Chain-of-Thought | 🟡 框架支持 | `api/lib/ai-service-v3/catalog.ts` COT 框架 |
-| Self-Consistency | ❌ | P0-3 |
+| Self-Consistency | ✅ v1.2 | `api/services/ai/self-consistency.ts` |
 | OPRO | ❌ | P0-1 |
 | Tree of Thoughts | ❌ | P1-3 |
 | ReAct | ❌ | P1-3 |
@@ -136,14 +136,19 @@
 
 ## 下一步行动
 
-**本周**：启动 P0-3 Decode 策略层（底层改造，影响所有 AI 调用）
+**本周**：P0-3 Decode 策略层已完成，启动 P0-1 OPRO 自动优化引擎
 
 ```
-1. api/services/ai/decoding-strategies.ts — 策略配置
-2. api/services/ai/self-consistency.ts — SC 实现
-3. 集成到 AIRouter，所有调用经过 decode 层
+1. api/services/ai/decoding-strategies.ts — 策略配置 ✅
+2. api/services/ai/self-consistency.ts — SC 实现 ✅
+3. 集成到 AIRouter，所有调用经过 decode 层 ✅
+
+下一步：
+1. api/services/promptforge/opro-engine.ts — OPRO 核心引擎
+2. api/services/promptforge/llm-judge.ts — LLM-as-judge 评估器
+3. src/components/optimizer/ — 优化轨迹可视化组件
 ```
 
 ---
 
-*最后更新：2026-04-29*
+*最后更新：2026-04-30*

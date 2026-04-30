@@ -11,12 +11,16 @@ export interface ChatMessage {
   name?: string; // for tool/function calls
 }
 
+import type { DecodeStrategy } from "./decoding-strategies";
+
 export interface ChatOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
   topP?: number;
   stopSequences?: string[];
+  /** 解码策略配置（新增：greedy / sampling / self-consistency） */
+  decodeStrategy?: DecodeStrategy;
   // Optional callbacks for streaming
   onToken?: (token: string) => void;
   // Abort signal

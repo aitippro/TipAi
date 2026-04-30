@@ -27,6 +27,20 @@ import {
   createOllamaProvider,
 } from "./providers";
 
+import {
+  type DecodeStrategy,
+  type CostEstimate,
+  resolveDecodeStrategy,
+  recommendStrategyForTask,
+  estimateCost,
+  strategyToLabel,
+} from "./decoding-strategies";
+
+import {
+  runSelfConsistency,
+  scResultToChatResponse,
+} from "./self-consistency";
+
 export type TaskType =
   | "chat"
   | "analysis"
@@ -45,6 +59,10 @@ export interface RouterConfig {
   maxRetries?: number;
   /** 是否启用用量统计 */
   trackUsage?: boolean;
+  /** 是否启用解码策略层 */
+  enableDecodeLayer?: boolean;
+  /** 默认解码策略 */
+  defaultDecodeStrategy?: DecodeStrategy;
 }
 
 export interface RoutingDecision {
@@ -112,12 +130,25 @@ export class AIRouter {
     byProvider: {},
   };
 
+  /** 解码策略累计统计 */
+  private decodeStats: {
+    scCalls: number;
+    scTotalPaths: number;
+    scAvgConfidence: number;
+  } = {
+    scCalls: 0,
+    scTotalPaths: 0,
+    scAvgConfidence: 0,
+  };
+
   constructor(config: RouterConfig) {
     this.config = {
       providers: config.providers,
       routingRules: { ...DEFAULT_ROUTING_RULES, ...config.routingRules },
       maxRetries: config.maxRetries ?? 2,
       trackUsage: config.trackUsage ?? true,
+      enableDecodeLayer: config.enableDecodeLayer ?? true,
+      defaultDecodeStrategy: config.defaultDecodeStrategy,
     };
 
     this.initProviders();
@@ -206,6 +237,7 @@ export class AIRouter {
 
   /**
    * 带自动降级的非流式调用
+   * 新增：集成 Decode 策略层（greedy / sampling / self-consistency）
    */
   async chat(
     messages: ChatMessage[],
@@ -215,6 +247,10 @@ export class AIRouter {
     const { preferredProvider, ...chatOptions } = options;
     const decision = this.decideRoute(taskType, preferredProvider);
     const fallbackChain = [decision.provider, ...decision.fallbackChain];
+
+    // 解析解码策略
+    const decodeStrategy = this.resolveStrategy(chatOptions.decodeStrategy, taskType);
+    const isSC = decodeStrategy.type === "self-consistency";
 
     let lastError: Error | null = null;
 
@@ -228,14 +264,44 @@ export class AIRouter {
       }
 
       try {
-        console.log(`[AI Router] Using ${providerName} for ${taskType}`);
-        const response = await provider.chat(messages, chatOptions);
+        console.log(
+          `[AI Router] Using ${providerName} for ${taskType} | Strategy: ${strategyToLabel(decodeStrategy)}`,
+        );
+
+        let response: ChatResponse;
+
+        if (isSC && this.config.enableDecodeLayer) {
+          // Self-Consistency：多路径采样 + 投票
+          const scResult = await runSelfConsistency(
+            provider,
+            messages,
+            { ...chatOptions, temperature: decodeStrategy.temperature, maxTokens: decodeStrategy.maxTokens },
+            decodeStrategy,
+          );
+
+          response = scResultToChatResponse(scResult, providerName, provider.config.model || "unknown");
+
+          // 更新 SC 统计
+          this.decodeStats.scCalls += 1;
+          this.decodeStats.scTotalPaths += scResult.paths.length;
+          this.decodeStats.scAvgConfidence =
+            (this.decodeStats.scAvgConfidence * (this.decodeStats.scCalls - 1) + scResult.confidence) /
+            this.decodeStats.scCalls;
+        } else {
+          // Greedy / Sampling：单次调用
+          const finalOptions: ChatOptions = {
+            ...chatOptions,
+            temperature: decodeStrategy.temperature,
+            maxTokens: decodeStrategy.maxTokens ?? chatOptions.maxTokens,
+            topP: decodeStrategy.topP ?? chatOptions.topP,
+          };
+          response = await provider.chat(messages, finalOptions);
+        }
 
         this.recordUsage(providerName, response.usage);
 
         return {
           ...response,
-          // 在响应中注入路由元信息，方便前端展示
           raw: {
             ...(response.raw as Record<string, unknown> ?? {}),
             _router: {
@@ -244,13 +310,14 @@ export class AIRouter {
               fallbackIndex: i,
               decision,
             },
+            _decodeStrategy: decodeStrategy.type,
+            _decodeLabel: strategyToLabel(decodeStrategy),
           },
         };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         console.error(`[AI Router] ${providerName} failed:`, lastError.message);
 
-        // 如果是用户取消（Abort），不重试
         if (lastError.name === "AbortError") {
           throw lastError;
         }
@@ -265,6 +332,9 @@ export class AIRouter {
   /**
    * 带自动降级的流式调用
    * 返回标准化 SSE 格式的 AsyncGenerator
+   *
+   * 注意：Self-Consistency 不支持流式（需等全部路径完成才能投票），
+   *       流式模式下自动降级为 sampling 策略。
    */
   async *streamChat(
     messages: ChatMessage[],
@@ -274,6 +344,13 @@ export class AIRouter {
     const { preferredProvider, ...chatOptions } = options;
     const decision = this.decideRoute(taskType, preferredProvider);
     const fallbackChain = [decision.provider, ...decision.fallbackChain];
+
+    // 流式模式不支持 SC，自动降级为 sampling
+    const decodeStrategy = this.resolveStrategy(chatOptions.decodeStrategy, taskType);
+    const streamingStrategy: DecodeStrategy =
+      decodeStrategy.type === "self-consistency"
+        ? { type: "sampling", temperature: decodeStrategy.temperature, topP: decodeStrategy.topP, maxTokens: decodeStrategy.maxTokens }
+        : decodeStrategy;
 
     let lastError: Error | null = null;
 
@@ -287,8 +364,16 @@ export class AIRouter {
       }
 
       try {
-        console.log(`[AI Router] Streaming with ${providerName} for ${taskType}`);
-        const generator = provider.streamChat(messages, chatOptions);
+        console.log(`[AI Router] Streaming with ${providerName} for ${taskType} | Strategy: ${strategyToLabel(streamingStrategy)}`);
+
+        const finalOptions: ChatOptions = {
+          ...chatOptions,
+          temperature: streamingStrategy.temperature,
+          maxTokens: streamingStrategy.maxTokens ?? chatOptions.maxTokens,
+          topP: streamingStrategy.topP ?? chatOptions.topP,
+        };
+
+        const generator = provider.streamChat(messages, finalOptions);
 
         for await (const chunk of generator) {
           yield chunk;
@@ -327,6 +412,46 @@ export class AIRouter {
     };
 
     throw lastError ?? new Error(`All AI providers failed for streaming task "${taskType}"`);
+  }
+
+  /**
+   * 获取指定任务的解码策略成本估算
+   */
+  estimateTaskCost(
+    promptText: string,
+    taskType: TaskType = "default",
+    strategy?: DecodeStrategy,
+    preferredProvider?: string,
+  ): CostEstimate | null {
+    const decision = this.decideRoute(taskType, preferredProvider);
+    const provider = this.getProvider(decision.provider);
+    if (!provider) return null;
+
+    const resolved = this.resolveStrategy(strategy, taskType);
+    return estimateCost(promptText, provider.config.model || "unknown", resolved);
+  }
+
+  /**
+   * 获取解码策略统计
+   */
+  getDecodeStats(): typeof this.decodeStats {
+    return { ...this.decodeStats };
+  }
+
+  /**
+   * 解析最终解码策略（用户指定 → 任务推荐 → 全局默认 → sampling）
+   */
+  private resolveStrategy(
+    userStrategy?: DecodeStrategy,
+    taskType: TaskType = "default",
+  ): DecodeStrategy {
+    if (userStrategy) {
+      return resolveDecodeStrategy(userStrategy);
+    }
+    if (this.config.defaultDecodeStrategy) {
+      return resolveDecodeStrategy(this.config.defaultDecodeStrategy);
+    }
+    return resolveDecodeStrategy({ type: recommendStrategyForTask(taskType) });
   }
 
   /**
