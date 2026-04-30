@@ -14,6 +14,7 @@ import { TiltCard } from "@/components/effects/TiltCard";
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { RippleButton } from "@/components/ui/RippleButton";
+import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import {
   FolderOpen, Search, Plus, ChevronRight, Sparkles,
   FolderCheck, Clock, TrendingUp
@@ -100,7 +101,7 @@ export default function WorkspacePage() {
               <CardContent className="p-4 flex items-center gap-3">
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 <div>
-                  <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
+                  <div className="text-2xl font-bold text-slate-800"><AnimatedCounter value={stat.value} /></div>
                   <div className="text-xs text-slate-500">{stat.label}</div>
                 </div>
               </CardContent>
