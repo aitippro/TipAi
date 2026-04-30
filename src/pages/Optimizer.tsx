@@ -5,15 +5,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { DiffViewer } from "@/components/optimizer/DiffViewer";
 import { HistoryPanel } from "@/components/optimizer/HistoryPanel";
 import { IterationTrajectory } from "@/components/optimizer/IterationTrajectory";
+import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer";
+import { TiltCard } from "@/components/effects/TiltCard";
+import { EmptyState } from "@/components/EmptyState";
 import {
-  Sparkles,
+  Sparkles as _Sparkles,
   History,
   Copy,
   Check,
@@ -23,37 +26,62 @@ import {
   Loader2,
   ArrowLeft,
   BrainCircuit,
-  Target,
-  Settings2,
   GitCompare,
+  Wand2,
 } from "lucide-react";
 
-type OptimizeMode = "static" | "opro";
-type StaticStrategy = "general" | "structured" | "concise";
-type DecodeType = "greedy" | "sampling" | "self-consistency";
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
-interface StaticStrategyOption {
-  value: StaticStrategy;
-  label: string;
-  description: string;
-  icon: typeof Zap;
+interface _OptimizationResult {
+  optimizedPrompt: string;
+  improvements: string[];
+  technique: string;
+  strategy?: string;
 }
 
-const staticStrategies: StaticStrategyOption[] = [
+interface _OPROResult {
+  finalPrompt: string;
+  finalScore: number;
+  originalPrompt: string;
+  originalScore: number;
+  improvementPercent: number;
+  iterations: unknown[];
+  stopReason: string;
+  estimatedTokens: number;
+  elapsedMs: number;
+}
+
+function isStaticResult(r: unknown): r is _OptimizationResult {
+  return !!r && typeof (r as Record<string, unknown>).optimizedPrompt === "string";
+}
+
+function isOproResult(r: unknown): r is _OPROResult {
+  return !!r && typeof (r as Record<string, unknown>).finalPrompt === "string";
+}
+
+/* ------------------------------------------------------------------ */
+
+export type OptimizeMode = "static" | "opro";
+export type StaticStrategy = "general" | "structured" | "concise";
+export type DecodeType = "greedy" | "sampling" | "self-consistency";
+
+const staticStrategies = [
   {
-    value: "general",
+    value: "general" as StaticStrategy,
     label: "通用优化",
     description: "基于CRISPE/CO-STAR框架的全面优化，适合大多数场景",
     icon: Zap,
   },
   {
-    value: "structured",
+    value: "structured" as StaticStrategy,
     label: "结构化",
     description: "添加步骤分解和思维链引导，适合复杂任务",
     icon: Layers,
   },
   {
-    value: "concise",
+    value: "concise" as StaticStrategy,
     label: "精简",
     description: "删除冗余，保留核心，追求最高信息密度",
     icon: Minimize2,
@@ -66,11 +94,12 @@ const decodeStrategyOptions: { value: DecodeType; label: string; desc: string }[
   { value: "self-consistency", label: "Self-Consistency", desc: "多路径投票，质量最高，成本最高" },
 ];
 
+/* ------------------------------------------------------------------ */
+
 export default function Optimizer() {
   const [originalPrompt, setOriginalPrompt] = useState("");
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>("static");
   const [selectedStrategy, setSelectedStrategy] = useState<StaticStrategy>("general");
-  const [activeTab, setActiveTab] = useState("input");
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -83,32 +112,22 @@ export default function Optimizer() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Static optimize mutation
   const optimizeMutation = trpc.optimizer.optimize.useMutation({
-    onSuccess: () => {
-      setActiveTab("result");
-      toast.success("提示词优化完成！");
-    },
-    onError: (error) => {
-      toast.error(error.message || "优化失败，请重试");
-    },
+    onSuccess: () => toast.success("提示词优化完成！"),
+    onError: (error) => toast.error(error.message || "优化失败，请重试"),
   });
 
-  // OPRO optimize mutation
   const oproMutation = trpc.optimizer.optimizeOPRO.useMutation({
-    onSuccess: () => {
-      setActiveTab("result");
-      toast.success("OPRO 自动优化完成！");
-    },
-    onError: (error) => {
-      toast.error(error.message || "OPRO 优化失败，请重试");
-    },
+    onSuccess: () => toast.success("OPRO 自动优化完成！"),
+    onError: (error) => toast.error(error.message || "OPRO 优化失败，请重试"),
   });
 
   const { data: historyData, refetch: refetchHistory } = trpc.optimizer.history.useQuery(
     undefined,
     { enabled: isAuthenticated && showHistory }
   );
+
+  const result = optimizeMutation.data || oproMutation.data;
 
   const handleOptimize = () => {
     if (!originalPrompt.trim()) {
@@ -120,7 +139,6 @@ export default function Optimizer() {
       navigate("/login");
       return;
     }
-
     if (optimizeMode === "static") {
       optimizeMutation.mutate({
         prompt: originalPrompt.trim(),
@@ -146,11 +164,7 @@ export default function Optimizer() {
     toast.success("已复制到剪贴板");
   };
 
-  const loadFromHistory = (item: {
-    originalPrompt: string;
-    optimizedPrompt: string;
-    strategy?: string;
-  }) => {
+  const loadFromHistory = (item: { originalPrompt: string; optimizedPrompt?: string; strategy?: string }) => {
     setOriginalPrompt(item.originalPrompt);
     if (item.strategy && ["general", "structured", "concise"].includes(item.strategy)) {
       setSelectedStrategy(item.strategy as StaticStrategy);
@@ -160,226 +174,171 @@ export default function Optimizer() {
   };
 
   const isPending = optimizeMutation.isPending || oproMutation.isPending;
-  const result = optimizeMutation.data || oproMutation.data;
-  const isOproResult = optimizeMode === "opro" && oproMutation.data;
+
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                           */
+  /* ---------------------------------------------------------------- */
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="rounded-full hover:bg-secondary"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">提示词优化器</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              一键优化你的提示词，让AI输出更精准
-            </p>
-          </div>
+    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden bg-background"
+    >
+      {/* Header */}
+      <div className="shrink-0 px-6 py-4 border-b border-border/50 flex items-center gap-4"
+      >
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1"
+        >
+          <h1 className="text-xl font-semibold tracking-tight"
+          >提示词优化器</h1>
+          <p className="text-muted-foreground text-xs mt-0.5"
+          >一键优化你的提示词，让AI输出更精准</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)} className="rounded-lg"
+        >
+          <History className="w-4 h-4 mr-2" />
+          历史
+        </Button>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Mode Selection */}
-            <Card className="border-border/50 shadow-apple">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <GitCompare className="w-4 h-4 text-apple-blue" />
-                  选择优化模式
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setOptimizeMode("static")}
-                    className={`relative flex flex-col items-start p-4 rounded-xl border text-left transition-all duration-200 ${
-                      optimizeMode === "static"
-                        ? "border-apple-blue bg-apple-blue/5 shadow-sm"
-                        : "border-border/50 hover:border-apple-blue/30 hover:bg-secondary/50"
-                    }`}
+      <div className="flex-1 flex overflow-hidden"
+      >
+        {/* Left — Original Input */}
+        <div className="w-[45%] min-w-[320px] max-w-[520px] flex flex-col border-r border-border/50 bg-slate-50/30"
+        >
+          <ScrollReveal className="shrink-0 px-5 py-4 space-y-4 overflow-y-auto"
+          >
+            {/* Mode Cards */}
+            <div className="grid grid-cols-2 gap-2"
+            >
+              <TiltCard maxTilt={3} scale={1.02}
+              >
+                <button
+                  onClick={() => setOptimizeMode("static")}
+                  className={`w-full flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                    optimizeMode === "static"
+                      ? "border-apple-blue bg-apple-blue/5 shadow-sm"
+                      : "border-border/50 hover:border-apple-blue/30 bg-white"
+                  }`}
+                >
+                  <Zap className={`w-4 h-4 mb-1.5 ${optimizeMode === "static" ? "text-apple-blue" : "text-muted-foreground"}`} />
+                  <span className={`text-xs font-medium ${optimizeMode === "static" ? "text-apple-blue" : ""}`}
+                  >静态优化</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5"
+                  >单轮策略，快速出结果</span>
+                </button>
+              </TiltCard>
+              <TiltCard maxTilt={3} scale={1.02}
+              >
+                <button
+                  onClick={() => setOptimizeMode("opro")}
+                  className={`w-full flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                    optimizeMode === "opro"
+                      ? "border-apple-blue bg-apple-blue/5 shadow-sm"
+                      : "border-border/50 hover:border-apple-blue/30 bg-white"
+                  }`}
+                >
+                  <BrainCircuit className={`w-4 h-4 mb-1.5 ${optimizeMode === "opro" ? "text-apple-blue" : "text-muted-foreground"}`} />
+                  <span className={`text-xs font-medium ${optimizeMode === "opro" ? "text-apple-blue" : ""}`}
+                  >OPRO 自动优化</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5"
+                  >多轮迭代，自动评估</span>
+                </button>
+              </TiltCard>
+            </div>
+
+            {/* Strategy (static) */}
+            {optimizeMode === "static" && (
+              <StaggerContainer className="space-y-2"
+              >
+                {staticStrategies.map((strategy) => {
+                  const Icon = strategy.icon;
+                  return (
+                    <StaggerItem key={strategy.value}
+                    >
+                      <button
+                        onClick={() => setSelectedStrategy(strategy.value)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                          selectedStrategy === strategy.value
+                            ? "border-apple-blue bg-apple-blue/5 shadow-sm"
+                            : "border-border/50 hover:border-apple-blue/30 bg-white"
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${selectedStrategy === strategy.value ? "text-apple-blue" : "text-muted-foreground"}`} />
+                        <div>
+                          <span className={`text-xs font-medium ${selectedStrategy === strategy.value ? "text-apple-blue" : ""}`}
+                          >{strategy.label}</span>
+                          <p className="text-[10px] text-muted-foreground mt-0.5"
+                          >{strategy.description}</p>
+                        </div>
+                      </button>
+                    </StaggerItem>
+                  );
+                })}
+              </StaggerContainer>
+            )}
+
+            {/* OPRO config */}
+            {optimizeMode === "opro" && (
+              <Card className="border-border/50 rounded-xl"
+              >
+                <CardContent className="p-4 space-y-4"
+                >
+                  <div className="space-y-1.5"
                   >
-                    <Zap className={`w-5 h-5 mb-2 ${
-                      optimizeMode === "static" ? "text-apple-blue" : "text-muted-foreground"
-                    }`} />
-                    <span className={`font-medium text-sm ${
-                      optimizeMode === "static" ? "text-apple-blue" : "text-foreground"
-                    }`}>
-                      静态优化
-                    </span>
-                    <span className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      单轮策略优化，快速出结果
-                    </span>
-                    {optimizeMode === "static" && (
-                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-apple-blue" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setOptimizeMode("opro")}
-                    className={`relative flex flex-col items-start p-4 rounded-xl border text-left transition-all duration-200 ${
-                      optimizeMode === "opro"
-                        ? "border-apple-blue bg-apple-blue/5 shadow-sm"
-                        : "border-border/50 hover:border-apple-blue/30 hover:bg-secondary/50"
-                    }`}
+                    <div className="flex items-center justify-between"
+                    >
+                      <label className="text-xs font-medium"
+                      >最大迭代轮次</label>
+                      <span className="text-xs text-apple-blue font-medium"
+                      >{maxIterations[0]} 轮</span>
+                    </div>
+                    <Slider value={maxIterations} onValueChange={setMaxIterations} min={1} max={5} step={1} />
+                  </div>
+                  <div className="space-y-1.5"
                   >
-                    <BrainCircuit className={`w-5 h-5 mb-2 ${
-                      optimizeMode === "opro" ? "text-apple-blue" : "text-muted-foreground"
-                    }`} />
-                    <span className={`font-medium text-sm ${
-                      optimizeMode === "opro" ? "text-apple-blue" : "text-foreground"
-                    }`}>
-                      OPRO 自动优化
-                    </span>
-                    <span className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      多轮迭代 + LLM-as-Judge 自动评估，寻找最优提示词
-                    </span>
-                    {optimizeMode === "opro" && (
-                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-apple-blue" />
-                    )}
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mode-specific Config */}
-            {optimizeMode === "static" ? (
-              <Card className="border-border/50 shadow-apple">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-apple-blue" />
-                    选择优化策略
-                  </CardTitle>
-                  <CardDescription>
-                    根据你的需求选择最适合的优化方向
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {staticStrategies.map((strategy) => {
-                      const Icon = strategy.icon;
-                      return (
-                        <button
-                          key={strategy.value}
-                          onClick={() => setSelectedStrategy(strategy.value)}
-                          className={`relative flex flex-col items-start p-4 rounded-xl border text-left transition-all duration-200 ${
-                            selectedStrategy === strategy.value
-                              ? "border-apple-blue bg-apple-blue/5 shadow-sm"
-                              : "border-border/50 hover:border-apple-blue/30 hover:bg-secondary/50"
-                          }`}
-                        >
-                          <Icon className={`w-5 h-5 mb-2 ${
-                            selectedStrategy === strategy.value ? "text-apple-blue" : "text-muted-foreground"
-                          }`} />
-                          <span className={`font-medium text-sm ${
-                            selectedStrategy === strategy.value ? "text-apple-blue" : "text-foreground"
-                          }`}>
-                            {strategy.label}
-                          </span>
-                          <span className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            {strategy.description}
-                          </span>
-                          {selectedStrategy === strategy.value && (
-                            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-apple-blue" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-border/50 shadow-apple">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Settings2 className="w-4 h-4 text-apple-blue" />
-                    OPRO 优化参数
-                  </CardTitle>
-                  <CardDescription>
-                    调整迭代策略，平衡优化质量与成本
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {/* Max Iterations */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">最大迭代轮次</label>
-                      <span className="text-sm text-apple-blue font-medium">{maxIterations[0]} 轮</span>
+                    <div className="flex items-center justify-between"
+                    >
+                      <label className="text-xs font-medium"
+                      >每轮候选数</label>
+                      <span className="text-xs text-apple-blue font-medium"
+                      >{candidatesPerIteration[0]} 个</span>
                     </div>
-                    <Slider
-                      value={maxIterations}
-                      onValueChange={setMaxIterations}
-                      min={1}
-                      max={5}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      每轮生成候选提示词并评估，保留最优继续迭代
-                    </p>
+                    <Slider value={candidatesPerIteration} onValueChange={setCandidatesPerIteration} min={3} max={8} step={1} />
                   </div>
-
-                  {/* Candidates per iteration */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">每轮候选数</label>
-                      <span className="text-sm text-apple-blue font-medium">{candidatesPerIteration[0]} 个</span>
+                  <div className="space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between"
+                    >
+                      <label className="text-xs font-medium"
+                      >目标分数</label>
+                      <span className="text-xs text-apple-blue font-medium"
+                      >{targetScore[0]}/10</span>
                     </div>
-                    <Slider
-                      value={candidatesPerIteration}
-                      onValueChange={setCandidatesPerIteration}
-                      min={3}
-                      max={8}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      候选越多，找到优质提示词的概率越高，但成本也越高
-                    </p>
+                    <Slider value={targetScore} onValueChange={setTargetScore} min={5} max={10} step={0.5} />
                   </div>
-
-                  {/* Target Score */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">目标分数</label>
-                      <span className="text-sm text-apple-blue font-medium">{targetScore[0]}/10</span>
-                    </div>
-                    <Slider
-                      value={targetScore}
-                      onValueChange={setTargetScore}
-                      min={5}
-                      max={10}
-                      step={0.5}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      达到目标分数后自动停止，避免不必要的迭代
-                    </p>
-                  </div>
-
-                  {/* Decode Strategy */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">解码策略（成本-质量权衡）</label>
-                    <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1.5"
+                  >
+                    <label className="text-xs font-medium"
+                    >解码策略</label>
+                    <div className="grid grid-cols-3 gap-2"
+                    >
                       {decodeStrategyOptions.map((opt) => (
                         <button
                           key={opt.value}
                           onClick={() => setDecodeType(opt.value)}
-                          className={`p-2.5 rounded-lg border text-left transition-all ${
+                          className={`p-2 rounded-lg border text-left transition-all ${
                             decodeType === opt.value
                               ? "border-apple-blue bg-apple-blue/5"
                               : "border-border/50 hover:border-apple-blue/30"
                           }`}
                         >
-                          <div className={`text-xs font-medium ${
-                            decodeType === opt.value ? "text-apple-blue" : "text-foreground"
-                          }`}>
-                            {opt.label}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                          <div className={`text-[10px] font-medium ${decodeType === opt.value ? "text-apple-blue" : ""}`}
+                          >{opt.label}</div>
+                          <div className="text-[9px] text-muted-foreground mt-0.5"
+                          >{opt.desc}</div>
                         </button>
                       ))}
                     </div>
@@ -388,173 +347,171 @@ export default function Optimizer() {
               </Card>
             )}
 
-            {/* Input / Result Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full grid grid-cols-2 bg-secondary/50 p-1 rounded-xl">
-                <TabsTrigger value="input" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  输入提示词
-                </TabsTrigger>
-                <TabsTrigger
-                  value="result"
-                  disabled={!result}
-                  className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            {/* Input Area */}
+            <div className="space-y-3"
+            >
+              <Textarea
+                placeholder="在这里粘贴你需要优化的提示词…"
+                value={originalPrompt}
+                onChange={(e) => setOriginalPrompt(e.target.value)}
+                className="min-h-[160px] resize-none border-border/50 focus-visible:ring-apple-blue/30 font-mono text-sm leading-relaxed rounded-xl"
+              />
+              <div className="flex items-center justify-between"
+              >
+                <span className="text-xs text-muted-foreground"
+                >{originalPrompt.length} / 5000 字符</span>
+                <Button
+                  onClick={handleOptimize}
+                  disabled={isPending || !originalPrompt.trim()}
+                  className="rounded-xl bg-gradient-to-r from-apple-blue to-apple-purple text-white shadow-md"
                 >
-                  优化结果
-                </TabsTrigger>
-              </TabsList>
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {optimizeMode === "opro" ? "OPRO 优化中…" : "优化中…"}
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      {optimizeMode === "opro" ? "启动 OPRO" : "开始优化"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
 
-              <TabsContent value="input" className="mt-4 space-y-4">
-                <Card className="border-border/50 shadow-apple">
-                  <CardContent className="pt-6">
-                    <Textarea
-                      placeholder="在这里粘贴你需要优化的提示词..."
-                      value={originalPrompt}
-                      onChange={(e) => setOriginalPrompt(e.target.value)}
-                      className="min-h-[200px] resize-none border-border/50 focus-visible:ring-apple-blue/30 font-mono text-sm leading-relaxed"
-                    />
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="text-xs text-muted-foreground">
-                        {originalPrompt.length} / 5000 字符
-                      </span>
-                      <div className="flex gap-2">
+        {/* Right — Result / Comparison */}
+        <div className="flex-1 flex flex-col min-w-0 bg-background"
+        >
+          {!result ? (
+            <div className="flex-1 flex items-center justify-center p-8"
+            >
+              <EmptyState
+                icon={<GitCompare className="w-10 h-10" />}
+                title="准备优化"
+                description="在左侧输入提示词并点击优化，结果将在这里显示"
+              />
+            </div>
+          ) : (
+            <ScrollReveal className="flex-1 p-5 space-y-4 overflow-y-auto"
+            >
+              {/* Improvements badges (static only) */}
+              {isStaticResult(result) && (
+                <StaggerContainer className="flex flex-wrap gap-2"
+                >
+                  {result.improvements.map((improvement, idx) => (
+                    <StaggerItem key={idx}
+                    >
+                      <Badge variant="secondary" className="bg-apple-blue/10 text-apple-blue hover:bg-apple-blue/20 border-0 text-xs"
+                      >
+                        ✦ {improvement}
+                      </Badge>
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              )}
+
+              {/* Diff / Trajectory */}
+              {isOproResult(result) ? (
+                <IterationTrajectory result={result as unknown as Parameters<typeof IterationTrajectory>[0]["result"]} />
+              ) : (
+                <Card className="border-border/50 shadow-apple rounded-2xl"
+                >
+                  <CardHeader className="pb-3"
+                  >
+                    <div className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2"
+                      >
+                        <GitCompare className="w-4 h-4 text-apple-blue" />
+                        <CardTitle className="text-sm font-medium"
+                        >优化对比</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-2"
+                      >
+                        {isStaticResult(result) && (
+                          <Badge variant="outline" className="text-xs rounded-md"
+                          >{result.technique}</Badge>
+                        )}
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => setShowHistory(!showHistory)}
-                          className="rounded-lg border-border/50"
+                          onClick={() =>
+                            handleCopy(
+                              (result as { optimizedPrompt?: string; finalPrompt?: string }).optimizedPrompt
+                              || (result as { optimizedPrompt?: string; finalPrompt?: string }).finalPrompt
+                              || ""
+                            )}
+                          className="rounded-lg h-8 px-2"
                         >
-                          <History className="w-4 h-4 mr-2" />
-                          历史记录
-                        </Button>
-                        <Button
-                          onClick={handleOptimize}
-                          disabled={isPending || !originalPrompt.trim()}
-                          className="rounded-lg bg-apple-blue hover:bg-apple-blue-dark text-white"
-                        >
-                          {isPending ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              {optimizeMode === "opro" ? "OPRO 优化中..." : "优化中..."}
-                            </>
+                          {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
                           ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              {optimizeMode === "opro" ? "启动 OPRO 优化" : "开始优化"}
-                            </>
+                            <Copy className="w-4 h-4" />
                           )}
                         </Button>
                       </div>
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isStaticResult(result) && (
+                      <DiffViewer
+                        original={originalPrompt}
+                        optimized={result.optimizedPrompt}
+                      />
+                    )}
                   </CardContent>
                 </Card>
-              </TabsContent>
+              )}
 
-              <TabsContent value="result" className="mt-4 space-y-4">
-                {result && (
-                  <>
-                    {isOproResult ? (
-                      /* OPRO Result */
-                      <IterationTrajectory
-                        result={oproMutation.data!}
-                        baselinePrompt={originalPrompt}
-                      />
-                    ) : (
-                      /* Static Result */
-                      <>
-                        {/* Improvements Badge */}
-                        <div className="flex flex-wrap gap-2">
-                          {result.improvements.map((improvement: string, idx: number) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="bg-apple-blue/10 text-apple-blue hover:bg-apple-blue/20 border-0"
-                            >
-                              {improvement}
-                            </Badge>
-                          ))}
-                        </div>
+              {/* Action bar */}
+              <div className="flex justify-end gap-2 pt-2"
+              >
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    optimizeMutation.reset();
+                    oproMutation.reset();
+                  }}
+                  className="rounded-xl"
+                >
+                  重新优化
+                </Button>
+                <Button
+                  onClick={() =>
+                    handleCopy(isOproResult(result) ? result.finalPrompt : (isStaticResult(result) ? result.optimizedPrompt : ""))}
+                  className="rounded-xl bg-gradient-to-r from-apple-blue to-apple-purple text-white"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      已复制
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      复制结果
+                    </>
+                  )}
+                </Button>
+              </div>
+            </ScrollReveal>
+          )}
+        </div>
 
-                        {/* Diff View */}
-                        <Card className="border-border/50 shadow-apple">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base font-medium">优化对比</CardTitle>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {result.technique}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCopy(result.optimizedPrompt)}
-                                  className="rounded-lg h-8 px-2"
-                                >
-                                  {copied ? (
-                                    <Check className="w-4 h-4 text-green-500" />
-                                  ) : (
-                                    <Copy className="w-4 h-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <DiffViewer
-                              original={originalPrompt}
-                              optimized={result.optimizedPrompt}
-                            />
-                          </CardContent>
-                        </Card>
-                      </>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setActiveTab("input")}
-                        className="rounded-lg border-border/50"
-                      >
-                        继续优化
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          handleCopy(
-                            isOproResult
-                              ? (result as { finalPrompt: string }).finalPrompt
-                              : result.optimizedPrompt
-                          )
-                        }
-                        className="rounded-lg bg-apple-blue hover:bg-apple-blue-dark text-white"
-                      >
-                        {copied ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            已复制
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 mr-2" />
-                            复制优化结果
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* History Sidebar */}
-          <div className={`${showHistory ? "block" : "hidden lg:block"}`}>
+        {/* History Drawer (collapsible) */}
+        {showHistory && (
+          <div className="w-80 border-l border-border/50 bg-slate-50/30 overflow-y-auto"
+          >
             <HistoryPanel
               history={historyData || []}
               onSelect={loadFromHistory}
               onRefresh={refetchHistory}
             />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

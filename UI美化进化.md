@@ -2104,24 +2104,24 @@ Level 5 (最高): shadow-xl    — FAB、Toast
 | 编号 | 任务 | 工期 | 验收标准 |
 |------|------|------|----------|
 | L2-1 | ✅ 首页 Hero 区重设计 | 6h | 居中布局 + 横向场景卡片 + 统计区 |
-| L2-2 | 工作台两栏布局 | 8h | 左项目列表 + 右生命周期/概览 |
-| L2-3 | 工作台合并 Projects | 4h | /projects 功能并入 /workspace |
+| L2-2 | ✅ 工作台两栏布局 | 8h | 左项目列表 + 右生命周期/概览 |
+| L2-3 | ✅ 工作台合并 Projects | 4h | /projects 功能并入 /workspace |
 | L2-4 | ✅ 提示词库双视图 | 6h | 网格/列表切换 + 详情抽屉 |
 | L2-5 | ✅ 模板市场橱窗设计 | 6h | 精选区 + 分类导航 + 卡片网格 |
-| L2-6 | 优化器双栏对比 | 6h | 原始/结果并排 + Diff 高亮 + 改进徽章 |
+| L2-6 | ✅ 优化器双栏对比 | 6h | 原始/结果并排 + Diff 高亮 + 改进徽章 |
 | L2-7 | ✅ 导出向导式流程 | 4h | 三步骤 + 选择 + 格式 + 导出 |
 | L2-8 | ✅ 设置分 Tab 重构 | 6h | 5 个 Tab + 即时保存 + 模型 Key 页 |
-| L2-9 | 账户页新建 | 4h | 个人资料 + 统计 + 登录安全 |
+| L2-9 | ✅ 账户页新建 | 4h | 个人资料 + 统计 + 登录安全 |
 | L2-10 | ✅ 项目详情对话剧场 | 6h | Messages 风格气泡 + 摘要抽屉 + 输入栏 |
 
 ### 批次 3 — 全局组件 Polish (P2)
 
 | 编号 | 任务 | 工期 | 验收标准 |
 |------|------|------|----------|
-| L3-1 | 卡片组件统一 | 4h | Material Card + Glass + Hover/Press 态 |
-| L3-2 | 按钮组件统一 | 3h | Primary/Secondary/Tertiary 三级 |
-| L3-3 | 输入框组件统一 | 3h | Search/Textarea + Focus 态 |
-| L3-4 | Badge 组件统一 | 2h | Domain/Status 两种 + 领域色 |
+| L3-1 | ✅ 卡片组件统一 | 4h | Material Card + Glass + Hover/Press 态 |
+| L3-2 | ✅ 按钮组件统一 | 3h | Primary/Secondary/Tertiary 三级 |
+| L3-3 | ✅ 输入框组件统一 | 3h | Search/Textarea + Focus 态 |
+| L3-4 | ✅ Badge 组件统一 | 2h | Domain/Status 两种 + 领域色 |
 | L3-5 | ✅ 空状态组件统一 | 3h | 每页专属 + 图标 + 操作按钮 |
 | L3-6 | ✅ 全局搜索升级 | 4h | Command Palette 搜索全部内容 |
 | L3-7 | 空状态生成艺术 | 4h | 星座图/粒子装饰背景 |

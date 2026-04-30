@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/accordion";
 import {
   TrendingUp,
-  TrendingDown,
   Target,
   Clock,
   Coins,
@@ -49,10 +48,9 @@ interface OPROResult {
 
 interface IterationTrajectoryProps {
   result: OPROResult;
-  baselinePrompt: string;
 }
 
-export function IterationTrajectory({ result, baselinePrompt }: IterationTrajectoryProps) {
+export function IterationTrajectory({ result }: IterationTrajectoryProps) {
   const maxScore = 10;
   const scoreColor = (score: number) => {
     if (score >= 8) return "bg-green-500";

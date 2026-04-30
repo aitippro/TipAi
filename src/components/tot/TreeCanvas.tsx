@@ -21,7 +21,7 @@ const NODE_HEIGHT = 56;
 const LEVEL_GAP = 100;
 const NODE_GAP = 24;
 
-export function TreeCanvas({ tree, rootId, bestPath }: TreeCanvasProps) {
+export function TreeCanvas({ tree, rootId: _rootId, bestPath }: TreeCanvasProps) {
   const layout = useMemo(() => {
     const nodes = Object.values(tree);
     const maxDepth = Math.max(0, ...nodes.map((n) => n.depth));

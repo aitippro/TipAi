@@ -45,8 +45,6 @@ export default function QualityGatePage() {
     { enabled: submitted && !!prompt.trim() }
   );
 
-  const checksListQuery = trpc.qualityGate.checks.useQuery();
-
   const handleCheck = () => {
     if (!prompt.trim()) return;
     setSubmitted(true);

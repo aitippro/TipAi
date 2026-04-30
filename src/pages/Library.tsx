@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
+import { motion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -14,14 +15,8 @@ import { Skeleton } from "@/components/ui/Skeleton"
 import { TiltCard } from "@/components/effects/TiltCard"
 import {
   BookOpen, Search, Trash2, Copy, Clock,
-  Megaphone, Code, GraduationCap, BarChart3, Scale, Globe,
   ChevronDown, ChevronUp, Sparkles,
 } from "lucide-react"
-
-const DOMAIN_ICONS: Record<string, typeof Globe> = {
-  "content-marketing": Megaphone, programming: Code, education: GraduationCap,
-  "data-analysis": BarChart3, legal: Scale, general: Globe,
-}
 
 const DOMAIN_COLORS: Record<string, string> = {
   "content-marketing": "bg-pink-50 text-pink-600 border-pink-200",

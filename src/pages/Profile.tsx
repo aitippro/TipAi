@@ -1,11 +1,8 @@
-import { useState } from "react"
 import { useNavigate } from "react-router"
 import { trpc } from "@/providers/trpc"
 import { useAuth } from "@/hooks/useAuth"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
 import {
   User, Mail, Shield, Clock, ArrowRight, Sparkles, FileText,
   FolderOpen, CheckCircle2, TrendingUp,
@@ -70,7 +67,7 @@ export default function Profile() {
             <CardContent className="p-4 text-center">
               <FolderOpen className="w-5 h-5 text-apple-blue mx-auto mb-2" />
               <div className="text-2xl font-bold text-slate-800">
-                <AnimatedCounter from={0} to={totalProjects} duration={800} />
+                <AnimatedCounter value={totalProjects} duration={800} />
               </div>
               <p className="text-xs text-slate-400">总项目</p>
             </CardContent>
@@ -82,7 +79,7 @@ export default function Profile() {
             <CardContent className="p-4 text-center">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
               <div className="text-2xl font-bold text-slate-800">
-                <AnimatedCounter from={0} to={completedProjects} duration={800} />
+                <AnimatedCounter value={completedProjects} duration={800} />
               </div>
               <p className="text-xs text-slate-400">已完成</p>
             </CardContent>
@@ -94,7 +91,7 @@ export default function Profile() {
             <CardContent className="p-4 text-center">
               <Sparkles className="w-5 h-5 text-violet-500 mx-auto mb-2" />
               <div className="text-2xl font-bold text-slate-800">
-                <AnimatedCounter from={0} to={prompts?.length || 0} duration={800} />
+                <AnimatedCounter value={prompts?.length || 0} duration={800} />
               </div>
               <p className="text-xs text-slate-400">提示词</p>
             </CardContent>

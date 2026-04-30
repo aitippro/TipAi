@@ -25,14 +25,6 @@ const ROLE_COLORS: Record<string, string> = {
   coordinator: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
-const ROLE_ICONS: Record<string, typeof Layers> = {
-  planner: ListOrdered,
-  executor: CheckCircle2,
-  reviewer: Sparkles,
-  optimizer: Layers,
-  coordinator: GitBranch,
-};
-
 const MODE_ICONS: Record<string, typeof Layers> = {
   sequential: ListOrdered,
   parallel: Layers,

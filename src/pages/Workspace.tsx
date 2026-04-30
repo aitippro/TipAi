@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -101,7 +102,7 @@ export default function WorkspacePage() {
             <RippleButton
               onClick={() => {
                 if (!isAuthenticated) { toast.error("请先登录"); navigate("/login"); return; }
-                createProject.mutate({ title: "新项目", description: "" });
+                createProject.mutate({ title: "新项目", description: "", intent: "general" });
               }}
               className="bg-gradient-to-r from-apple-blue to-apple-purple text-white rounded-xl px-4 py-2 text-sm font-medium shadow-md"
             >
@@ -129,7 +130,7 @@ export default function WorkspacePage() {
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
-                              <AnimatedCounter from={0} to={stats.total} duration={600} />
+                              <AnimatedCounter value={stats.total} duration={600} />
                             </p>
                             <p className="text-[11px] text-slate-400">总项目</p>
                           </div>
@@ -149,7 +150,7 @@ export default function WorkspacePage() {
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
-                              <AnimatedCounter from={0} to={stats.completed} duration={600} />
+                              <AnimatedCounter value={stats.completed} duration={600} />
                             </p>
                             <p className="text-[11px] text-slate-400">已完成</p>
                           </div>
@@ -169,7 +170,7 @@ export default function WorkspacePage() {
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
-                              <AnimatedCounter from={0} to={stats.inProgress} duration={600} />
+                              <AnimatedCounter value={stats.inProgress} duration={600} />
                             </p>
                             <p className="text-[11px] text-slate-400">进行中</p>
                           </div>
@@ -189,7 +190,7 @@ export default function WorkspacePage() {
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
-                              <AnimatedCounter from={0} to={stats.ready} duration={600} />
+                              <AnimatedCounter value={stats.ready} duration={600} />
                             </p>
                             <p className="text-[11px] text-slate-400">就绪</p>
                           </div>
@@ -230,7 +231,7 @@ export default function WorkspacePage() {
                 description="创建你的第一个提示词项目"
                 action={{
                   label: "新建项目",
-                  onClick: () => createProject.mutate({ title: "新项目", description: "" }),
+                  onClick: () => createProject.mutate({ title: "新项目", description: "", intent: "general" }),
                 }}
               />
             ) : (

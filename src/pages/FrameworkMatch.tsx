@@ -50,6 +50,8 @@ function ComplexityBadge({ complexity }: { complexity: string }) {
   );
 }
 
+export { ComplexityBadge };
+
 export default function FrameworkMatchPage() {
   const [intent, setIntent] = useState("");
   const [submittedIntent, setSubmittedIntent] = useState("");

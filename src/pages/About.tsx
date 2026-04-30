@@ -1,21 +1,14 @@
 import { motion } from "framer-motion"
-import { Sparkles, Zap, Shield, Github, Heart, ArrowUpRight, Terminal, Database, Layers } from "lucide-react"
+import { Sparkles, Zap, Shield, Github, Heart, ArrowUpRight } from "lucide-react"
 import { AuroraBackground } from "@/components/effects/AuroraBackground"
 import { TiltCard } from "@/components/effects/TiltCard"
 import { ScrollReveal } from "@/components/effects/ScrollReveal"
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer"
-import { TextReveal } from "@/components/effects/TextReveal"
 
 const FEATURES = [
   { icon: Sparkles, title: "AI 驱动", desc: "多模型智能提示词生成与优化", color: "from-violet-500 to-indigo-600" },
   { icon: Zap, title: "高效工作流", desc: "六阶段提示词开发生命周期", color: "from-amber-500 to-orange-600" },
   { icon: Shield, title: "隐私优先", desc: "本地 SQLite，数据完全可控", color: "from-emerald-500 to-teal-600" },
-]
-
-const TECH_STACK = [
-  { icon: Terminal, label: "Electron 41", desc: "桌面应用框架" },
-  { icon: Layers, label: "React 19", desc: "UI 渲染引擎" },
-  { icon: Database, label: "SQLite", desc: "本地数据库" },
 ]
 
 /**
@@ -72,7 +65,7 @@ export default function About() {
         <ScrollReveal delay={100}>
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-sm p-6 mb-8">
             <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-slate-400" />
+              <Zap className="w-4 h-4 text-slate-400" />
               技术栈
             </h3>
             <div className="flex flex-wrap gap-2">

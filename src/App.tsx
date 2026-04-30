@@ -28,13 +28,6 @@ const Logs = lazy(() => import("./pages/Logs"))
 const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
 const Profile = lazy(() => import("./pages/Profile"))
 const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
-const Multimodal = lazy(() => import("./pages/Multimodal"))
-const QualityGate = lazy(() => import("./pages/QualityGate"))
-const Feedback = lazy(() => import("./pages/Feedback"))
-const DriftDetection = lazy(() => import("./pages/DriftDetection"))
-const AgentSwarm = lazy(() => import("./pages/AgentSwarm"))
-const Academic = lazy(() => import("./pages/Academic"))
-const ApiDocs = lazy(() => import("./pages/ApiDocs"))
 
 function PageFallback() {
   return (
