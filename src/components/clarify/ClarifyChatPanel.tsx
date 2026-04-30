@@ -40,8 +40,18 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   const [errMsg, setErrMsg] = useState<string | null>(null)
   const [summary, setSummary] = useState<RequirementSummary | null>(null)
   const completedRef = useRef(false)
+  const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+    }
+  }, [])
 
   const completeOnce = useMemo(() => (answers: Record<string, string>, summary: RequirementSummary) => {
     if (completedRef.current) return
@@ -59,7 +69,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       const result = await generateSummaryMutation.mutateAsync({ projectId })
       setSummary(result)
       // Auto-proceed to results after brief pause
-      setTimeout(() => completeOnce({}, result), 1800)
+      autoTimerRef.current = setTimeout(() => completeOnce({}, result), 1800)
     } catch (error) {
         setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
         logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
@@ -77,6 +87,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
 
   // Initialize: save intent turn and get first question
   useEffect(() => {
+    let cancelled = false
     async function init() {
       setIsLoading(true)
       try {
@@ -86,6 +97,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
           content: intent || "（用户初始需求）",
           turnNumber: 0,
         })
+        if (cancelled) return
 
         const result = await generateNextQuestion.mutateAsync({ id: projectId })
 
@@ -124,6 +136,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     }
 
     init()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, intent])
 

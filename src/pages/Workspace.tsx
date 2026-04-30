@@ -32,10 +32,12 @@ export default function WorkspacePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const { data: projects, isLoading } = trpc.project.list.useQuery(undefined, { enabled: isAuthenticated });
+  const utils = trpc.useUtils()
   const createProject = trpc.project.create.useMutation({
     onSuccess: (p) => {
-      toast.success("项目已创建");
-      setSelectedId(p.id);
+      utils.project.list.invalidate()
+      toast.success("项目已创建")
+      setSelectedId(p.id)
     },
     onError: (e) => toast.error(e.message),
   });

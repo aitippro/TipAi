@@ -61,7 +61,7 @@ export default function SettingsPage() {
     localStorage.setItem("tipai_theme", theme)
 
     try {
-      if (Object.keys(payload).length > 0) {
+      if (Object.keys(payload).length > 1) { // >1 because defaultModel is always present
         await updateMutation.mutateAsync(payload)
       }
       toast.success("所有设置已保存", {
@@ -69,8 +69,7 @@ export default function SettingsPage() {
         duration: 2500,
       })
     } catch {
-      // Error toast already shown by onError handler
-      toast.info("本地设置已保留，可稍后重试", { duration: 2000 })
+      // onError already showed a toast; don't double-ping
     } finally {
       savingRef.current = false
     }
