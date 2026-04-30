@@ -34,6 +34,7 @@ import {
   GitBranch,
   Image,
   ShieldCheck,
+  BarChart3,
 } from "lucide-react"
 
 // ============================================================================
@@ -63,6 +64,7 @@ const NAV_GROUPS = [
       { path: "/tot", icon: GitBranch, label: "ToT 推理" },
       { path: "/multimodal", icon: Image, label: "多模态" },
       { path: "/quality-gate", icon: ShieldCheck, label: "质量门禁" },
+      { path: "/feedback", icon: BarChart3, label: "反馈闭环" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },
