@@ -21,6 +21,7 @@ import {
   type JudgeResult,
 } from "./llm-judge";
 import type { DecodeStrategy } from "../ai/decoding-strategies";
+import type { OptimizationResult } from "../../types/shared";
 
 /** OPRO 配置 */
 export interface OPROConfig {
@@ -64,6 +65,7 @@ export interface OPROIteration {
   iteration: number;
   candidates: OPROCandidate[];
   bestCandidate: OPROCandidate;
+  worstCandidate?: OPROCandidate;
   avgScore: number;
   topBottomGap: number;
   analysis: string;
@@ -253,7 +255,7 @@ async function generateNextCandidates(
 export async function runOPRO(
   originalPrompt: string,
   userConfig: Partial<OPROConfig>,
-): Promise<OPROResult> {
+): Promise<OptimizationResult> {
   const startTime = Date.now();
   const config: OPROConfig = { ...DEFAULT_CONFIG, ...userConfig } as OPROConfig;
 
@@ -378,10 +380,16 @@ export async function runOPRO(
     }
 
     // 记录本轮
+    const worstCandidate =
+      batchResult.bottomCandidate && iterationCandidates.find((c) => c.id === batchResult.bottomCandidate!.id)
+        ? iterationCandidates.find((c) => c.id === batchResult.bottomCandidate!.id)
+        : iterationCandidates[iterationCandidates.length - 1];
+
     iterations.push({
       iteration,
       candidates: iterationCandidates,
       bestCandidate: iterationBest || bestEver,
+      worstCandidate,
       avgScore: batchResult.avgScore,
       topBottomGap:
         batchResult.topCandidate && batchResult.bottomCandidate
@@ -410,7 +418,7 @@ export async function runOPRO(
   const elapsedMs = Date.now() - startTime;
   const improvementPercent = calculateImprovement(originalScore, bestEver.score);
 
-  const stopReason: OPROResult["stopReason"] =
+  const stopReason: OptimizationResult["stopReason"] =
     bestEver.score >= config.targetScore
       ? "target_reached"
       : noImprovementCount >= config.earlyStopPatience
@@ -427,7 +435,34 @@ export async function runOPRO(
     originalPrompt,
     originalScore,
     improvementPercent,
-    iterations,
+    iterations: iterations.map((it) => ({
+      round: it.iteration,
+      candidates: it.candidates.map((c) => ({
+        id: c.id,
+        prompt: c.prompt,
+        score: c.score,
+        dimensions: c.dimensions as unknown as Record<string, number>,
+        reasoning: c.reasoning,
+      })),
+      bestCandidate: {
+        id: it.bestCandidate.id,
+        prompt: it.bestCandidate.prompt,
+        score: it.bestCandidate.score,
+        dimensions: it.bestCandidate.dimensions as unknown as Record<string, number>,
+        reasoning: it.bestCandidate.reasoning,
+      },
+      worstCandidate: it.worstCandidate
+        ? {
+            id: it.worstCandidate.id,
+            prompt: it.worstCandidate.prompt,
+            score: it.worstCandidate.score,
+            dimensions: it.worstCandidate.dimensions as unknown as Record<string, number>,
+            reasoning: it.worstCandidate.reasoning,
+          }
+        : undefined,
+      avgScore: it.avgScore,
+      analysis: it.analysis,
+    })),
     totalCandidates: allHistory.length,
     actualIterations: iterations.length,
     estimatedTokens,

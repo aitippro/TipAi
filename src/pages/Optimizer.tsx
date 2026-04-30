@@ -15,6 +15,7 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { EmptyState } from "@/components/EmptyState";
+import type { OptimizationResult } from "../../api/types/shared";
 import {
   Sparkles as _Sparkles,
   History,
@@ -41,23 +42,12 @@ interface _OptimizationResult {
   strategy?: string;
 }
 
-interface _OPROResult {
-  finalPrompt: string;
-  finalScore: number;
-  originalPrompt: string;
-  originalScore: number;
-  improvementPercent: number;
-  iterations: unknown[];
-  stopReason: string;
-  estimatedTokens: number;
-  elapsedMs: number;
-}
 
 function isStaticResult(r: unknown): r is _OptimizationResult {
   return !!r && typeof (r as Record<string, unknown>).optimizedPrompt === "string";
 }
 
-function isOproResult(r: unknown): r is _OPROResult {
+function isOproResult(r: unknown): r is OptimizationResult {
   return !!r && typeof (r as Record<string, unknown>).finalPrompt === "string";
 }
 
@@ -415,7 +405,7 @@ export default function Optimizer() {
 
               {/* Diff / Trajectory */}
               {isOproResult(result) ? (
-                <IterationTrajectory result={result as unknown as Parameters<typeof IterationTrajectory>[0]["result"]} />
+                <IterationTrajectory result={result} />
               ) : (
                 <Card className="border-border/50 shadow-apple rounded-2xl"
                 >

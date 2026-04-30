@@ -19,35 +19,10 @@ import {
   RotateCcw,
   Layers,
 } from "lucide-react";
-
-interface JudgeResult {
-  prompt: string;
-  scores: Record<string, number>;
-  overall: number;
-  feedback: string;
-}
-
-interface OPROIteration {
-  round: number;
-  candidates: JudgeResult[];
-  bestCandidate: JudgeResult;
-  worstCandidate: JudgeResult;
-  topBottomAnalysis: string;
-}
-
-interface OPROResult {
-  finalPrompt: string;
-  finalScore: number;
-  originalScore: number;
-  improvementPercent: number;
-  iterations: OPROIteration[];
-  stopReason: string;
-  estimatedTokens: number;
-  elapsedMs: number;
-}
+import type { OptimizationResult } from "../../../api/types/shared";
 
 interface IterationTrajectoryProps {
-  result: OPROResult;
+  result: OptimizationResult;
 }
 
 export function IterationTrajectory({ result }: IterationTrajectoryProps) {
@@ -63,6 +38,7 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
     no_improvement: "连续多轮无提升",
     max_iterations: "达到最大迭代次数",
     no_new_candidates: "无新候选方案",
+    error: "执行出错",
   };
 
   return (
@@ -131,11 +107,11 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
                   </Badge>
                 </span>
                 <span className="font-medium text-apple-blue">
-                  {iter.bestCandidate.overall.toFixed(1)}
+                  {iter.bestCandidate.score.toFixed(1)}
                 </span>
               </div>
               <Progress
-                value={(iter.bestCandidate.overall / maxScore) * 100}
+                value={(iter.bestCandidate.score / maxScore) * 100}
                 className="h-1.5"
               />
             </div>
@@ -173,11 +149,11 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
                 <Layers className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium">第 {iter.round} 轮</span>
                 <div className="flex items-center gap-2 ml-auto mr-4">
-                  <Badge className={`text-[10px] h-5 px-1.5 text-white ${scoreColor(iter.bestCandidate.overall)}`}>
-                    最优 {iter.bestCandidate.overall.toFixed(1)}
+                  <Badge className={`text-[10px] h-5 px-1.5 text-white ${scoreColor(iter.bestCandidate.score)}`}>
+                    最优 {iter.bestCandidate.score.toFixed(1)}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                    最差 {iter.worstCandidate.overall.toFixed(1)}
+                    最差 {iter.worstCandidate?.score.toFixed(1) ?? "—"}
                   </Badge>
                 </div>
               </div>
@@ -188,16 +164,16 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
                 <p className="text-xs text-muted-foreground mb-1">候选分数分布</p>
                 <div className="flex items-end gap-1 h-16">
                   {iter.candidates.map((cand, idx) => {
-                    const height = (cand.overall / maxScore) * 100;
-                    const isBest = cand.overall === iter.bestCandidate.overall;
+                    const height = (cand.score / maxScore) * 100;
+                    const isBest = cand.score === iter.bestCandidate.score;
                     return (
                       <div
                         key={idx}
                         className="flex-1 flex flex-col items-center gap-1 group"
-                        title={`候选 ${idx + 1}: ${cand.overall.toFixed(1)}`}
+                        title={`候选 ${idx + 1}: ${cand.score.toFixed(1)}`}
                       >
                         <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                          {cand.overall.toFixed(1)}
+                          {cand.score.toFixed(1)}
                         </span>
                         <div
                           className={`w-full rounded-t-sm transition-all ${
@@ -214,7 +190,7 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
               {/* Dimension scores radar-like bars */}
               <div className="space-y-1.5">
                 <p className="text-xs text-muted-foreground">最优候选维度得分</p>
-                {Object.entries(iter.bestCandidate.scores).map(([dim, score]) => (
+                {Object.entries(iter.bestCandidate.dimensions).map(([dim, score]) => (
                   <div key={dim} className="flex items-center gap-2">
                     <span className="text-xs w-20 text-muted-foreground capitalize">{dim}</span>
                     <div className="flex-1">
@@ -231,7 +207,7 @@ export function IterationTrajectory({ result }: IterationTrajectoryProps) {
                   <TrendingUp className="w-3 h-3" />
                   优劣差异分析
                 </p>
-                {iter.topBottomAnalysis}
+                {iter.analysis}
               </div>
 
               {/* Best prompt preview */}
