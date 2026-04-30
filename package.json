@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "dev:electron": "npm run build:electron && electron .",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
+    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --external:better-sqlite3 --external:sharp --banner:js=\"import { createRequire } from 'module';import { fileURLToPath } from 'node:url';import nodePath from 'node:path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=nodePath.dirname(__filename);\"",
     "build:electron": "npm run build && npm run db:push",
     "build:desktop": "npm run build:electron && electron-builder",
     "build:desktop:win": "npm run build:electron && electron-builder --win",
