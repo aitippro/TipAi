@@ -20,6 +20,7 @@ export const generatePromptSchema = z.object({
 
 export const clarifyIntentSchema = z.object({
   intent: z.string().min(1).max(3000),
+  answers: z.record(z.string(), z.string()).optional(),
 });
 
 export const decomposeIntentSchema = z.object({

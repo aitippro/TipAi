@@ -236,11 +236,13 @@ describe("promptForge generation service", () => {
       "kimi",
       "secret",
     );
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       needsClarification: false,
       questions: [],
       analysis: baseAnalysis,
     });
+    expect(result.strategy).toBeDefined();
+    expect(result.strategy.completenessScore).toBeGreaterThanOrEqual(0);
   });
 
   it("returns decomposition for parsed intent", async () => {

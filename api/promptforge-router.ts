@@ -32,6 +32,12 @@ import {
   generateDynamicOptions,
   regeneratePrompt as regenerateDynamicPrompt,
 } from "./services/promptforge/dynamic-options";
+import {
+  classifyIntent,
+  getAllDomains,
+  getDomainKnowledge,
+} from "./services/clarify";
+import { generateClarifyStrategy } from "./services/clarify/strategy-router";
 
 export const promptForgeRouter = createRouter({
   getSettings: authedQuery.query(({ ctx }) => getPromptForgeSettings(ctx.user.id)),
@@ -96,4 +102,31 @@ export const promptForgeRouter = createRouter({
         controlValues: input.controlValues,
       })
     ),
+
+  // P0-2: Clarify 策略路由 — 实时分析（无需 AI 调用）
+  clarifyPreview: publicQuery
+    .input(z.object({ intent: z.string().min(1).max(3000) }))
+    .query(({ input }) => {
+      const classification = classifyIntent(input.intent);
+      const strategy = generateClarifyStrategy(input.intent);
+      const knowledge = getDomainKnowledge(classification.domain);
+      return {
+        classification,
+        strategy: {
+          completenessScore: strategy.completenessScore,
+          suggestedRounds: strategy.suggestedRounds,
+          frameworkRecommendation: strategy.frameworkRecommendation,
+          strategyDescription: strategy.strategyDescription,
+        },
+        domainKnowledge: {
+          bestPractices: knowledge.bestPractices,
+          keyInformation: knowledge.keyInformation,
+          defaultFramework: knowledge.defaultFramework,
+          outputFormats: knowledge.outputFormats,
+        },
+      };
+    }),
+
+  // P0-2: 获取所有支持领域
+  listDomains: publicQuery.query(() => getAllDomains()),
 });

@@ -10,6 +10,10 @@ import {
   parseSlashCommand,
   recommendFramework,
 } from "../../lib/ai-service-v3";
+import {
+  generateClarifyStrategy,
+  type ClarifyStrategy,
+} from "../clarify/strategy-router";
 import type {
   ClarifyIntentInput,
   DecomposeIntentInput,
@@ -103,13 +107,73 @@ export async function generatePromptForgeClarification(
 
   const { cleanIntent } = parseSlashCommand(input.intent);
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);
-  const questions = await generateClarification(cleanIntent, analysis, model, apiKey);
+
+  // P0-2: 并行运行策略路由（本地即时）和 AI 追问生成
+  const [questions, strategy] = await Promise.all([
+    generateClarification(cleanIntent, analysis, model, apiKey),
+    Promise.resolve(generateClarifyStrategy(cleanIntent, input.answers || {})),
+  ]);
+
+  // P0-2: 将策略路由追问作为 AI 追问的补充（不覆盖 AI 的 null 判断）
+  const mergedQuestions = mergeClarificationQuestions(
+    questions || [],
+    strategy,
+    analysis.domain,
+  );
 
   return {
-    needsClarification: !!questions && questions.length > 0,
-    questions: questions || [],
+    needsClarification: mergedQuestions.length > 0,
+    questions: mergedQuestions,
     analysis,
+    // P0-2: 新增策略路由信息
+    strategy: {
+      completenessScore: strategy.completenessScore,
+      suggestedRounds: strategy.suggestedRounds,
+      frameworkRecommendation: strategy.frameworkRecommendation,
+      strategyDescription: strategy.strategyDescription,
+    },
   };
+}
+
+/**
+ * 合并 AI 生成的追问和策略路由生成的追问，去重并优先保留 AI 生成的。
+ */
+function mergeClarificationQuestions(
+  aiQuestions: { id: string; question: string; type: string; options?: string[]; why: string; required: boolean }[],
+  strategy: ClarifyStrategy,
+  _domain: string,
+): { id: string; question: string; type: string; options?: string[]; why: string; required: boolean }[] {
+  // AI 未生成追问时，尊重 AI 判断（不强制注入策略路由追问）
+  if (aiQuestions.length === 0) {
+    return [];
+  }
+
+  // AI 追问不足时，用策略路由补充
+  if (aiQuestions.length >= 3) {
+    return aiQuestions.slice(0, 5);
+  }
+
+  const merged = [...aiQuestions];
+  const existingTexts = new Set(aiQuestions.map((q) => q.question));
+
+  for (const routerQuestion of strategy.followUpQuestions) {
+    if (existingTexts.has(routerQuestion)) continue;
+    const isDuplicate = aiQuestions.some((q) =>
+      q.question.includes(routerQuestion.slice(0, 8)) ||
+      routerQuestion.includes(q.question.slice(0, 8)),
+    );
+    if (isDuplicate) continue;
+
+    merged.push({
+      id: `router-${merged.length + 1}`,
+      question: routerQuestion,
+      type: "text",
+      why: "基于领域知识，补充此信息可显著提升生成质量",
+      required: false,
+    });
+  }
+
+  return merged.slice(0, 5);
 }
 
 export async function generatePromptForgeDecomposition(

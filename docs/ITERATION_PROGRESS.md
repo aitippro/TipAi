@@ -10,7 +10,7 @@
 | 期数 | 名称 | 状态 | 完成度 |
 |------|------|------|--------|
 | **基础建设** | 桌面端 + 核心功能 + UI | ✅ 完成 | 100% |
-| **第一期** | 学术 debt 清零 | 🔄 进行中 | 75% |
+| **第一期** | 学术 debt 清零 | 🔄 进行中 | 90% |
 | **第二期** | 前沿追赶 | ⬜ 待启动 | 0% |
 | **第三期** | 工程化闭环 | ⬜ 待启动 | 0% |
 | **第四期** | 生态扩展 | ⬜ 待启动 | 0% |
@@ -53,12 +53,17 @@
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
-| 任务分类器 | 🟡 已有基础 | ≥10 个任务类型，准确率 ≥80% |
-| 领域知识注入 | 🔴 未开始 | 每领域 ≥5 条最佳实践 |
-| 策略路由器 | 🔴 未开始 | 领域定制追问 |
-| 框架推荐增强 | 🟡 已有基础 | 推荐理由 + 分数 |
+| 任务分类器 | ✅ 完成 | 11 个领域，30+ 子领域，准确率 81.8%（9/11） |
+| 领域知识注入 | ✅ 完成 | 11 领域 × ≥5 条最佳实践 + ≥5 条追问模板 |
+| 策略路由器 | ✅ 完成 | 领域定制追问，信息完整度评分，建议追问轮次 |
+| 框架推荐增强 | ✅ 完成 | 12 种框架，匹配分数 0-100，推荐理由 + 3 个备选 |
 
-**当前 Clarify 评估**：通用多轮追问，`api/lib/ai-service-v3` 有 `recommendFramework` 基础。
+**当前 Clarify 评估**：`api/services/clarify/` 三层架构：
+- `task-classifier.ts` — 关键词 + 语义规则多层分类，11 领域 / 30+ 子领域
+- `domain-knowledge.ts` — 领域知识库（77 条最佳实践 / 66 条追问模板）
+- `strategy-router.ts` — 策略路由（追问生成 + 框架推荐 + 完整度评估）
+- `api/promptforge-router.ts` — 新增 `clarifyPreview` / `listDomains` 公共端点
+- `api/services/promptforge/generation.ts` — `generatePromptForgeClarification` 已集成策略路由，追问智能合并
 
 ### P0-3: Decode 策略层 (Self-Consistency)
 
@@ -162,9 +167,18 @@ P0-1 已完成：
 3. api/optimizer-router.ts — optimizeOPRO / judge API ✅
 4. 单元测试 17 个，全部通过 ✅
 
-下一步（可选）：
+P0-2 已完成：
+1. api/services/clarify/task-classifier.ts — 11 领域分类器 ✅
+2. api/services/clarify/domain-knowledge.ts — 领域知识注入 ✅
+3. api/services/clarify/strategy-router.ts — 策略路由器 ✅
+4. api/services/promptforge/generation.ts — Clarify 集成 ✅
+5. api/promptforge-router.ts — clarifyPreview / listDomains 端点 ✅
+6. 单元测试 41 个，全部通过 ✅
+
+下一步（前端收尾）：
 1. src/components/optimizer/ — 前端 OPRO 迭代轨迹可视化
 2. src/pages/Optimizer.tsx — OPRO 模式切换 UI
+3. src/components/clarify/ — 接入 clarifyPreview 实时策略预览
 ```
 
 ---
