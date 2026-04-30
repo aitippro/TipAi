@@ -8,6 +8,7 @@ import { steps } from "@db/schema";
 import { getDb } from "../../queries/connection";
 import { STAGE_TRANSITIONS } from "@contracts/lifecycle";
 import type { LifecycleStage, PipelineSummary } from "@contracts/lifecycle";
+import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 export async function getProjectPipeline(projectId: number): Promise<PipelineSummary> {
   const allSteps = await getDb()
@@ -90,6 +91,7 @@ export async function createLifecycleStep(input: {
   parentStepId?: number;
   model?: string;
   temperature?: number;
+  decodeStrategy?: DecodeStrategy;
 }) {
   const maxOrder = await getDb()
     .select({ orderNum: steps.orderNum })
@@ -112,6 +114,7 @@ export async function createLifecycleStep(input: {
       parentStepId: input.parentStepId || null,
       model: input.model || "kimi",
       temperature: input.temperature ?? 0.7,
+      decodeStrategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : null,
     })
     .returning();
 

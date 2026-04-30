@@ -8,6 +8,7 @@ import {
 } from "../../lib/ai-service-v3";
 import type { IntentAnalysis } from "../../lib/ai-service-v3/types";
 import { getPromptForgeSettingsRecord, getAvailableModels } from "../promptforge/settings";
+import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 import { getDb } from "../../queries/connection";
 import { projectConversations } from "@db/schema";
@@ -54,6 +55,7 @@ export async function generateRequirementSummary(
   userId: number,
   projectId: number,
   originalIntent: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<RequirementSummary> {
   const settings = await getPromptForgeSettingsRecord(userId);
   const models = getAvailableModels(settings);
@@ -82,7 +84,7 @@ export async function generateRequirementSummary(
   // Analyze intent — try models in order
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
-    analysis = await analyzeIntent(originalIntent, model, apiKey);
+    analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
     if (analysis) break;
   }
   if (!analysis) {
@@ -155,7 +157,7 @@ ${conversationContext}
   const { callAI } = await import("../../lib/ai-service-v3/client");
   let result: string | null = null;
   for (const { model, apiKey } of models) {
-    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4, decodeStrategy);
     if (result) break;
   }
 
@@ -193,6 +195,7 @@ export async function generateNextClarificationQuestion(
   userId: number,
   originalIntent: string,
   previousTurns: ConversationTurn[],
+  decodeStrategy?: DecodeStrategy,
 ): Promise<{
   needsMoreClarification: boolean;
   question?: {
@@ -219,7 +222,7 @@ export async function generateNextClarificationQuestion(
   // Try intent analysis with first available model, fall through if fails
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
-    analysis = await analyzeIntent(originalIntent, model, apiKey);
+    analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
     if (analysis) break;
   }
   if (!analysis) {
@@ -281,7 +284,7 @@ ${context || "（刚开始对话）"}
   // Try models in order for the question generation
   let result: string | null = null;
   for (const { model, apiKey } of models) {
-    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4, decodeStrategy);
     if (result) break;
   }
 

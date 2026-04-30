@@ -147,6 +147,13 @@ export const projectRouter = createRouter({
         parentStepId: z.number().optional(),
         model: z.string().optional(),
         temperature: z.number().optional(),
+        decodeStrategy: z.object({
+          type: z.enum(["greedy", "sampling", "self-consistency"]),
+          temperature: z.number().optional(),
+          topP: z.number().optional(),
+          sampleCount: z.number().optional(),
+          maxTokens: z.number().optional(),
+        }).optional(),
       })
     )
     .mutation(({ input }) => createLifecycleStep(input)),

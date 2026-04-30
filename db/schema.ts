@@ -115,6 +115,7 @@ export const steps = sqliteTable("steps", {
   parentStepId: integer("parentStepId", { mode: "number" }),
   model: text("model", { length: 100 }).default("kimi"),
   temperature: real("temperature").default(0.7),
+  decodeStrategy: text("decode_strategy"),
   createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });

@@ -13,6 +13,7 @@ import type {
 } from "@contracts/dynamic-prompt";
 import { resolvePromptForgeModelApiKey } from "./settings";
 import { callAI } from "../../lib/ai-service-v3/client";
+import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 // === Default Session-Level Controls ===
 
@@ -94,6 +95,7 @@ export async function generateDynamicOptions(
   userId: number,
   intent: string,
   sessionPreferences?: Record<string, unknown>,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<DynamicPromptOptions> {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
 
@@ -109,6 +111,7 @@ export async function generateDynamicOptions(
     CONTROL_GENERATION_SYSTEM_PROMPT,
     userMessage,
     0.7,
+    decodeStrategy,
   );
 
   if (!result) {
@@ -151,6 +154,7 @@ const REGENERATION_SYSTEM_PROMPT = `你是一个提示词优化专家。根据�
 export async function regeneratePrompt(
   userId: number,
   input: RegenerationInput,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<RegenerationResult> {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
 
@@ -170,6 +174,7 @@ export async function regeneratePrompt(
     REGENERATION_SYSTEM_PROMPT,
     userMessage,
     0.6,
+    decodeStrategy,
   );
 
   if (!result) {

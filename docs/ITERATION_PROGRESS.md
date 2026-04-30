@@ -68,8 +68,15 @@
 | Decode 策略配置器 | ✅ 完成 | greedy/sampling/SC 可切换，任务类型自动推荐策略 |
 | Confidence 显示 | ✅ 完成 | 可靠性分数（0-1），随响应 raw._confidence 透出 |
 | 成本-质量 UI | 🟡 基础完成 | 成本估算 API `estimateCost()` + `estimateTaskCost()`，前端 Slider 待接入 |
+| 全链路策略透传 | ✅ 完成 | `callAI()` → `ai-service-v3.ts` → `dynamic-options.ts` / `summary.ts` 全部支持 decodeStrategy |
+| 数据库存储 | ✅ 完成 | `steps.decode_strategy` JSON 字段 + `project-router.ts` API 扩展 |
 
-**当前状态**：`api/services/ai/decoding-strategies.ts` + `self-consistency.ts` 已上线，AIRouter 集成完毕。流式模式自动降级为 sampling。
+**当前状态**：
+- `api/services/ai/decoding-strategies.ts` + `self-consistency.ts` 已上线
+- AIRouter 集成完毕，流式模式自动降级为 sampling
+- **旧调用路径 `callAI()` 已升级为策略感知**，支持 greedy/sampling/self-consistency
+- `analyzeIntent` / `generatePrompt` / `generateClarification` / `decomposeSteps` 全部支持 decodeStrategy 透传
+- `steps` 表新增 `decode_strategy` 字段，API 支持读写
 
 ---
 
@@ -108,7 +115,7 @@
 | 债务 | 严重程度 | 状态 |
 |------|---------|------|
 | CI 全部 green | 🔴 致命 | ✅ 已修复 |
-| 数据库 schema 无版本控制 | 🔴 高 | ⬜ |
+| 数据库 schema 无版本控制 | 🔴 高 | 🟡 decode_strategy 字段已添加，完整迁移待 Drizzle 生成 |
 | AI Provider 统一错误处理 | 🟡 中 | ⬜ |
 | E2E 测试 | 🟡 中 | ⬜ |
 | 性能监控 | 🟡 中 | ⬜ |
@@ -136,12 +143,18 @@
 
 ## 下一步行动
 
-**本周**：P0-3 Decode 策略层已完成，启动 P0-1 OPRO 自动优化引擎
+**本周**：P0-3 Decode 策略层已完成（含全链路适配），启动 P0-1 OPRO 自动优化引擎
 
 ```
+P0-3 已完成：
 1. api/services/ai/decoding-strategies.ts — 策略配置 ✅
 2. api/services/ai/self-consistency.ts — SC 实现 ✅
 3. 集成到 AIRouter，所有调用经过 decode 层 ✅
+4. api/lib/ai-service-v3/client.ts — callAI 策略感知 ✅
+5. api/lib/ai-service-v3.ts — 核心函数透传 decodeStrategy ✅
+6. api/services/promptforge/dynamic-options.ts — 策略透传 ✅
+7. api/services/projects/summary.ts — 策略透传 ✅
+8. db/schema.ts steps.decode_strategy — 数据库存储 ✅
 
 下一步：
 1. api/services/promptforge/opro-engine.ts — OPRO 核心引擎

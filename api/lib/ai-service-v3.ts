@@ -17,6 +17,7 @@ import type {
   IntentAnalysis,
   StepDecomposition,
 } from "./ai-service-v3/types";
+import type { DecodeStrategy } from "../services/ai/decoding-strategies";
 
 export {
   parseAIJsonResponse,
@@ -81,6 +82,7 @@ export async function analyzeIntent(
   intent: string,
   provider: string,
   apiKey: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<IntentAnalysis> {
   const systemPrompt = `你是意图分析专家。分析用户的模糊需求描述，提取结构化信息。
 
@@ -105,7 +107,7 @@ complexity判断标准：
 
 只返回JSON，不要其他内容。`;
 
-  const result = await callAI(provider, apiKey, systemPrompt, intent, 0.3);
+  const result = await callAI(provider, apiKey, systemPrompt, intent, 0.3, decodeStrategy);
   if (result) {
     const parsed = parseAIJsonResponse<Record<string, unknown>>(result);
     if (parsed) {
@@ -147,6 +149,7 @@ export async function generateClarification(
   analysis: IntentAnalysis,
   provider: string,
   apiKey: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<ClarificationQuestion[] | null> {
   if (analysis.complexity === "simple" && intent.length > 50) return null;
 
@@ -186,7 +189,7 @@ required 规则：
 
 请生成澄清问题。`;
 
-  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.4);
+  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.4, decodeStrategy);
   if (!result) return null;
 
   const parsed = parseAIJsonResponse<ClarificationQuestion[]>(result);
@@ -201,6 +204,7 @@ export async function decomposeSteps(
   analysis: IntentAnalysis,
   provider: string,
   apiKey: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<StepDecomposition | null> {
   if (analysis.complexity !== "complex") return null;
 
@@ -233,6 +237,7 @@ export async function decomposeSteps(
     systemPrompt,
     `需求：${intent}\n复杂度：${analysis.complexity}\n目标：${analysis.goal}`,
     0.3,
+    decodeStrategy,
   );
   if (!result) return null;
 
@@ -255,6 +260,7 @@ export async function generatePrompt(
   framework: string,
   provider: string,
   apiKey: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<GeneratedPrompt> {
   const frameworkConfig = resolveFramework(framework);
 
@@ -304,7 +310,7 @@ ${frameworkConfig.example}
 
 请基于以上信息，使用${frameworkConfig.name}框架生成一条完美的提示词。确保每个组件都被充分填充，输出可直接使用。`;
 
-  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.5);
+  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.5, decodeStrategy);
   if (result) {
     const parsed = parseAIJsonResponse<Record<string, unknown>>(result);
     if (parsed) {
@@ -403,6 +409,7 @@ export async function generateMultipleVersions(
   frameworks: string[],
   provider: string,
   apiKey: string,
+  decodeStrategy?: DecodeStrategy,
 ): Promise<GeneratedPrompt[]> {
   const results: GeneratedPrompt[] = [];
 
@@ -414,6 +421,7 @@ export async function generateMultipleVersions(
         framework,
         provider,
         apiKey,
+        decodeStrategy,
       );
       results.push(prompt);
     } catch (error) {
