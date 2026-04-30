@@ -1,5 +1,6 @@
 import { useState, memo } from "react"
 import { Link, useLocation, type Location } from "react-router"
+import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -25,21 +26,48 @@ import {
   ChevronLeft,
   ChevronRight,
   FolderOpen,
-  Zap,
   ScrollText,
+  LayoutGrid,
+  PenTool,
+  Download,
 } from "lucide-react"
 
-const navItems = [
-  { path: "/", icon: Sparkles, label: "开始" },
-  { path: "/workspace", icon: FolderOpen, label: "工作台" },
-  { path: "/library", icon: BookOpen, label: "资源" },
-  { path: "/toolbox", icon: Zap, label: "工具箱" },
-  { path: "/settings", icon: Settings, label: "设置" },
-  { path: "/logs", icon: ScrollText, label: "日志" },
-  { path: "/about", icon: Info, label: "关于" },
-]
+// ============================================================================
+// 分组导航结构 — Apple 式空间组织
+// ============================================================================
 
-// 获取平台信息
+const NAV_GROUPS = [
+  {
+    title: "创建",
+    items: [
+      { path: "/", icon: Sparkles, label: "首页" },
+    ],
+  },
+  {
+    title: "管理",
+    items: [
+      { path: "/workspace", icon: FolderOpen, label: "工作台" },
+      { path: "/library", icon: BookOpen, label: "提示词库" },
+      { path: "/templates", icon: LayoutGrid, label: "模板" },
+    ],
+  },
+  {
+    title: "工具",
+    items: [
+      { path: "/optimizer", icon: PenTool, label: "优化器" },
+      { path: "/export", icon: Download, label: "导出" },
+    ],
+  },
+  {
+    title: "系统",
+    items: [
+      { path: "/settings", icon: Settings, label: "设置" },
+      { path: "/logs", icon: ScrollText, label: "日志" },
+      { path: "/about", icon: Info, label: "关于" },
+    ],
+  },
+] as const
+
 function getPlatform() {
   if (typeof window !== 'undefined' && window.electronAPI) {
     return window.electronAPI.platform
@@ -47,13 +75,11 @@ function getPlatform() {
   return 'web'
 }
 
-// Sidebar 用户信息类型
 interface UserInfo {
   name?: string | null
   email?: string | null
 }
 
-// 侧边栏内容组件
 interface SidebarContentProps {
   isMobile?: boolean
   collapsed?: boolean
@@ -64,73 +90,103 @@ interface SidebarContentProps {
   setMobileOpen?: (open: boolean) => void
 }
 
-function SidebarContent({ 
-  isMobile = false, 
-  collapsed = false, 
-  isMacOS, 
+function SidebarContent({
+  isMobile = false,
+  collapsed = false,
+  isMacOS,
   location,
   user,
   isAuthenticated,
-  setMobileOpen
+  setMobileOpen,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* Logo 区域 - macOS 上增加顶部间距给窗口控制按钮 */}
+      {/* Logo */}
       <div className={`flex items-center gap-3 px-4 ${isMacOS && !isMobile ? 'pt-10' : 'pt-4'} pb-4`}>
-        <div className="w-8 h-8 rounded-xl bg-apple-blue flex items-center justify-center shadow-apple shrink-0">
+        <motion.div
+          whileHover={{ scale: 1.05, rotate: 5 }}
+          whileTap={{ scale: 0.95 }}
+          className="w-8 h-8 rounded-xl bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center shadow-apple shrink-0"
+        >
           <Wand2 className="w-4 h-4 text-white" />
-        </div>
+        </motion.div>
         {!collapsed && (
-          <span className="text-lg font-semibold text-foreground tracking-tight">
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-lg font-semibold text-foreground tracking-tight"
+          >
             TipAi
-          </span>
+          </motion.span>
         )}
       </div>
 
-      {/* 导航链接 */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = location.pathname === item.path || 
-            (item.path !== "/" && location.pathname.startsWith(item.path))
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => isMobile && setMobileOpen?.(false)}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                transition-all duration-200 ease-apple
-                ${isActive 
-                  ? "bg-apple-blue/10 text-apple-blue" 
-                  : "text-apple-gray hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                }
-                ${collapsed ? "justify-center" : ""}
-              `}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? "text-apple-blue" : ""}`} />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          )
-        })}
+      {/* 分组导航 */}
+      <nav className="flex-1 px-3 py-2 space-y-5 overflow-y-auto">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.title} className="space-y-1">
+            {!collapsed && (
+              <span className="px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                {group.title}
+              </span>
+            )}
+            {group.items.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.path ||
+                (item.path !== "/" && location.pathname.startsWith(item.path))
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => isMobile && setMobileOpen?.(false)}
+                  className={`
+                    group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                    transition-all duration-200 ease-apple
+                    ${isActive
+                      ? "bg-apple-blue/10 text-apple-blue"
+                      : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                    }
+                    ${collapsed ? "justify-center" : ""}
+                  `}
+                  title={collapsed ? item.label : undefined}
+                >
+                  {/* 激活态 indicator */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-indicator"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-apple-blue"
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    />
+                  )}
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: isActive ? 0 : 5 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? "text-apple-blue" : ""}`} />
+                  </motion.div>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* 底部用户区域 */}
+      {/* 底部用户 */}
       <div className="p-3 border-t border-border/50">
         {isAuthenticated ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className={`
                   w-full h-auto p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5
                   ${collapsed ? "justify-center px-0" : "justify-start gap-3"}
                 `}
               >
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="bg-violet-100 text-violet-700 text-xs font-semibold">
+                  <AvatarFallback className="bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700 text-xs font-semibold">
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -146,22 +202,20 @@ function SidebarContent({
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="end" 
+            <DropdownMenuContent
+              align="end"
               side={collapsed ? "right" : "top"}
               className="w-48 rounded-xl shadow-xl border-border/50"
             >
-              <DropdownMenuItem
-                className="text-slate-400 cursor-default rounded-lg mx-1 my-1"
-              >
+              <DropdownMenuItem className="text-slate-400 cursor-default rounded-lg mx-1 my-1">
                 本地模式
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
           <Link to="/login" className={collapsed ? "flex justify-center" : ""}>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`
                 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-sm
                 ${collapsed ? "px-2" : "w-full justify-start gap-2"}
@@ -185,25 +239,27 @@ export default memo(function Sidebar() {
   const location = useLocation()
 
   const isMacOS = platform === 'darwin'
-  const sidebarWidth = collapsed ? 72 : 220
+  const sidebarWidth = collapsed ? 72 : 240
 
   return (
     <>
-      {/* 桌面端侧边栏 */}
-      <aside 
-        className="sidebar-glass fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col transition-all duration-300 ease-apple"
-        style={{ width: sidebarWidth }}
+      {/* 桌面端 */}
+      <aside
+        className="sidebar-glass fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col"
+        style={{ width: sidebarWidth, transition: "width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)" }}
       >
-        <SidebarContent 
+        <SidebarContent
           collapsed={collapsed}
           isMacOS={isMacOS}
           location={location}
           user={user}
           isAuthenticated={isAuthenticated}
         />
-        
-        {/* 折叠/展开按钮 */}
-        <button
+
+        {/* 折叠按钮 */}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-sm flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
           title={collapsed ? "展开侧边栏" : "折叠侧边栏"}
@@ -213,21 +269,24 @@ export default memo(function Sidebar() {
           ) : (
             <ChevronLeft className="w-3 h-3 text-muted-foreground" />
           )}
-        </button>
+        </motion.button>
       </aside>
 
-      {/* 移动端顶部导航栏 */}
+      {/* 移动端 */}
       <header className="fixed top-0 left-0 right-0 h-14 z-40 md:hidden glass-nav border-b border-border/50">
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-apple-blue flex items-center justify-center shadow-apple">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="w-7 h-7 rounded-lg bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center shadow-apple"
+            >
               <Wand2 className="w-3.5 h-3.5 text-white" />
-            </div>
+            </motion.div>
             <span className="text-base font-semibold text-foreground tracking-tight">
               TipAi
             </span>
           </div>
-          
+
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-xl hover:bg-black/5 dark:hover:bg-white/5">
@@ -235,14 +294,14 @@ export default memo(function Sidebar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[260px] p-0 sidebar-glass border-r border-border/50">
-              <SidebarContent 
-                isMobile 
+              <SidebarContent
+                isMobile
                 collapsed={false}
                 isMacOS={isMacOS}
                 location={location}
                 user={user}
                 isAuthenticated={isAuthenticated}
-                      setMobileOpen={setMobileOpen}
+                setMobileOpen={setMobileOpen}
               />
             </SheetContent>
           </Sheet>
