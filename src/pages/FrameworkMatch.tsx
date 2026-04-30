@@ -15,7 +15,9 @@ import {
   GitCompare,
   Target,
   BrainCircuit,
+  Network,
 } from "lucide-react";
+import { FrameworkGraphCanvas } from "@/components/framework/FrameworkGraphCanvas";
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
@@ -56,6 +58,8 @@ export default function FrameworkMatchPage() {
     { intent: submittedIntent },
     { enabled: !!submittedIntent }
   );
+
+  const graphQuery = trpc.framework.graph.useQuery();
 
   const handleMatch = () => {
     if (!intent.trim()) return;
@@ -122,6 +126,10 @@ export default function FrameworkMatchPage() {
             <TabsTrigger value="analysis" className="rounded-lg text-xs">
               <Target className="w-3.5 h-3.5 mr-1.5" />
               意图分析
+            </TabsTrigger>
+            <TabsTrigger value="graph" className="rounded-lg text-xs">
+              <Network className="w-3.5 h-3.5 mr-1.5" />
+              知识图谱
             </TabsTrigger>
           </TabsList>
 
@@ -273,6 +281,22 @@ export default function FrameworkMatchPage() {
                 </CardContent>
               </Card>
             ))}
+          </TabsContent>
+
+          {/* Graph Tab */}
+          <TabsContent value="graph" className="space-y-4">
+            {graphQuery.data ? (
+              <>
+                <FrameworkGraphCanvas data={graphQuery.data} />
+                <p className="text-xs text-slate-400 text-center">
+                  基于 20 个提示词框架的知识图谱 · 节点大小代表组件数量 · 悬停查看详情
+                </p>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[480px] rounded-2xl bg-slate-50/50 border border-slate-100">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+              </div>
+            )}
           </TabsContent>
 
           {/* Analysis Tab */}
