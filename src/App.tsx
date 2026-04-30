@@ -25,6 +25,7 @@ const Toolbox = lazy(() => import("./pages/Toolbox"))
 const Logs = lazy(() => import("./pages/Logs"))
 const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
 const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
+const Multimodal = lazy(() => import("./pages/Multimodal"))
 
 function PageFallback() {
   return (

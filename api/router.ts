@@ -6,6 +6,7 @@ import { optimizerRouter } from "./optimizer-router";
 import { exportRouter } from "./export-router";
 import { frameworkRouter } from "./services/framework";
 import { totRouter } from "./services/ai/tot-router";
+import { multimodalRouter } from "./services/multimodal/multimodal-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -18,6 +19,7 @@ export const appRouter = createRouter({
   export: exportRouter,
   framework: frameworkRouter,
   tot: totRouter,
+  multimodal: multimodalRouter,
 });
 
 export type AppRouter = typeof appRouter;
