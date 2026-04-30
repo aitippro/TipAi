@@ -23,3 +23,5 @@ export {
   type CombinationRecommendation,
   type MatcherResult,
 } from "./framework-matcher";
+
+export { frameworkRouter } from "./framework-router";

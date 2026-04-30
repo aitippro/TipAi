@@ -4,6 +4,7 @@ import { templateRouter } from "./template-router";
 import { projectRouter } from "./project-router";
 import { optimizerRouter } from "./optimizer-router";
 import { exportRouter } from "./export-router";
+import { frameworkRouter } from "./services/framework";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -14,6 +15,7 @@ export const appRouter = createRouter({
   project: projectRouter,
   optimizer: optimizerRouter,
   export: exportRouter,
+  framework: frameworkRouter,
 });
 
 export type AppRouter = typeof appRouter;

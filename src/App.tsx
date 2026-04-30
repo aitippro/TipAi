@@ -21,6 +21,7 @@ const Export = lazy(() => import("./pages/Export"))
 const Workspace = lazy(() => import("./pages/Workspace"))
 const Toolbox = lazy(() => import("./pages/Toolbox"))
 const Logs = lazy(() => import("./pages/Logs"))
+const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
 
 function PageFallback() {
   return (
@@ -80,6 +81,7 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/logs" element={<Logs />} />
+                <Route path="/frameworks" element={<FrameworkMatch />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

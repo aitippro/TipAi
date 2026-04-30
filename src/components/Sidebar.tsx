@@ -30,6 +30,7 @@ import {
   LayoutGrid,
   PenTool,
   Download,
+  BrainCircuit,
 } from "lucide-react"
 
 // ============================================================================
@@ -55,6 +56,7 @@ const NAV_GROUPS = [
     title: "工具",
     items: [
       { path: "/optimizer", icon: PenTool, label: "优化器" },
+      { path: "/frameworks", icon: BrainCircuit, label: "框架匹配" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },
