@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import superjson from "superjson";
 import type { AppRouter } from "../../api/router";
 import type { ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -41,12 +42,26 @@ const customFetch: typeof globalThis.fetch = async (input, init) => {
   // Use Electron IPC if available
   const api = window.electronAPI;
   if (api?.fetch) {
-    const r = await api.fetch(url, { method, headers, body });
-    return new Response(r.body, { status: r.status, statusText: r.statusText, headers: new Headers(r.headers) });
+    try {
+      const r = await api.fetch(url, { method, headers, body });
+      if (r.status >= 400) {
+        logger.warn("tRPC", `${method} ${url} → ${r.status}`, r.body?.substring?.(0, 500))
+      }
+      return new Response(r.body, { status: r.status, statusText: r.statusText, headers: new Headers(r.headers) });
+    } catch (e) {
+      logger.error("tRPC:IPC", `${method} ${url} 失败`, e instanceof Error ? e.message : String(e))
+      throw e
+    }
   }
 
   // Browser mode
-  return globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
+  try {
+    return await globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
+  } catch (e) {
+    const urlStr = typeof input === 'string' ? input : (input instanceof URL ? input.pathname : (input as Request).url)
+    logger.error("tRPC:HTTP", `${method} ${urlStr} 网络错误`, e instanceof Error ? e.message : String(e))
+    throw e
+  }
 };
 
 const trpcClient = trpc.createClient({

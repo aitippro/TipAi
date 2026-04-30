@@ -24,6 +24,14 @@ const MODEL_CONFIGS: Record<
   },
 };
 
+const AI_CALL_TIMEOUT_MS = 30000
+
+function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer))
+}
+
 export async function callAI(
   provider: string,
   apiKey: string,
@@ -32,19 +40,19 @@ export async function callAI(
   temperature = 0.5,
 ): Promise<string | null> {
   if (!apiKey) {
-    console.warn(`No API key for ${provider}`);
-    return null;
+    console.warn(`No API key for ${provider}`)
+    return null
   }
 
-  const config = MODEL_CONFIGS[provider];
+  const config = MODEL_CONFIGS[provider]
   if (!config) {
-    console.error(`Unknown provider: ${provider}`);
-    return null;
+    console.error(`Unknown provider: ${provider}`)
+    return null
   }
 
   try {
     if (provider === "claude") {
-      const response = await fetch(config.baseUrl, {
+      const response = await fetchWithTimeout(config.baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -58,19 +66,20 @@ export async function callAI(
           messages: [{ role: "user", content: userMessage }],
           temperature,
         }),
-      });
+      }, AI_CALL_TIMEOUT_MS)
       if (!response.ok) {
-        console.error(`Claude error: ${response.status}`);
-        return null;
+        const errText = await response.text().catch(() => "")
+        console.error(`Claude error ${response.status}: ${errText}`)
+        return null
       }
-      const data = (await response.json()) as Record<string, unknown>;
+      const data = (await response.json()) as Record<string, unknown>
       return (
         ((data.content as Array<Record<string, unknown>> | undefined)?.[0]
           ?.text as string) || null
-      );
+      )
     }
 
-    const response = await fetch(config.baseUrl, {
+    const response = await fetchWithTimeout(config.baseUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -85,16 +94,18 @@ export async function callAI(
         temperature,
         max_tokens: 4000,
       }),
-    });
+    }, AI_CALL_TIMEOUT_MS)
     if (!response.ok) {
-      console.error(`${provider} error: ${response.status}`);
-      return null;
+      const errText = await response.text().catch(() => "")
+      console.error(`${provider} error ${response.status}: ${errText}`)
+      return null
     }
-    const data = (await response.json()) as Record<string, unknown>;
-    const choices = data.choices as Array<Record<string, unknown>> | undefined;
-    return ((choices?.[0]?.message as Record<string, unknown>)?.content as string) || null;
+    const data = (await response.json()) as Record<string, unknown>
+    const choices = data.choices as Array<Record<string, unknown>> | undefined
+    return ((choices?.[0]?.message as Record<string, unknown>)?.content as string) || null
   } catch (error) {
-    console.error(`${provider} API call failed:`, error);
-    return null;
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error(`${provider} API call failed: ${msg}`)
+    return null
   }
 }

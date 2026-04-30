@@ -14,11 +14,12 @@ interface Props {
   intent: string
   answers?: Record<string, string>
   stepMode: boolean
+  inline?: boolean
   onClose: () => void
   onSaved?: () => void
 }
 
-export default function GenerateModal({ intent, answers, stepMode, onClose, onSaved }: Props) {
+export default function GenerateModal({ intent, answers, stepMode, inline, onClose, onSaved }: Props) {
   const [result, setResult] = useState<GenResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [activeStep, setActiveStep] = useState(1)
@@ -143,6 +144,7 @@ export default function GenerateModal({ intent, answers, stepMode, onClose, onSa
         intent={intent}
         activeStep={activeStep}
         onClose={onClose}
+        inline={inline}
       />
     )
   }

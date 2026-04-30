@@ -1,184 +1,277 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
+import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2 } from "lucide-react"
 
 import GenerateModal from "@/components/GenerateModal"
 import { useAuth } from "@/hooks/useAuth"
 import { trpc } from "@/providers/trpc"
-
 import { ClarifyChatPanel } from "@/components/clarify/ClarifyChatPanel"
 import type { RequirementSummary } from "@/components/clarify/types"
-import { HomeHeroSection } from "@/components/home/HomeHeroSection"
-import { HowItWorksSection } from "@/components/home/HowItWorksSection"
-import { SceneCards } from "@/components/home/SceneCards"
-import { SLASH_COMMANDS } from "@/components/home/config"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { FolderOpen } from "lucide-react"
-import { Link } from "react-router"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { QUICK_EXAMPLES } from "@/components/home/config"
 
-function RecentProjects() {
-  const { data: projects } = trpc.project.list.useQuery(undefined, {
-    enabled: true,
-  });
+// ── Types ────────────────────────────────────────────
+type FlowStage = "input" | "clarify" | "results"
 
-  if (!projects || projects.length === 0) return null;
+const STEPS = [
+  { key: "input" as const, label: "描述需求", icon: MessageSquare },
+  { key: "clarify" as const, label: "AI 分析", icon: Sparkles },
+  { key: "results" as const, label: "生成结果", icon: CheckCircle2 },
+]
 
-  const recent = projects.slice(0, 4);
+// ── Progress Indicator ───────────────────────────────
+function ProgressSteps({ stage }: { stage: FlowStage }) {
+  const idx = STEPS.findIndex((s) => s.key === stage)
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {recent.map((p) => (
-        <Link key={p.id} to={`/workspace`}>
-          <Card className="border-0 shadow-sm rounded-2xl bg-white/80 hover:shadow-md transition-all cursor-pointer">
-            <CardContent className="p-4 flex items-center gap-3">
-              <FolderOpen className="w-5 h-5 text-violet-400" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{p.title}</p>
-                <p className="text-xs text-slate-400">{p.domain}</p>
-              </div>
-              <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {STEPS.map((s, i) => {
+        const Icon = s.icon
+        const done = i < idx
+        const active = i === idx
+        const badgeCls = done
+          ? "bg-emerald-50 text-emerald-600"
+          : active
+            ? "bg-violet-100 text-violet-700 shadow-sm"
+            : "bg-slate-50 text-slate-400"
+        const iconCls = active
+          ? "text-violet-500"
+          : done
+            ? "text-emerald-500"
+            : "text-slate-300"
+        return (
+          <div key={s.key} className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-500 ${badgeCls}`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${iconCls}`} />
+              <span className="hidden sm:inline">{s.label}</span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`w-6 h-px ${i < idx ? "bg-emerald-300" : "bg-slate-200"}`} />
+            )}
+          </div>
+        )
+      })}
     </div>
-  );
+  )
 }
 
+// ── Compact Clarify Wrapper ──────────────────────────
+function ClarifyStage({
+  projectId,
+  intent,
+  onComplete,
+  onBack,
+}: {
+  projectId: number
+  intent: string
+  onComplete: (answers: Record<string, string>, summary: RequirementSummary) => void
+  onBack: () => void
+}) {
+  return (
+    <div className="w-full max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+          AI 正在了解你的需求
+        </p>
+        <Button variant="ghost" size="sm" className="text-xs text-slate-400" onClick={onBack}>
+          返回修改需求
+        </Button>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden" style={{ height: "420px" }}>
+        <ClarifyChatPanel
+          projectId={projectId}
+          intent={intent}
+          onComplete={onComplete}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Home ─────────────────────────────────────────────
 export default function Home() {
   const [intent, setIntent] = useState("")
-  const [stepMode, setStepMode] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [pendingAnswers, setPendingAnswers] = useState<Record<string, string>>({})
-  const [showClarify, setShowClarify] = useState(false)
+  const [stage, setStage] = useState<FlowStage>("input")
   const [clarifyProjectId, setClarifyProjectId] = useState<number | null>(null)
+  const [pendingAnswers, setPendingAnswers] = useState<Record<string, string>>({})
+  const [isCreating, setIsCreating] = useState(false)
 
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const slashMatch = intent.match(/^\/([a-z]*)$/i)
-  const showSlashMenu = intent.startsWith("/") && Boolean(slashMatch)
-  const slashQuery = showSlashMenu ? (slashMatch?.[1] || "") : ""
-
-  const filteredSlashCommands = slashQuery
-    ? SLASH_COMMANDS.filter((c) => c.command.includes(slashQuery.toLowerCase()) || c.name.includes(slashQuery))
-    : SLASH_COMMANDS
-
-  const insertSlashCommand = (cmd: string) => {
-    setIntent(cmd + " ")
-    textareaRef.current?.focus()
-  }
-
   const createProject = trpc.project.create.useMutation()
   const updateProject = trpc.project.update.useMutation()
 
-  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  // Auto-focus textarea on mount
+  useEffect(() => {
+    textareaRef.current?.focus()
+  }, [])
 
-  const handleStartGenerate = useCallback(async () => {
-    if (!intent.trim()) { toast.error("请输入你的需求"); return }
-    if (!isAuthenticated) { toast.info("请先登录"); navigate("/login"); return }
+  const handleStart = useCallback(async () => {
+    if (!intent.trim()) {
+      toast.error("请输入你的需求")
+      return
+    }
+    if (!isAuthenticated) {
+      toast.info("请先登录")
+      navigate("/login")
+      return
+    }
 
-    setIsCreatingProject(true)
+    setIsCreating(true)
     try {
-      // Create a project first
-      const title = intent.trim().length > 30
-        ? intent.trim().substring(0, 30) + "..."
-        : intent.trim()
-
-      const project = await createProject.mutateAsync({
-        title,
-        intent: intent.trim(),
-        domain: undefined,
-      })
-
-      // Update project to in_progress
-      await updateProject.mutateAsync({
-        id: project.id,
-        clarificationStatus: "in_progress",
-      })
+      const title = intent.trim().length > 30 ? intent.trim().substring(0, 30) + "..." : intent.trim()
+      const project = await createProject.mutateAsync({ title, intent: intent.trim(), domain: undefined })
+      await updateProject.mutateAsync({ id: project.id, clarificationStatus: "in_progress" })
 
       setClarifyProjectId(project.id)
-      setShowClarify(true)
-    } catch (error) {
+      setStage("clarify")
+    } catch {
       toast.error("创建项目失败，请重试")
-      console.error(error)
-      // Fallback: open modal directly
-      setPendingAnswers({})
-      setShowModal(true)
     } finally {
-      setIsCreatingProject(false)
+      setIsCreating(false)
     }
   }, [intent, isAuthenticated, navigate, createProject, updateProject])
 
-  const handleCloseClarify = useCallback(() => {
-    setShowClarify(false)
-    setClarifyProjectId(null)
-  }, [])
-
-  const handleClarifyComplete = useCallback((answers: Record<string, string>, _summary: RequirementSummary) => {
-    setShowClarify(false)
-    setClarifyProjectId(null)
-    setPendingAnswers(answers)
-    setShowModal(true)
-  }, [])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      handleStartGenerate()
+  const handleClarifyComplete = useCallback(async (answers: Record<string, string>, _summary: RequirementSummary) => {
+    // Update project status to reflect clarify completion
+    if (clarifyProjectId) {
+      try {
+        await updateProject.mutateAsync({
+          id: clarifyProjectId,
+          clarificationStatus: "completed",
+          status: "ready",
+        })
+      } catch { /* non-blocking */ }
     }
-  }, [handleStartGenerate])
+    setPendingAnswers(answers)
+    setStage("results")
+  }, [clarifyProjectId, updateProject])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        handleStart()
+      }
+    },
+    [handleStart],
+  )
+
+  const handleReset = useCallback(() => {
+    setStage("input")
+    setClarifyProjectId(null)
+    setPendingAnswers({})
+    setIntent("")
+    setTimeout(() => textareaRef.current?.focus(), 100)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-hero-gradient">
-      <HomeHeroSection
-        intent={intent}
-        stepMode={stepMode}
-        showSlashMenu={showSlashMenu}
-        isGenerating={isCreatingProject}
-        filteredSlashCommands={filteredSlashCommands}
-        textareaRef={textareaRef}
-        onIntentChange={setIntent}
-        onIntentKeyDown={handleKeyDown}
-        onExampleSelect={setIntent}
-        onInsertSlashCommand={insertSlashCommand}
-        onStepModeToggle={() => setStepMode((current) => !current)}
-        onStartGenerate={handleStartGenerate}
-      />
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] px-4 py-8">
+      {/* Progress Steps */}
+      <ProgressSteps stage={stage} />
 
-      {/* Scene cards */}
-      <div className="max-w-3xl mx-auto px-6 mt-10">
-        <p className="text-sm font-medium text-slate-500 mb-4 text-center">快速开始</p>
-        <SceneCards onSelect={setIntent} />
-      </div>
+      {/* STAGE 1: Input */}
+      {stage === "input" && (
+        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-3">
+              <span className="text-slate-800">模糊需求</span>
+              <span className="mx-3 text-slate-300 font-light">→</span>
+              <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                完美提示词
+              </span>
+            </h1>
+            <p className="text-slate-400 max-w-md mx-auto">
+              用自然语言描述任务，AI 自动分析意图并生成专业级提示词
+            </p>
+          </div>
 
-      {/* Recent projects */}
-      <div className="max-w-3xl mx-auto px-6 mt-12 pb-12">
-        <p className="text-sm font-medium text-slate-500 mb-4">最近项目</p>
-        <RecentProjects />
-      </div>
+          {/* Input Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
+            <Textarea
+              ref={textareaRef}
+              value={intent}
+              onChange={(e) => setIntent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="描述你想完成的任务，例如：帮我写一份产品发布会的演讲稿..."
+              className="min-h-[140px] text-base resize-none border-0 focus-visible:ring-0 p-5 shadow-none bg-transparent placeholder:text-slate-300 leading-relaxed"
+            />
 
-      {showClarify && clarifyProjectId !== null && (
-        <ClarifyChatPanel
+            {/* Examples */}
+            <div className="flex flex-wrap gap-1.5 px-5 pb-3">
+              {QUICK_EXAMPLES.map((ex, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIntent(ex)}
+                  className="text-xs text-slate-400 hover:text-violet-600 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-colors truncate max-w-[280px] text-left"
+                >
+                  {ex.substring(0, 30)}…
+                </button>
+              ))}
+            </div>
+
+            {/* Action bar */}
+            <div className="flex items-center justify-between px-5 py-3 border-t border-slate-50 bg-slate-50/50">
+              <span className="text-xs text-slate-400">
+                {intent.length > 0 ? `${intent.length} 字` : "⌘↵ 快速生成"}
+              </span>
+              <Button
+                onClick={handleStart}
+                disabled={isCreating || !intent.trim()}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl shadow-md shadow-violet-200/50 transition-all hover:shadow-lg"
+                size="lg"
+              >
+                {isCreating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4 mr-2" />
+                )}
+                {isCreating ? "创建中..." : "开始生成"}
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STAGE 2: Clarify */}
+      {stage === "clarify" && clarifyProjectId !== null && (
+        <ClarifyStage
           projectId={clarifyProjectId}
           intent={intent}
-          onClose={handleCloseClarify}
           onComplete={handleClarifyComplete}
+          onBack={() => setStage("input")}
         />
       )}
 
-      {showModal ? (
-        <GenerateModal
-          intent={intent}
-          answers={pendingAnswers}
-          stepMode={stepMode}
-          onClose={() => setShowModal(false)}
-          onSaved={() => setIntent("")}
-        />
-      ) : null}
-
-      <HowItWorksSection />
+      {/* STAGE 3: Results */}
+      {stage === "results" && (
+        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              需求澄清完成，正在生成提示词
+            </p>
+            <Button variant="ghost" size="sm" className="text-xs text-slate-400" onClick={() => navigate("/workspace")}>
+              查看工作台
+            </Button>
+          </div>
+          <GenerateModal
+            intent={intent}
+            answers={pendingAnswers}
+            stepMode={false}
+            inline
+            onClose={handleReset}
+            onSaved={() => { handleReset(); navigate("/workspace") }}
+          />
+        </div>
+      )}
     </div>
   )
 }

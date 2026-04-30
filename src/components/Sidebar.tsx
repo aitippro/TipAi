@@ -26,6 +26,7 @@ import {
   ChevronRight,
   FolderOpen,
   Zap,
+  ScrollText,
 } from "lucide-react"
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { path: "/library", icon: BookOpen, label: "资源" },
   { path: "/toolbox", icon: Zap, label: "工具箱" },
   { path: "/settings", icon: Settings, label: "设置" },
+  { path: "/logs", icon: ScrollText, label: "日志" },
   { path: "/about", icon: Info, label: "关于" },
 ]
 

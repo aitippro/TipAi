@@ -20,6 +20,7 @@ const ProjectDetail = lazy(() => import("./pages/ProjectDetail"))
 const Export = lazy(() => import("./pages/Export"))
 const Workspace = lazy(() => import("./pages/Workspace"))
 const Toolbox = lazy(() => import("./pages/Toolbox"))
+const Logs = lazy(() => import("./pages/Logs"))
 
 function PageFallback() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
                 <Route path="/export" element={<Export />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/about" element={<About />} />
+                <Route path="/logs" element={<Logs />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

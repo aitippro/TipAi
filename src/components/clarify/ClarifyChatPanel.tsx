@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { ClarifyMessageBubble } from "./ClarifyMessageBubble"
 import { SummaryPanel } from "./SummaryPanel"
+import { logger } from "@/lib/logger"
 import type {
   ClarifyQuestion,
   ClarifyAnswer,
@@ -36,9 +37,17 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [_turnNumber, setTurnNumber] = useState(0)
+  const [errMsg, setErrMsg] = useState<string | null>(null)
   const [summary, setSummary] = useState<RequirementSummary | null>(null)
+  const completedRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const completeOnce = useMemo(() => (answers: Record<string, string>, summary: RequirementSummary) => {
+    if (completedRef.current) return
+    completedRef.current = true
+    onComplete?.(answers, summary)
+  }, [onComplete])
 
   const saveTurn = trpc.project.saveConversationTurn.useMutation()
   const generateNextQuestion = trpc.project.generateNextQuestion.useMutation()
@@ -49,13 +58,17 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     try {
       const result = await generateSummaryMutation.mutateAsync({ projectId })
       setSummary(result)
+      // Auto-proceed to results after brief pause
+      setTimeout(() => completeOnce({}, result), 1800)
     } catch (error) {
+        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("生成摘要失败")
       console.error(error)
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, generateSummaryMutation])
+  }, [projectId, generateSummaryMutation, onComplete])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -101,6 +114,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
           await generateSummaryAndShow()
         }
       } catch (error) {
+        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
         toast.error("初始化对话失败")
         console.error(error)
       } finally {
@@ -184,6 +199,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         await generateSummaryAndShow()
       }
     } catch (error) {
+        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存回答失败")
       console.error(error)
     }
@@ -246,6 +263,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         await generateSummaryAndShow()
       }
     } catch (error) {
+        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存跳过失败")
       console.error(error)
     }
@@ -268,14 +287,28 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <ClarifyMessageBubble key={msg.id} message={msg} />
-        ))}
-        {isLoading && !currentQuestion && (
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>AI 思考中...</span>
+        {errMsg ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+              <span className="text-red-400 text-lg">!</span>
+            </div>
+            <p className="text-sm text-red-600 font-medium">{errMsg}</p>
+            <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { setErrMsg(null); setIsLoading(true); /* retry by remounting */ window.location.reload(); }}>
+              重试
+            </Button>
           </div>
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <ClarifyMessageBubble key={msg.id} message={msg} />
+            ))}
+            {isLoading && !currentQuestion && (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>AI 思考中...</span>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -284,7 +317,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       {summary && (
         <SummaryPanel
           summary={summary}
-          onProceed={() => onComplete?.({}, summary)}
+          onProceed={() => completeOnce({}, summary)}
           onRegenerate={generateSummaryAndShow}
           isGenerating={generateSummaryMutation.isPending}
         />
@@ -386,11 +419,21 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
               </div>
             )}
           </div>
-        ) : (
-          <div className="text-center text-sm text-slate-400 py-2">
-            {summary ? "需求澄清已完成 ✓" : "等待 AI 提问..."}
+        ) : !isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-4">
+            {summary ? (
+              <span className="text-sm text-emerald-600 font-medium">需求澄清已完成</span>
+            ) : (
+              <div className="flex items-center gap-2 text-slate-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
+                </span>
+                <span className="text-sm">AI 正在分析你的需求...</span>
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

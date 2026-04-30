@@ -44,6 +44,9 @@ export function Onboarding({ onComplete }: Props) {
       const payload: Record<string, string> = {};
       Object.entries(keys).forEach(([k, v]) => { if (v?.trim()) payload[`${k}ApiKey`] = v.trim(); });
       if (Object.keys(payload).length > 0) {
+        // Auto-set default model to the first provider with a key
+        const firstKey = Object.keys(payload)[0];
+        payload.defaultModel = firstKey.replace('ApiKey', '');
         await updateSettings.mutateAsync(payload);
       }
     } catch { /* optional */ }

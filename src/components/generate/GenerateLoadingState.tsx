@@ -4,6 +4,7 @@ type GenerateLoadingStateProps = {
   intent: string
   activeStep: number
   onClose: () => void
+  inline?: boolean
 }
 
 const LOADING_STEPS = [
@@ -16,9 +17,13 @@ export function GenerateLoadingState({
   intent,
   activeStep,
   onClose,
+  inline,
 }: GenerateLoadingStateProps) {
+  const wrapperCls = inline
+    ? "bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden"
+    : "fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col"
   return (
-    <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col">
+    <div className={wrapperCls}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">

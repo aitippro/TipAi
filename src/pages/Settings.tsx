@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { toast } from "sonner"
 import {
   Key, Eye, EyeOff, Shield, Globe, Database, Wand2, Settings2,
-  Download, Upload, RefreshCw, Sparkles,
+  Download, Upload, RefreshCw, Sparkles, CheckCircle2, XCircle,
 } from "lucide-react"
 
 const MODELS = [
@@ -36,20 +36,44 @@ export default function SettingsPage() {
   }, [settings])
   const utils = trpc.useUtils()
   const updateMutation = trpc.promptForge.updateSettings.useMutation({
-    onSuccess: () => { utils.promptForge.getSettings.invalidate(); toast.success("设置已保存") },
-    onError: (e: { message?: string }) => toast.error(e.message || "保存失败"),
+    onSuccess: () => {
+      utils.promptForge.getSettings.invalidate()
+    },
+    onError: (e: { message?: string }) => {
+      toast.error(e.message || "保存失败", {
+        icon: <XCircle className="w-4 h-4 text-red-500" />,
+        duration: 4000,
+      })
+    },
   })
 
-  const handleSave = () => {
+  const savingRef = useRef(false)
+  const handleSave = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
+
     const payload: Record<string, string> = { defaultModel }
     MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
-    if (Object.keys(payload).length > 0) {
-      updateMutation.mutate(payload)
-    }
+
+    // Save localStorage regardless
     localStorage.setItem("tipai_global_prompt", globalPrompt)
     localStorage.setItem("tipai_cloud_sync", String(cloudSync))
     localStorage.setItem("tipai_theme", theme)
-    toast.success("本地设置已保存")
+
+    try {
+      if (Object.keys(payload).length > 0) {
+        await updateMutation.mutateAsync(payload)
+      }
+      toast.success("所有设置已保存", {
+        icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+        duration: 2500,
+      })
+    } catch {
+      // Error toast already shown by onError handler
+      toast.info("本地设置已保留，可稍后重试", { duration: 2000 })
+    } finally {
+      savingRef.current = false
+    }
   }
 
   const toggleShow = (k: string) => setShowKeys((p) => ({ ...p, [k]: !p[k] }))

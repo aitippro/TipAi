@@ -58,12 +58,40 @@ function buildSettingsUpdateData(input: UpdatePromptForgeSettingsInput): Record<
   return updateData;
 }
 
-export function resolveStoredApiKey(model: string, settings?: UserSettings): string {
+function getApiKey(model: string, settings?: UserSettings): string {
   if (model === "kimi" && settings?.kimiApiKey) return decrypt(settings.kimiApiKey);
   if (model === "openai" && settings?.openaiApiKey) return decrypt(settings.openaiApiKey);
   if (model === "claude" && settings?.claudeApiKey) return decrypt(settings.claudeApiKey);
   if (model === "deepseek" && settings?.deepseekApiKey) return decrypt(settings.deepseekApiKey);
   return "";
+}
+
+/** Get all available models sorted by: preferred model first, then remaining by priority */
+export function getAvailableModels(settings?: UserSettings): { model: string; apiKey: string }[] {
+  const result: { model: string; apiKey: string }[] = [];
+  const preferred = settings?.defaultModel || "kimi";
+
+  // Try preferred model first
+  const preferredKey = getApiKey(preferred, settings) || process.env[`${preferred.toUpperCase()}_API_KEY`] || "";
+  if (preferredKey) {
+    result.push({ model: preferred, apiKey: preferredKey });
+  }
+
+  // Then try remaining models in priority order (deepseek first for domestic optimization)
+  const remainingOrder = ["deepseek", "kimi", "openai", "claude"];
+  for (const model of remainingOrder) {
+    if (model === preferred) continue; // already tried
+    const key = getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
+    if (key) {
+      result.push({ model, apiKey: key });
+    }
+  }
+
+  return result;
+}
+
+export function resolveStoredApiKey(model: string, settings?: UserSettings): string {
+  return getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
 }
 
 export async function getPromptForgeSettingsRecord(userId: number): Promise<UserSettings | undefined> {

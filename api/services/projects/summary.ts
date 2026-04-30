@@ -7,7 +7,7 @@ import {
   toStringValue,
 } from "../../lib/ai-service-v3";
 import type { IntentAnalysis } from "../../lib/ai-service-v3/types";
-import { getPromptForgeSettingsRecord, resolveStoredApiKey } from "../promptforge/settings";
+import { getPromptForgeSettingsRecord, getAvailableModels } from "../promptforge/settings";
 
 import { getDb } from "../../queries/connection";
 import { projectConversations } from "@db/schema";
@@ -56,13 +56,12 @@ export async function generateRequirementSummary(
   originalIntent: string,
 ): Promise<RequirementSummary> {
   const settings = await getPromptForgeSettingsRecord(userId);
-  const model = settings?.defaultModel || "kimi";
-  const apiKey = resolveStoredApiKey(model, settings);
+  const models = getAvailableModels(settings);
 
-  if (!apiKey) {
+  if (models.length === 0) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "未配置API Key，请先在设置中配置",
+      message: "未配置任何 AI 模型 API Key，请先在设置中配置",
     });
   }
 
@@ -80,8 +79,22 @@ export async function generateRequirementSummary(
     answerData: t.answerData ? JSON.parse(t.answerData) : null,
   }));
 
-  // Analyze intent first
-  const analysis = await analyzeIntent(originalIntent, model, apiKey);
+  // Analyze intent — try models in order
+  let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
+  for (const { model, apiKey } of models) {
+    analysis = await analyzeIntent(originalIntent, model, apiKey);
+    if (analysis) break;
+  }
+  if (!analysis) {
+    const fallback = { goal: originalIntent, domain: "general", subDomain: "general", audience: "", tone: "专业", style: "简洁", outputFormat: "详细文字说明", complexity: "simple" as const, constraints: [] as string[], language: "zh" };
+    return {
+      summary: originalIntent,
+      requirements: [originalIntent],
+      constraints: [],
+      suggestedFrameworks: [],
+      intentAnalysis: fallback,
+    };
+  }
 
   // If no conversation turns, return basic analysis
   if (turns.length === 0) {
@@ -140,7 +153,11 @@ ${conversationContext}
 
   // Use the AI client directly since we need a structured response
   const { callAI } = await import("../../lib/ai-service-v3/client");
-  const result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+  let result: string | null = null;
+  for (const { model, apiKey } of models) {
+    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+    if (result) break;
+  }
 
   if (!result) {
     return {
@@ -188,19 +205,26 @@ export async function generateNextClarificationQuestion(
   };
   summary?: string;
 }> {
+  const { getAvailableModels } = await import("../promptforge/settings");
   const settings = await getPromptForgeSettingsRecord(userId);
-  const model = settings?.defaultModel || "kimi";
-  const apiKey = resolveStoredApiKey(model, settings);
+  const models = getAvailableModels(settings);
 
-  if (!apiKey) {
+  if (models.length === 0) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "未配置API Key",
+      message: "未配置任何 AI 模型 API Key，请在设置中配置（支持 DeepSeek/Kimi/OpenAI/Claude）",
     });
   }
 
-  // First analyze intent
-  const analysis = await analyzeIntent(originalIntent, model, apiKey);
+  // Try intent analysis with first available model, fall through if fails
+  let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
+  for (const { model, apiKey } of models) {
+    analysis = await analyzeIntent(originalIntent, model, apiKey);
+    if (analysis) break;
+  }
+  if (!analysis) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "AI 意图分析失败，请检查网络和 API Key 配置" });
+  }
 
   // If already simple and enough info, skip
   if (analysis.complexity === "simple" && previousTurns.length >= 2) {
@@ -254,7 +278,12 @@ ${context || "（刚开始对话）"}
 请判断是否需要继续提问。如果需要，只生成一个问题。`;
 
   const { callAI } = await import("../../lib/ai-service-v3/client");
-  const result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+  // Try models in order for the question generation
+  let result: string | null = null;
+  for (const { model, apiKey } of models) {
+    result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4);
+    if (result) break;
+  }
 
   if (!result) {
     return { needsMoreClarification: false };
