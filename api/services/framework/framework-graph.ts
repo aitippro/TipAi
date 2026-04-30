@@ -57,6 +57,16 @@ const COMPLEXITY_MAP: Record<string, "simple" | "medium" | "complex"> = {
   "self-refine": "complex",
   "few-shot": "medium",
   "meta-prompting": "complex",
+  "security-audit": "complex",
+  "multi-translate": "medium",
+  "scientific-experiment": "complex",
+  "medical-diagnosis": "complex",
+  "legal-analysis": "complex",
+  "persona-plus": "medium",
+  "compare-contrast": "simple",
+  "brainstorming": "simple",
+  "crisis-response": "medium",
+  "data-storytelling": "medium",
 };
 
 /** 框架分类 */
@@ -81,6 +91,16 @@ const CATEGORY_MAP: Record<string, string> = {
   "self-refine": "iterative",
   "few-shot": "learning",
   "meta-prompting": "meta",
+  "security-audit": "security",
+  "multi-translate": "communication",
+  "scientific-experiment": "research",
+  "medical-diagnosis": "healthcare",
+  "legal-analysis": "legal",
+  "persona-plus": "persona",
+  "compare-contrast": "analytical",
+  "brainstorming": "creative",
+  "crisis-response": "management",
+  "data-storytelling": "communication",
 };
 
 /** 手动定义的互补关系对 */
@@ -95,6 +115,16 @@ const COMPLEMENTARY_PAIRS: Array<{ a: string; b: string; reason: string }> = [
   { a: "broke", b: "smart", reason: "BROKE 定义项目框架，SMART 细化可衡量目标" },
   { a: "chain-of-thought", b: "self-refine", reason: "CoT 展示推理过程，Self-Refine 优化推理质量" },
   { a: "prompt", b: "risen", reason: "PROMPT 提供全面结构，RISEN 强化步骤执行" },
+  { a: "security-audit", b: "ape-optimized", reason: "Security Audit 发现问题，APE+ 生成修复代码和验证方案" },
+  { a: "scientific-experiment", b: "chain-of-thought", reason: "实验设计需要严谨推理，CoT 深化假设验证逻辑" },
+  { a: "medical-diagnosis", b: "tree-of-thoughts", reason: "鉴别诊断需要多路径探索，ToT 并行评估多种疾病可能性" },
+  { a: "legal-analysis", b: "scqa", reason: "法律分析提供论证，SCQA 包装为说服性叙事" },
+  { a: "persona-plus", b: "crispe", reason: "Persona+ 深度角色定义，CRISPE 提供教学/咨询场景的应用框架" },
+  { a: "compare-contrast", b: "smart", reason: "对比分析产出评估结果，SMART 将选择转化为可执行目标" },
+  { a: "brainstorming", b: "tree-of-thoughts", reason: "Brainstorming 发散创意，ToT 结构化评估多条路径" },
+  { a: "crisis-response", b: "risen", reason: "Crisis Response 制定策略，RISEN 将策略分解为可执行步骤" },
+  { a: "data-storytelling", b: "co-star", reason: "Data Storytelling 构建数据洞察，CO-STAR 优化受众表达" },
+  { a: "multi-translate", b: "self-refine", reason: "Multi-Translate 生成初译，Self-Refine 迭代优化文化适配" },
 ];
 
 /** 升级路径：简单框架 → 更复杂的同类框架 */
@@ -108,6 +138,15 @@ const UPGRADE_PATHS: Array<{ from: string; to: string; reason: string }> = [
   { from: "chain-of-thought", to: "tree-of-thoughts", reason: "CoT 单路径推理 → ToT 多路径并行探索" },
   { from: "co-star", to: "crispe", reason: "CO-STAR 通用框架 → CRISPE 深度角色化" },
   { from: "risen", to: "react", reason: "RISEN 步骤驱动 → ReAct 行动-观察循环" },
+  { from: "care", to: "compare-contrast", reason: "CARE 快速输出 → Compare-Contrast 结构化对比分析" },
+  { from: "compare-contrast", to: "tree-of-thoughts", reason: "对比两个方案 → ToT 评估多条复杂路径" },
+  { from: "tag", to: "smart", reason: "TAG 基础目标 → SMART 精细化可衡量目标" },
+  { from: "smart", to: "broke", reason: "SMART 单目标细化 → BROKE 项目全链路管理" },
+  { from: "crispe", to: "persona-plus", reason: "CRISPE 角色扮演 → Persona+ 深度多维度角色构建" },
+  { from: "brainstorming", to: "tree-of-thoughts", reason: "Brainstorming 发散创意 → ToT 结构化多路径决策" },
+  { from: "data-storytelling", to: "prompt", reason: "Data Storytelling 叙事框架 → PROMPT 全面输出控制" },
+  { from: "chain-of-thought", to: "scientific-experiment", reason: "CoT 单路径推理 → 实验设计完整方法论" },
+  { from: "react", to: "security-audit", reason: "ReAct 行动循环 → 安全审计系统化评估框架" },
 ];
 
 /**

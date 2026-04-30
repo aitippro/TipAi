@@ -8,6 +8,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
+import { rest } from "./rest-router";
 
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -116,6 +117,9 @@ app.use("/api/trpc/*", async (c) => {
     createContext,
   });
 });
+
+// REST API routes
+app.route("/api/rest", rest);
 
 app.get("/api/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));

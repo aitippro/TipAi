@@ -26,6 +26,14 @@ const Workspace = lazy(() => import("./pages/Workspace"))
 const Toolbox = lazy(() => import("./pages/Toolbox"))
 const Logs = lazy(() => import("./pages/Logs"))
 const FrameworkMatch = lazy(() => import("./pages/FrameworkMatch"))
+const TreeOfThoughts = lazy(() => import("./pages/TreeOfThoughts"))
+const Multimodal = lazy(() => import("./pages/Multimodal"))
+const QualityGate = lazy(() => import("./pages/QualityGate"))
+const Feedback = lazy(() => import("./pages/Feedback"))
+const DriftDetection = lazy(() => import("./pages/DriftDetection"))
+const AgentSwarm = lazy(() => import("./pages/AgentSwarm"))
+const Academic = lazy(() => import("./pages/Academic"))
+const ApiDocs = lazy(() => import("./pages/ApiDocs"))
 
 function PageFallback() {
   return (
@@ -87,6 +95,7 @@ export default function App() {
                       <Route path="/about" element={<About />} />
                       <Route path="/logs" element={<Logs />} />
                       <Route path="/frameworks" element={<FrameworkMatch />} />
+                      <Route path="/tot" element={<TreeOfThoughts />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </PageTransition>

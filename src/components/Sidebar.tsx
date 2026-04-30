@@ -31,6 +31,14 @@ import {
   PenTool,
   Download,
   BrainCircuit,
+  GitBranch,
+  Image,
+  ShieldCheck,
+  BarChart3,
+  Activity,
+  Users,
+  GraduationCap,
+  Globe,
 } from "lucide-react"
 
 // ============================================================================
@@ -57,6 +65,14 @@ const NAV_GROUPS = [
     items: [
       { path: "/optimizer", icon: PenTool, label: "优化器" },
       { path: "/frameworks", icon: BrainCircuit, label: "框架匹配" },
+      { path: "/tot", icon: GitBranch, label: "ToT 推理" },
+      { path: "/multimodal", icon: Image, label: "多模态" },
+      { path: "/quality-gate", icon: ShieldCheck, label: "质量门禁" },
+      { path: "/feedback", icon: BarChart3, label: "反馈闭环" },
+      { path: "/drift", icon: Activity, label: "漂移检测" },
+      { path: "/swarm", icon: Users, label: "Agent Swarm" },
+      { path: "/academic", icon: GraduationCap, label: "学术合作" },
+      { path: "/api-docs", icon: Globe, label: "API 文档" },
       { path: "/export", icon: Download, label: "导出" },
     ],
   },
