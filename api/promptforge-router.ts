@@ -38,6 +38,10 @@ import {
   getDomainKnowledge,
 } from "./services/clarify";
 import { generateClarifyStrategy } from "./services/clarify/strategy-router";
+import {
+  matchFrameworks,
+  getFrameworkGraphData,
+} from "./services/framework";
 
 export const promptForgeRouter = createRouter({
   getSettings: authedQuery.query(({ ctx }) => getPromptForgeSettings(ctx.user.id)),
@@ -129,4 +133,12 @@ export const promptForgeRouter = createRouter({
 
   // P0-2: 获取所有支持领域
   listDomains: publicQuery.query(() => getAllDomains()),
+
+  // P1-2: 智能框架匹配引擎
+  matchFrameworks: publicQuery
+    .input(z.object({ intent: z.string().min(1).max(3000) }))
+    .query(({ input }) => matchFrameworks(input.intent)),
+
+  // P1-2: 框架知识图谱数据（用于可视化）
+  frameworkGraph: publicQuery.query(() => getFrameworkGraphData()),
 });
