@@ -8,6 +8,9 @@ import { CommandPalette } from "./components/search/CommandPalette"
 import { Onboarding } from "./components/Onboarding"
 import { isFirstLaunch, markOnboarded } from "./lib/onboarding"
 
+import { FAB } from "./components/layout/FAB"
+import { BottomTabBar } from "./components/layout/BottomTabBar"
+
 // Code-split pages — each loads on demand
 const Home = lazy(() => import("./pages/Home"))
 const Settings = lazy(() => import("./pages/Settings"))
@@ -17,7 +20,6 @@ const Login = lazy(() => import("./pages/Login"))
 const NotFound = lazy(() => import("./pages/NotFound"))
 const Optimizer = lazy(() => import("./pages/Optimizer"))
 const About = lazy(() => import("./pages/About"))
-const Projects = lazy(() => import("./pages/Projects"))
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"))
 const Export = lazy(() => import("./pages/Export"))
 const Workspace = lazy(() => import("./pages/Workspace"))
@@ -65,7 +67,7 @@ export default function App() {
         <div className={`flex flex-1 transition-opacity duration-500 ${appReady ? "opacity-100" : "opacity-0"}`}>
           <Sidebar />
           <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
-          <main className="flex-1 min-h-screen md:ml-[220px] pt-14 md:pt-0 pb-8">
+          <main className="flex-1 min-h-screen md:ml-[240px] pt-14 md:pt-0 pb-8 md:pb-8">
             <div className="h-full">
               <Suspense fallback={<PageFallback />}>
                 <AnimatePresence mode="wait">
@@ -78,7 +80,7 @@ export default function App() {
                       <Route path="/library" element={<Library />} />
                       <Route path="/templates" element={<TemplateMarket />} />
                       <Route path="/optimizer" element={<Optimizer />} />
-                      <Route path="/projects" element={<Projects />} />
+                      <Route path="/projects" element={<Workspace />} />
                       <Route path="/projects/:id" element={<ProjectDetail />} />
                       <Route path="/export" element={<Export />} />
                       <Route path="/login" element={<Login />} />
@@ -92,6 +94,8 @@ export default function App() {
               </Suspense>
             </div>
           </main>
+          <FAB />
+          <BottomTabBar />
         </div>
       </div>
     </KeyboardShortcutProvider>

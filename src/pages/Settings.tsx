@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { motion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,9 +9,12 @@ import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "sonner"
 import {
-  Key, Eye, EyeOff, Shield, Globe, Database, Wand2, Settings2,
+  Key, Eye, EyeOff, Shield, Globe, Database, Settings2,
   Download, Upload, RefreshCw, Sparkles, CheckCircle2, XCircle,
+  Monitor, Moon, Sun, Type, Gauge, Palette
 } from "lucide-react"
+import { ScrollReveal } from "@/components/effects/ScrollReveal"
+import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer"
 
 const MODELS = [
   { key: "kimi", name: "Kimi", fullName: "Kimi (Moonshot)", icon: Sparkles, color: "bg-violet-50 text-violet-600 border-violet-200", placeholder: "sk-...", site: "platform.moonshot.cn" },
@@ -20,30 +24,38 @@ const MODELS = [
   { key: "ollama", name: "Ollama", fullName: "Ollama (本地)", icon: Shield, color: "bg-slate-50 text-slate-600 border-slate-200", placeholder: "本地服务，无需 Key", site: "localhost:11434" },
 ]
 
+const TABS = [
+  { id: "general", label: "通用", icon: Settings2 },
+  { id: "models", label: "模型与Key", icon: Key },
+  { id: "interface", label: "界面", icon: Palette },
+  { id: "data", label: "数据", icon: Database },
+  { id: "advanced", label: "高级", icon: Gauge },
+]
+
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("general")
   const [keys, setKeys] = useState<Record<string, string>>({})
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [defaultModel, setDefaultModel] = useState("kimi")
   const [globalPrompt, setGlobalPrompt] = useState(() => localStorage.getItem("tipai_global_prompt") || "")
   const [cloudSync, setCloudSync] = useState(() => localStorage.getItem("tipai_cloud_sync") === "true")
   const [theme, setTheme] = useState(() => localStorage.getItem("tipai_theme") || "light")
+  const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("tipai_reduced_motion") === "true")
+  const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("tipai_font_size") || "14"))
 
   const { data: settings, isLoading } = trpc.promptForge.getSettings.useQuery(undefined)
   useEffect(() => {
     if (settings?.defaultModel)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDefaultModel(settings.defaultModel)
   }, [settings])
   const utils = trpc.useUtils()
   const updateMutation = trpc.promptForge.updateSettings.useMutation({
     onSuccess: () => {
       utils.promptForge.getSettings.invalidate()
+      toast.success("设置已保存", { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> })
     },
     onError: (e: { message?: string }) => {
-      toast.error(e.message || "保存失败", {
-        icon: <XCircle className="w-4 h-4 text-red-500" />,
-        duration: 4000,
-      })
+      toast.error(e.message || "保存失败", { icon: <XCircle className="w-4 h-4 text-red-500" />, duration: 4000 })
     },
   })
 
@@ -55,186 +67,326 @@ export default function SettingsPage() {
     const payload: Record<string, string> = { defaultModel }
     MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
 
-    // Save localStorage regardless
     localStorage.setItem("tipai_global_prompt", globalPrompt)
     localStorage.setItem("tipai_cloud_sync", String(cloudSync))
     localStorage.setItem("tipai_theme", theme)
+    localStorage.setItem("tipai_reduced_motion", String(reducedMotion))
+    localStorage.setItem("tipai_font_size", String(fontSize))
 
     try {
-      if (Object.keys(payload).length > 1) { // >1 because defaultModel is always present
-        await updateMutation.mutateAsync(payload)
-      }
-      toast.success("所有设置已保存", {
-        icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-        duration: 2500,
-      })
-    } catch {
-      // onError already showed a toast; don't double-ping
+      await updateMutation.mutateAsync(payload)
     } finally {
       savingRef.current = false
     }
   }
 
-  const toggleShow = (k: string) => setShowKeys((p) => ({ ...p, [k]: !p[k] }))
-  const getKeyStatus = (mk: string) => mk === "ollama" || !!(
-    settings as Record<string, unknown> | null
-  )?.[`has${mk.charAt(0).toUpperCase() + mk.slice(1)}Key`]
-
-  const handleExport = async () => {
-    try {
-      const data = { settings, globalPrompt, cloudSync, theme, exportedAt: new Date().toISOString() }
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a"); a.href = url; a.download = `tipai-backup-${Date.now()}.json`; a.click()
-      URL.revokeObjectURL(url)
-      toast.success("数据已导出")
-    } catch { toast.error("导出失败") }
-  }
-
-  const handleImport = () => {
-    const input = document.createElement("input"); input.type = "file"; input.accept = ".json"
-    input.onchange = async (e: Event) => {
-      try {
-        const file = (e.target as HTMLInputElement).files?.[0]
-        if (!file) { toast.error("未选择文件"); return }
-        const text = await file.text()
-        const data = JSON.parse(text)
-        if (data.globalPrompt) setGlobalPrompt(data.globalPrompt)
-        if (data.cloudSync !== undefined) setCloudSync(data.cloudSync)
-        if (data.theme) setTheme(data.theme)
-        toast.success("数据已导入，点击保存生效")
-      } catch { toast.error("文件格式错误") }
+  const handleExport = () => {
+    const data = {
+      globalPrompt,
+      defaultModel,
+      theme,
+      cloudSync,
+      keys: Object.fromEntries(MODELS.map((m) => [m.key, keys[m.key] || ""])),
     }
-    input.click()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `tipai-settings-${new Date().toISOString().split("T")[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("设置已导出")
   }
 
-  if (isLoading) return <div className="flex justify-center py-20"><Spinner /></div>
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string)
+        if (data.globalPrompt) setGlobalPrompt(data.globalPrompt)
+        if (data.defaultModel) setDefaultModel(data.defaultModel)
+        if (data.theme) setTheme(data.theme)
+        if (data.cloudSync !== undefined) setCloudSync(data.cloudSync)
+        if (data.keys) setKeys(data.keys)
+        toast.success("设置已导入，请保存")
+      } catch {
+        toast.error("导入失败，文件格式错误")
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-14">
+        <div className="flex items-center justify-center py-32">
+          <Spinner />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 space-y-6 animate-fade-in-up">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">设置</h1>
-        <p className="text-sm text-slate-400 mt-1">管理 API Key、全局提示词和数据</p>
-      </div>
+    <div className="max-w-4xl mx-auto px-6 py-14">
+      <ScrollReveal>
+        <div className="mb-10">
+          <h1 className="text-3xl font-semibold text-slate-900 mb-1">设置</h1>
+          <p className="text-sm text-slate-400">管理偏好、模型密钥和数据</p>
+        </div>
+      </ScrollReveal>
 
-      {/* API Keys */}
-      <Card className="glass-card rounded-2xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Key className="w-4 h-4 text-violet-500" />
-            <h2 className="font-semibold text-slate-800">API Key 管理</h2>
-          </div>
-          <div className="space-y-3 stagger-1">
-            {MODELS.map((model) => {
-              const hasKey = getKeyStatus(model.key)
-              const isDirty = keys[model.key]?.trim().length > 0
-              const MI = model.icon
-              return (
-                <div key={model.key} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${hasKey && !isDirty ? model.color : "border-slate-100 bg-white"}`}>
-                  <MI className="w-4 h-4 shrink-0" />
-                  <span className="text-sm font-medium text-slate-700 w-20 shrink-0">{model.fullName}</span>
-                  <div className="relative flex-1">
-                    <Input
-                      type={showKeys[model.key] ? "text" : "password"}
-                      placeholder={hasKey ? "已配置" : model.placeholder}
-                      value={keys[model.key] || ""}
-                      onChange={(e) => setKeys((p) => ({ ...p, [model.key]: e.target.value }))}
-                      className="h-9 text-xs rounded-xl pr-8"
-                    />
-                    <button onClick={() => toggleShow(model.key)} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                      {showKeys[model.key] ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-                    </button>
+      {/* Tab Navigation */}
+      <ScrollReveal delay={50}>
+        <div className="flex items-center gap-1 bg-slate-100/80 backdrop-blur-sm rounded-xl p-1 mb-8 overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </ScrollReveal>
+
+      {/* Tab Content */}
+      <StaggerContainer className="space-y-6">
+        {/* General Tab */}
+        {activeTab === "general" && (
+          <>
+            <StaggerItem>
+              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6 space-y-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">主题</Label>
+                    <div className="flex items-center gap-3">
+                      {[
+                        { value: "light", icon: Sun, label: "浅色" },
+                        { value: "dark", icon: Moon, label: "深色" },
+                        { value: "system", icon: Monitor, label: "跟随系统" },
+                      ].map((t) => (
+                        <button
+                          key={t.value}
+                          onClick={() => setTheme(t.value)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                            theme === t.value
+                              ? "border-apple-blue bg-blue-50 text-apple-blue"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <t.icon className="w-4 h-4" />
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <span className="text-[10px] text-slate-400 w-28 text-right hidden md:block">{model.site}</span>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Default Model */}
-      <Card className="glass-card rounded-2xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Wand2 className="w-4 h-4 text-amber-500" />
-            <h2 className="font-semibold text-slate-800">默认生成模型</h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            {MODELS.map((m) => {
-              const MI = m.icon
-              const sel = defaultModel === m.key
-              return (
-                <button
-                  key={m.key}
-                  onClick={() => setDefaultModel(m.key)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border text-sm transition-all ${sel ? `${m.color} ring-1` : "border-slate-100 hover:border-slate-200"}`}
-                >
-                  <MI className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">{m.name}</span>
-                  {sel && <span className="ml-auto w-2 h-2 rounded-full bg-current" />}
-                </button>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">全局提示词前缀</Label>
+                    <textarea
+                      value={globalPrompt}
+                      onChange={(e) => setGlobalPrompt(e.target.value)}
+                      placeholder="例如：始终使用中文、结构化输出..."
+                      className="w-full min-h-[100px] p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30"
+                    />
+                  </div>
 
-      {/* Global Prompt */}
-      <Card className="glass-card rounded-2xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings2 className="w-4 h-4 text-blue-500" />
-            <h2 className="font-semibold text-slate-800">全局提示词设置</h2>
-          </div>
-          <p className="text-xs text-slate-400 mb-3">设定后，AI 生成提示词时会自动遵循这些规则</p>
-          <Input
-            placeholder="例如：始终使用中文、倾向于结构化输出、面向技术受众..."
-            value={globalPrompt}
-            onChange={(e) => setGlobalPrompt(e.target.value)}
-            className="rounded-xl text-sm"
-          />
-          <p className="text-[10px] text-slate-400 mt-2">这些偏好将在所有 AI 生成中自动注入</p>
-        </CardContent>
-      </Card>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">默认生成框架</Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {["CO-STAR", "CRISPE", "BROKE", "自定义"].map((f) => (
+                        <button
+                          key={f}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            f === "CO-STAR"
+                              ? "border-apple-blue bg-blue-50 text-apple-blue"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          </>
+        )}
 
-      {/* Cloud & Data */}
-      <Card className="glass-card rounded-2xl shadow-sm">
-        <CardContent className="p-6">
-          <h2 className="font-semibold text-slate-800 mb-4">数据管理</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium">云端同步</Label>
-                <p className="text-xs text-slate-400">自动同步设置和提示词到云端</p>
-              </div>
-              <Switch checked={cloudSync} onCheckedChange={setCloudSync} />
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleExport} className="rounded-xl text-sm flex-1">
-                <Download className="w-4 h-4 mr-2" />导出数据
-              </Button>
-              <Button variant="outline" onClick={handleImport} className="rounded-xl text-sm flex-1">
-                <Upload className="w-4 h-4 mr-2" />导入数据
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Models Tab */}
+        {activeTab === "models" && (
+          <>
+            {MODELS.map((model) => (
+              <StaggerItem key={model.key}>
+                <Card className={`border-0 shadow-sm rounded-2xl ${model.color} bg-opacity-30 backdrop-blur-sm`}>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <model.icon className="w-5 h-5" />
+                        <div>
+                          <div className="text-sm font-semibold">{model.fullName}</div>
+                          <div className="text-xs opacity-70">{model.site}</div>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={defaultModel === model.key}
+                        onCheckedChange={() => setDefaultModel(model.key)}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showKeys[model.key] ? "text" : "password"}
+                        placeholder={model.placeholder}
+                        value={keys[model.key] || ""}
+                        onChange={(e) => setKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
+                        className="pr-10 bg-white/80 rounded-xl"
+                      />
+                      <button
+                        onClick={() => setShowKeys((prev) => ({ ...prev, [model.key]: !prev[model.key] }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showKeys[model.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            ))}
+          </>
+        )}
 
-      {/* Save */}
-      <Button
-        onClick={handleSave}
-        disabled={updateMutation.isPending}
-        className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium text-sm py-3 shadow-lg shadow-violet-200/50"
-      >
-        {updateMutation.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : null}
-        保存所有设置
-      </Button>
+        {/* Interface Tab */}
+        {activeTab === "interface" && (
+          <>
+            <StaggerItem>
+              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">减少动态效果</Label>
+                      <p className="text-xs text-slate-400">关闭动画，提升可访问性</p>
+                    </div>
+                    <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} />
+                  </div>
 
-      <p className="text-center text-[11px] text-slate-300 pb-8">
-        所有数据存储在本地 · 加密保护
-      </p>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">字体大小</Label>
+                    <div className="flex items-center gap-4">
+                      <Type className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="range"
+                        min="12"
+                        max="18"
+                        value={fontSize}
+                        onChange={(e) => setFontSize(parseInt(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-slate-500 w-8">{fontSize}px</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          </>
+        )}
+
+        {/* Data Tab */}
+        {activeTab === "data" && (
+          <>
+            <StaggerItem>
+              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">云端同步</Label>
+                      <p className="text-xs text-slate-400">跨设备同步设置和项目数据</p>
+                    </div>
+                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="rounded-xl" onClick={handleExport}>
+                      <Download className="w-4 h-4 mr-2" />导出设置
+                    </Button>
+                    <Label className="cursor-pointer">
+                      <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+                      <div className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-colors">
+                        <Upload className="w-4 h-4 mr-2" />导入设置
+                      </div>
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          </>
+        )}
+
+        {/* Advanced Tab */}
+        {activeTab === "advanced" && (
+          <>
+            <StaggerItem>
+              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">开发者模式</Label>
+                      <p className="text-xs text-slate-400">显示调试信息和额外选项</p>
+                    </div>
+                    <Switch />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">快捷键</Label>
+                    <div className="space-y-2 text-sm text-slate-500">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span>打开搜索</span>
+                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ K</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span>新建项目</span>
+                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ N</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span>打开优化器</span>
+                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ O</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          </>
+        )}
+      </StaggerContainer>
+
+      {/* Save Button */}
+      <div className="sticky bottom-6 mt-8 flex justify-end">
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="bg-gradient-to-r from-apple-blue to-apple-purple text-white rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+          >
+            {updateMutation.isPending ? (
+              <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />保存中...</>
+            ) : (
+              <><CheckCircle2 className="w-4 h-4 mr-2" />保存设置</>
+            )}
+          </Button>
+        </motion.div>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, Key, Wand2, ArrowRight } from "lucide-react";
+import { Zap, Download, Key, ArrowRight } from "lucide-react";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer";

@@ -2,11 +2,12 @@ import { useState } from "react"
 import {
   AlertCircle,
   Filter,
-  Loader2,
   RefreshCw,
   Search,
   Store,
   TrendingUp,
+  LayoutGrid,
+  List,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -19,18 +20,23 @@ import { TemplateMarketCard } from "@/components/template-market/TemplateMarketC
 import {
   createEmptyTemplateDraft,
   type TemplateDraft,
-  type TemplateItem,
 } from "@/components/template-market/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/useAuth"
 import { trpc } from "@/providers/trpc"
+import { ScrollReveal } from "@/components/effects/ScrollReveal"
+import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer"
+import { EmptyState } from "@/components/EmptyState"
+import { Skeleton } from "@/components/ui/Skeleton"
+import { TiltCard } from "@/components/effects/TiltCard"
 
 export default function TemplateMarket() {
   const { isAuthenticated } = useAuth()
   const [search, setSearch] = useState("")
   const [selectedDomain, setSelectedDomain] = useState("all")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [createOpen, setCreateOpen] = useState(false)
   const [newTemplate, setNewTemplate] = useState<TemplateDraft>(() =>
     createEmptyTemplateDraft(),
@@ -114,24 +120,26 @@ export default function TemplateMarket() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-14">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-900 mb-1">
-            模板市场
-          </h1>
-          <p className="text-sm text-slate-400">发现和分享高质量提示词模板</p>
+      <ScrollReveal>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900 mb-1">
+              模板市场
+            </h1>
+            <p className="text-sm text-slate-400">发现和分享高质量提示词模板</p>
+          </div>
+          {isAuthenticated && (
+            <CreateTemplateDialog
+              open={createOpen}
+              draft={newTemplate}
+              isPending={createMutation.isPending}
+              onOpenChange={setCreateOpen}
+              onDraftChange={setNewTemplate}
+              onSubmit={() => createMutation.mutate(newTemplate)}
+            />
+          )}
         </div>
-        {isAuthenticated && (
-          <CreateTemplateDialog
-            open={createOpen}
-            draft={newTemplate}
-            isPending={createMutation.isPending}
-            onOpenChange={setCreateOpen}
-            onDraftChange={setNewTemplate}
-            onSubmit={() => createMutation.mutate(newTemplate)}
-          />
-        )}
-      </div>
+      </ScrollReveal>
 
       {isError && (
         <div className="mb-6 flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700">
@@ -154,127 +162,155 @@ export default function TemplateMarket() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="搜索模板..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="pl-10 bg-white border-slate-100 rounded-xl focus-visible:ring-violet-200"
-          />
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-          {[
-            { key: "all", label: "全部" },
-            ...Object.entries(DOMAIN_LABELS).map(([key, label]) => ({
-              key,
-              label,
-            })),
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setSelectedDomain(key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${selectedDomain === key ? "bg-violet-100 text-violet-700" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-200"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ScrollReveal delay={100}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="搜索模板..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 bg-white/80 backdrop-blur-sm border-slate-200/80 rounded-xl focus-visible:ring-apple-blue/30"
+            />
+          </div>
 
-      <Tabs defaultValue="all">
-        <TabsList className="mb-8 bg-slate-50 border border-slate-100 rounded-xl p-1">
-          <TabsTrigger
-            value="all"
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm"
-          >
-            全部模板
-          </TabsTrigger>
-          <TabsTrigger
-            value="featured"
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm"
-          >
-            <TrendingUp className="w-3.5 h-3.5 mr-1" />
-            精选
-          </TabsTrigger>
-          {isAuthenticated && (
-            <TabsTrigger
-              value="my"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm"
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={selectedDomain === "all" ? "default" : "outline"}
+              className="rounded-xl h-9 text-xs"
+              onClick={() => setSelectedDomain("all")}
             >
-              我的模板
-            </TabsTrigger>
+              <Filter className="w-3.5 h-3.5 mr-1" />
+              全部
+            </Button>
+            {Object.entries(DOMAIN_LABELS).map(([key, label]) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={selectedDomain === key ? "default" : "outline"}
+                className="rounded-xl h-9 text-xs hidden sm:inline-flex"
+                onClick={() => setSelectedDomain(key)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 border border-slate-200 rounded-xl p-0.5">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg transition-colors ${viewMode === "grid" ? "bg-slate-100 text-slate-700" : "text-slate-400"}`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-lg transition-colors ${viewMode === "list" ? "bg-slate-100 text-slate-700" : "text-slate-400"}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </ScrollReveal>
+
+      {/* Featured Section */}
+      {featuredTemplates.length > 0 && !search && selectedDomain === "all" && (
+        <ScrollReveal delay={150}>
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-4 h-4 text-apple-blue" />
+              <h2 className="text-base font-semibold text-slate-800">精选模板</h2>
+            </div>
+            <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+                    <StaggerContainer>
+                {featuredTemplates.map((template) => (
+                  <StaggerItem key={template.id}>
+                    <TiltCard maxTilt={4} scale={1.01}>
+                      <TemplateMarketCard
+                        template={template}
+                        onUse={handleUseTemplate}
+                        onRate={handleRateTemplate}
+                      />
+                    </TiltCard>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {/* All Templates */}
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="bg-slate-100/80 backdrop-blur-sm rounded-xl p-1 mb-6">
+          <TabsTrigger value="all" className="rounded-lg text-xs">全部模板</TabsTrigger>
+          {isAuthenticated && (
+            <TabsTrigger value="my" className="rounded-lg text-xs">我的模板</TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="all">
-          {isLoading && !isError ? (
-            <div className="flex flex-col items-center justify-center py-32">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-400 mb-4" />
-              <p className="text-sm text-slate-400">加载模板中...</p>
-            </div>
-          ) : filteredTemplates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredTemplates.map((template) => (
-                <TemplateMarketCard
-                  key={template.id}
-                  template={template}
-                  onRate={handleRateTemplate}
-                  onUse={handleUseTemplate}
-                />
+          {isLoading ? (
+            <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-2xl" />
               ))}
             </div>
+          ) : filteredTemplates.length === 0 ? (
+            <EmptyState
+              icon={<Store className="w-10 h-10" />}
+              title="没有找到模板"
+              description="尝试调整搜索条件或筛选器"
+              action={{ label: "清除筛选", onClick: () => { setSearch(""); setSelectedDomain("all") } }}
+            />
           ) : (
-            <div className="text-center py-32">
-              <Store className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-400">暂无模板</p>
+            <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+              <StaggerContainer>
+                {filteredTemplates.map((template) => (
+                  <StaggerItem key={template.id}>
+                    <TiltCard maxTilt={4} scale={1.01}>
+                      <TemplateMarketCard
+                        template={template}
+                        onUse={handleUseTemplate}
+                        onRate={handleRateTemplate}
+                      />
+                    </TiltCard>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="featured">
-          {featuredTemplates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {featuredTemplates.map((template) => (
-                <TemplateMarketCard
-                  key={`f-${template.id}`}
-                  template={template}
-                  onRate={handleRateTemplate}
-                  onUse={handleUseTemplate}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-32 text-slate-400">
-              暂无精选模板
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="my">
-          {myTemplates && myTemplates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(myTemplates as TemplateItem[]).map((template) => (
-                <TemplateMarketCard
-                  key={template.id}
-                  template={template}
-                  showActions={false}
-                  onRate={handleRateTemplate}
-                  onUse={handleUseTemplate}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-32">
-              <p className="text-slate-400 mb-2">你还没有创建模板</p>
-              <p className="text-sm text-slate-400">
-                点击右上角创建你的第一个模板
-              </p>
-            </div>
-          )}
-        </TabsContent>
+        {isAuthenticated && (
+          <TabsContent value="my">
+            {myTemplates && myTemplates.length > 0 ? (
+              <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+                <StaggerContainer>
+                  {myTemplates.map((template) => (
+                    <StaggerItem key={template.id}>
+                      <TiltCard maxTilt={4} scale={1.01}>
+                        <TemplateMarketCard
+                          template={template}
+                          onUse={handleUseTemplate}
+                          onRate={handleRateTemplate}
+                        />
+                      </TiltCard>
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Store className="w-10 h-10" />}
+                title="还没有创建模板"
+                description="创建你的第一个提示词模板"
+                action={{ label: "创建模板", onClick: () => setCreateOpen(true) }}
+              />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )
