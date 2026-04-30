@@ -4,6 +4,7 @@
  */
 import Database from "better-sqlite3";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { MigrationManager } from "./migrate.ts";
@@ -11,8 +12,16 @@ import { seed } from "./seed.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function getDefaultDbPath() {
+  const dataDir = process.platform === "win32"
+    ? path.join(os.homedir(), "AppData", "Roaming", "TipAi")
+    : path.join(os.homedir(), ".config", "TipAi");
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  return path.join(dataDir, "data.db");
+}
+
 function initDatabase() {
-  const dbPath = process.env.DATABASE_URL?.replace("file:", "") || "./data.db";
+  const dbPath = process.env.DATABASE_URL?.replace("file:", "") || getDefaultDbPath();
 
   console.log("🚀 Initializing TipAi database...\n");
 

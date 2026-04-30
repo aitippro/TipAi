@@ -83,47 +83,99 @@
 
 ## 快速开始
 
+### 环境要求
+
+- **Node.js** ≥ 22
+- **npm** ≥ 10
+- **Windows 10+** / macOS 13+ (Windows 为主要目标平台)
+
+### 安装
+
 ```bash
 git clone https://github.com/aitippro/TipAi.git
 cd TipAi
 
-# 安装依赖（跳过 Electron 二进制下载可加速）
+# 推荐：跳过 Electron 二进制下载以加速安装（Electron 二进制较大且可能被墙）
 ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm install
 
-# 配置环境变量
-cp .env.example .env
-
-# 初始化数据库
-npm run db:push
-
-# 启动开发
-npm run dev            # Web 模式
-npm run dev:electron   # 桌面模式
+# 如果需要打包桌面应用，再单独安装 Electron
+# npx electron-rebuild 2>/dev/null
 ```
 
-### 环境要求
+### 配置
 
-- Node.js ≥ 22
-- npm ≥ 10
+```bash
+cp .env.example .env
+# 编辑 .env，按需填入 AI 模型 API Key
+```
 
----
+### 初始化数据库
 
-## 项目结构
+```bash
+npm run db:push
+```
+
+### 启动开发
+
+| 命令 | 模式 | 说明 |
+|------|------|------|
+| `npm run dev` | Web 开发 | Vite 在 `localhost:5173` 启动，API 由 Vite 内置代理处理 |
+| `npm run dev:electron` | 桌面开发 | Electron 窗口 + Vite HMR，**API 走 IPC 不占用额外端口** |
+
+> **Windows 注意**: Electron 桌面模式采用 IPC 架构 — 主进程直接调用 Hono 应用处理 API 请求，无需启动独立 HTTP 服务。前端仅通过 `preload` 暴露的 `window.electronAPI.fetch()` 与后端通信，避免了端口占用和本地网络暴露。
+
+### 生产构建
+
+```bash
+npm run build              # 构建前端 + 后端
+npm run start              # 生产模式启动 (cross-env 兼容 Windows)
+npm run build:desktop:win  # 打包 Windows 桌面应用 (.exe portable)
+npm run build:desktop:mac  # 打包 macOS 桌面应用 (.dmg)
+```
+
+### 项目结构
 
 ```
 src/              React 前端（页面、组件、hooks、providers）
   components/
     ui/           shadcn/ui 组件库
-    clarify/      F1 需求澄清
-    optimizer/    F2 提示词优化
-    export/       F3 批量导出
-    dynamic-prompt/ F6 动态提示词生成
+    clarify/      需求澄清
+    optimizer/    提示词优化
+    export/       批量导出
+    dynamic-prompt/ 动态提示词生成
 api/              tRPC 后端路由 + 服务层
   services/ai/    多模型 Provider（kimi/openai/claude/deepseek/gemini/ollama）
   lib/            工具库（加密、离线检测、AI 客户端）
-db/               Drizzle schema + 迁移 + 种子
-electron/         Electron 主进程 + 预加载
+db/               Drizzle schema + 迁移 + 种子数据
+electron/         Electron 主进程 + preload + 自动更新
 contracts/        共享类型定义
+```
+
+### 架构
+
+```
+┌─ Electron 桌面模式 ─────────────────────────┐
+│                                              │
+│  Renderer (React)                            │
+│    │ window.electronAPI.fetch()              │
+│    ▼                                         │
+│  IPC (ipcMain.handle 'api:fetch')            │
+│    │                                          │
+│    ▼                                         │
+│  Main Process ── Hono App (进程内调用)       │
+│    ├─ tRPC Router                            │
+│    ├─ Drizzle ORM → SQLite (better-sqlite3)  │
+│    └─ AI Providers (Kimi/OpenAI/DeepSeek…)   │
+│                                              │
+│  🚫 无 HTTP 端口暴露 (API 走 IPC)           │
+│  🔒 仅 127.0.0.1 回环 (静态资源服务)        │
+└──────────────────────────────────────────────┘
+
+┌─ Web 开发模式 ───────────────────────────────┐
+│  Vite Dev Server (localhost:5173)            │
+│    ├─ React HMR (热模块替换)                  │
+│    └─ @hono/vite-dev-server (API 代理)       │
+└──────────────────────────────────────────────┘
 ```
 
 ---
@@ -135,9 +187,19 @@ npm run check     # TypeScript 类型检查
 npm run lint      # ESLint
 npm run test      # Vitest 单元测试
 npm run build     # 生产构建
+npm run db:push   # 同步数据库 Schema
+npm run db:seed   # 填充种子数据
 ```
 
 CI 管线：`tsc -b` → `eslint` → `vitest` → `build`
+
+### Windows 平台注意事项
+
+- 数据目录：`%APPDATA%/TipAi/`（数据库、备份、导出均在此目录下）
+- 数据库：`%APPDATA%/TipAi/data.db`（SQLite WAL 模式）
+- 快捷键：`Ctrl+K` 打开命令面板（macOS 上为 `Cmd+K`）
+- 生产构建使用 `cross-env` 确保跨平台兼容
+- 推荐使用 Git Bash 或 PowerShell 运行脚本
 
 ---
 

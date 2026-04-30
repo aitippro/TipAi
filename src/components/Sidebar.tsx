@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Link, useLocation, type Location } from "react-router"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -175,7 +175,7 @@ function SidebarContent({
   )
 }
 
-export default function Sidebar() {
+export default memo(function Sidebar() {
   const { user, isAuthenticated } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -248,4 +248,4 @@ export default function Sidebar() {
       </header>
     </>
   )
-}
+})

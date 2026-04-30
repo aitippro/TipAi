@@ -16,6 +16,11 @@ if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
 let mainWindow;
 let backendPort = 0;
 let backendReady = false;
+let backendServer = null;
+
+// IPC mode: API calls go through IPC, NOT HTTP port
+let honoApp = null;
+let backendBaseUrl = '';
 
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -49,7 +54,6 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // Load from local backend server
     mainWindow.loadURL(`http://localhost:${backendPort}`);
   }
 
@@ -63,7 +67,7 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// Start backend with random available port
+// Start backend — in dev Vite handles everything; in prod we load Hono in-process
 async function startBackend() {
   process.env.NODE_ENV = isDev ? 'development' : 'production';
   process.env.DATABASE_URL = `file:${dbPath}`;
@@ -72,32 +76,37 @@ async function startBackend() {
   process.env.APP_URL = 'http://localhost:0';
 
   if (isDev) {
-    process.env.VITE_DEV_SERVER_URL = 'http://localhost:5173';
+    backendBaseUrl = 'http://localhost:5173';
+    process.env.VITE_DEV_SERVER_URL = backendBaseUrl;
+    backendReady = true;
     return;
   }
 
+  // Production: load Hono app in-process for IPC-based API calls
   process.env.TIPAI_ELECTRON = '1';
 
-  // Import boot.js (won't auto-start server because TIPAI_ELECTRON is set)
   const bootPath = path.join(__dirname, '../dist/boot.js');
   const bootUrl = pathToFileURL(bootPath).href;
-  const [{ serve }, { serveStaticFiles }, mod] = await Promise.all([
+
+  const [{ serve }, mod] = await Promise.all([
     import('@hono/node-server'),
-    import(bootUrl.replace('boot.js', 'lib/vite.js')),
     import(bootUrl),
   ]);
-  const app = mod.default;
-  serveStaticFiles(app);
+
+  honoApp = mod.default;
+  mod.serveStaticFiles(honoApp);
 
   return new Promise((resolve, reject) => {
-    const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' }, () => {
+    const server = serve({ fetch: honoApp.fetch, port: 0, hostname: '127.0.0.1' }, () => {
       const addr = server.address();
       if (addr && typeof addr === 'object') {
         backendPort = addr.port;
+        backendBaseUrl = `http://localhost:${backendPort}`;
         process.env.PORT = String(backendPort);
-        process.env.APP_URL = `http://localhost:${backendPort}`;
+        process.env.APP_URL = backendBaseUrl;
         backendReady = true;
-        log(`Backend started on port ${backendPort}`);
+        backendServer = server;
+        log(`Backend started on port ${backendPort} (IPC mode)`);
         resolve();
       } else {
         reject(new Error('Could not determine port'));
@@ -108,7 +117,44 @@ async function startBackend() {
   });
 }
 
-// IPC handlers
+// ── IPC Handlers ────────────────────────────────────────────
+
+// api:fetch — core IPC channel for all tRPC calls
+// In production: calls Hono app in-process (NO HTTP port for API)
+// In dev: forwards to Vite dev server (which proxies to Hono via @hono/vite-dev-server)
+ipcMain.handle('api:fetch', async (_e, { path: reqPath, method, headers, body }) => {
+  try {
+    if (honoApp) {
+      // Production: direct in-process call, no HTTP round-trip
+      const url = new URL(reqPath, 'http://localhost');
+      const req = new Request(url, {
+        method: method || 'GET',
+        headers: new Headers(headers || {}),
+        body: body || undefined,
+      });
+      const res = await honoApp.fetch(req);
+      const resBody = await res.text();
+      const resHeaders = {};
+      res.headers.forEach((v, k) => { resHeaders[k] = v; });
+      return { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody };
+    }
+
+    // Dev mode: forward to Vite dev server
+    const res = await fetch(`${backendBaseUrl}${reqPath}`, {
+      method: method || 'GET',
+      headers: headers || {},
+      body: body || undefined,
+    });
+    const resBody = await res.text();
+    const resHeaders = {};
+    res.headers.forEach((v, k) => { resHeaders[k] = v; });
+    return { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody };
+  } catch (err) {
+    logError('api:fetch error', err);
+    return { status: 500, statusText: 'Internal Server Error', headers: {}, body: JSON.stringify({ error: err.message }) };
+  }
+});
+
 ipcMain.handle('app:getInfo', () => ({
   version: app.getVersion(), platform: process.platform,
   dbPath, dataDir, isDev,
@@ -155,6 +201,26 @@ app.whenReady().then(async () => {
   }
 });
 
+// Prevent multiple instances on Windows
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
+// Clean shutdown — close backend server on quit
+app.on('before-quit', () => {
+  if (backendServer?.close) {
+    backendServer.close();
+    backendServer = null;
+  }
+});
 app.on('window-all-closed', () => { app.quit(); process.exit(0); });
 app.on('web-contents-created', (_e, contents) => {
   contents.on('new-window', (e, url) => { e.preventDefault(); shell.openExternal(url); });

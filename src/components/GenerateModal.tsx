@@ -103,11 +103,28 @@ export default function GenerateModal({ intent, answers, stepMode, onClose, onSa
     setSavedIds((prev) => new Set(prev).add(index))
   }, [isAuthenticated, result, intent, saveMutation])
 
-  const handleCopy = useCallback((text: string, index: number) => {
-    navigator.clipboard.writeText(text).catch(() => {})
-    setCopiedIndex(index)
-    setTimeout(() => setCopiedIndex(null), 2000)
-    toast.success("已复制到剪贴板")
+  const handleCopy = useCallback(async (text: string, index: number) => {
+    try {
+      // In Electron with contextIsolation, navigator.clipboard may fail;
+      // fall back to execCommand for legacy support
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+      toast.success("已复制到剪贴板")
+    } catch {
+      // silent fail — clipboard unavailable
+    }
   }, [])
 
   const handleRegenerate = useCallback(() => {

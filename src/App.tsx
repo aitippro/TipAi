@@ -1,23 +1,33 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { Routes, Route } from "react-router"
-import Home from "./pages/Home"
-import Settings from "./pages/Settings"
-import Library from "./pages/Library"
-import TemplateMarket from "./pages/TemplateMarket"
-import Login from "./pages/Login"
-import NotFound from "./pages/NotFound"
-import Optimizer from "./pages/Optimizer"
-import About from "./pages/About"
-import Projects from "./pages/Projects"
-import ProjectDetail from "./pages/ProjectDetail"
-import Export from "./pages/Export"
-import Workspace from "./pages/Workspace"
-import Toolbox from "./pages/Toolbox"
 import Sidebar from "./components/Sidebar"
 import { CommandPalette } from "./components/search/CommandPalette"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { Onboarding } from "./components/Onboarding"
 import { isFirstLaunch, markOnboarded } from "./lib/onboarding"
+
+// Code-split pages — each loads on demand
+const Home = lazy(() => import("./pages/Home"))
+const Settings = lazy(() => import("./pages/Settings"))
+const Library = lazy(() => import("./pages/Library"))
+const TemplateMarket = lazy(() => import("./pages/TemplateMarket"))
+const Login = lazy(() => import("./pages/Login"))
+const NotFound = lazy(() => import("./pages/NotFound"))
+const Optimizer = lazy(() => import("./pages/Optimizer"))
+const About = lazy(() => import("./pages/About"))
+const Projects = lazy(() => import("./pages/Projects"))
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"))
+const Export = lazy(() => import("./pages/Export"))
+const Workspace = lazy(() => import("./pages/Workspace"))
+const Toolbox = lazy(() => import("./pages/Toolbox"))
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  )
+}
 
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -54,21 +64,23 @@ export default function App() {
         <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
         <main className="flex-1 min-h-screen md:ml-[220px] pt-14 md:pt-0 pb-8">
           <div className="h-full">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/workspace" element={<Workspace />} />
-              <Route path="/toolbox" element={<Toolbox />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/templates" element={<TemplateMarket />} />
-              <Route path="/optimizer" element={<Optimizer />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/export" element={<Export />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/about" element={<About />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/workspace" element={<Workspace />} />
+                <Route path="/toolbox" element={<Toolbox />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/templates" element={<TemplateMarket />} />
+                <Route path="/optimizer" element={<Optimizer />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/projects/:id" element={<ProjectDetail />} />
+                <Route path="/export" element={<Export />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/about" element={<About />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </div>
         </main>
       </div>

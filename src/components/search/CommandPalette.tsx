@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { Input } from "@/components/ui/input";
@@ -20,21 +20,25 @@ const QUICK_ACTIONS = [
   { label: "设置", icon: Settings, shortcut: ",", action: "/settings" },
 ];
 
-export function CommandPalette({ open, onClose }: Props) {
+export const CommandPalette = memo(function CommandPalette({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const navigate = useNavigate();
 
   const { data: projects } = trpc.project.list.useQuery(undefined, { enabled: open });
 
-  const filteredActions = QUICK_ACTIONS.filter(
-    (a) => !query || a.label.toLowerCase().includes(query.toLowerCase())
-  );
-  const filteredProjects = (projects || []).filter(
-    (p) => !query || p.title.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredActions = useMemo(() =>
+    QUICK_ACTIONS.filter(
+      (a) => !query || a.label.toLowerCase().includes(query.toLowerCase())
+    ), [query]);
+  const filteredProjects = useMemo(() =>
+    (projects || []).filter(
+      (p) => !query || p.title.toLowerCase().includes(query.toLowerCase())
+    ), [projects, query]);
 
-  const totalItems = filteredActions.length + filteredProjects.length;
+  const totalItems = useMemo(() =>
+    filteredActions.length + filteredProjects.length,
+    [filteredActions, filteredProjects]);
 
   const executeAction = useCallback((idx: number) => {
     if (idx < filteredActions.length) {
@@ -140,4 +144,4 @@ export function CommandPalette({ open, onClose }: Props) {
       </Card>
     </div>
   );
-}
+});

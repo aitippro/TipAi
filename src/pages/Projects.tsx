@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { trpc } from "@/providers/trpc"
 import { useAuth } from "@/hooks/useAuth"
@@ -80,6 +80,15 @@ export default function Projects() {
     onError: (e) => toast.error(e.message),
   })
 
+  const filtered = useMemo(() =>
+    items?.filter(
+      (item) =>
+        !search ||
+        item.title.toLowerCase().includes(search.toLowerCase()) ||
+        (item.intent && item.intent.toLowerCase().includes(search.toLowerCase())) ||
+        (item.description && item.description.toLowerCase().includes(search.toLowerCase())),
+    ), [items, search])
+
   if (!isAuthenticated) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-32 text-center">
@@ -94,15 +103,6 @@ export default function Projects() {
       </div>
     )
   }
-
-  const filtered = items?.filter(
-    (item) =>
-      !search ||
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      (item.intent && item.intent.toLowerCase().includes(search.toLowerCase())) ||
-      (item.description && item.description.toLowerCase().includes(search.toLowerCase())),
-  )
-
   return (
     <div className="max-w-5xl mx-auto px-6 py-14">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">

@@ -4,8 +4,17 @@
  */
 import Database from "better-sqlite3";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { createHash } from "crypto";
+
+function getDefaultDataDir() {
+  const dir = process.platform === "win32"
+    ? path.join(os.homedir(), "AppData", "Roaming", "TipAi")
+    : path.join(os.homedir(), ".config", "TipAi");
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 interface BackupOptions {
   compress?: boolean;
@@ -29,13 +38,14 @@ export class DatabaseBackup {
    * Create a file-level backup of the SQLite database
    */
   createBackup(
-    backupDir: string = "./backups",
+    backupDir?: string,
     options: BackupOptions = {}
   ): string {
     const { includeTimestamp = true } = options;
+    const dir = backupDir || path.join(getDefaultDataDir(), "backups");
 
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
     const timestamp = includeTimestamp
@@ -46,7 +56,7 @@ export class DatabaseBackup {
     const backupName = timestamp
       ? `${dbName}.${timestamp}.backup`
       : `${dbName}.backup`;
-    const backupPath = path.join(backupDir, backupName);
+    const backupPath = path.join(dir, backupName);
 
     // Use SQLite's backup API for consistency
     const source = new Database(this.dbPath);
@@ -74,21 +84,22 @@ export class DatabaseBackup {
   /**
    * List all backups in a directory
    */
-  listBackups(backupDir: string = "./backups"): Array<{
+  listBackups(backupDir?: string): Array<{
     file: string;
     size: number;
     createdAt: Date;
     checksum?: string;
   }> {
-    if (!fs.existsSync(backupDir)) {
+    const dir = backupDir || path.join(getDefaultDataDir(), "backups");
+    if (!fs.existsSync(dir)) {
       return [];
     }
 
     return fs
-      .readdirSync(backupDir)
+      .readdirSync(dir)
       .filter((f) => f.endsWith(".backup") || f.endsWith(".db"))
       .map((file) => {
-        const filePath = path.join(backupDir, file);
+        const filePath = path.join(dir, file);
         const stats = fs.statSync(filePath);
         const checksumPath = `${filePath}.sha256`;
         const checksum = fs.existsSync(checksumPath)
@@ -237,11 +248,12 @@ export class DatabaseBackup {
    * Save export to file
    */
   saveExport(
-    exportDir: string = "./exports",
+    exportDir?: string,
     options: ExportOptions = {}
   ): string {
-    if (!fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir, { recursive: true });
+    const dir = exportDir || path.join(getDefaultDataDir(), "exports");
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -249,13 +261,13 @@ export class DatabaseBackup {
 
     if (format === "sql") {
       const sql = this.exportToSQL();
-      const filePath = path.join(exportDir, `tipai-export-${timestamp}.sql`);
+      const filePath = path.join(dir, `tipai-export-${timestamp}.sql`);
       fs.writeFileSync(filePath, sql);
       console.log(`✅ SQL export saved: ${filePath}`);
       return filePath;
     } else {
       const json = this.exportToJSON(options);
-      const filePath = path.join(exportDir, `tipai-export-${timestamp}.json`);
+      const filePath = path.join(dir, `tipai-export-${timestamp}.json`);
       fs.writeFileSync(filePath, JSON.stringify(json, null, 2));
       console.log(`✅ JSON export saved: ${filePath}`);
       return filePath;
@@ -332,11 +344,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       break;
     }
     case "export-json": {
-      backup.saveExport("./exports", { format: "json" });
+      backup.saveExport(undefined, { format: "json" });
       break;
     }
     case "export-sql": {
-      backup.saveExport("./exports", { format: "sql" });
+      backup.saveExport(undefined, { format: "sql" });
       break;
     }
     case "verify": {
