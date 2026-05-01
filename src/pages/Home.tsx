@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
-import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search } from "lucide-react"
+import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search, Compass } from "lucide-react"
 
 import GenerateModal from "@/components/GenerateModal"
 import { useAuth } from "@/hooks/useAuth"
@@ -97,6 +97,7 @@ export default function Home() {
   const [clarifyProjectId, setClarifyProjectId] = useState<number | null>(null)
   const [pendingAnswers, setPendingAnswers] = useState<Record<string, string>>({})
   const [isCreating, setIsCreating] = useState(false)
+  const [stepMode, setStepMode] = useState(false)
 
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -228,13 +229,27 @@ export default function Home() {
                 <span className="text-xs text-slate-400">
                   {intent.length > 0 ? `${intent.length} 字` : "⌘↵ 快速生成"}
                 </span>
-                <RippleButton variant="primary" size="md" onClick={handleStart}>
-                  {isCreating ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />创建中...</>
-                  ) : (
-                    <><Wand2 className="w-4 h-4 mr-2" />开始生成<ArrowRight className="w-3.5 h-3.5 ml-1.5" /></>
-                  )}
-                </RippleButton>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStepMode(v => !v)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all ${
+                      stepMode
+                        ? "bg-violet-100 text-violet-700 border border-violet-200"
+                        : "text-slate-400 hover:text-slate-600 bg-slate-50 border border-transparent"
+                    }`}
+                    title="复杂任务分步骤处理"
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    {stepMode ? "分步骤" : "单步骤"}
+                  </button>
+                  <RippleButton variant="primary" size="md" onClick={handleStart}>
+                    {isCreating ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />创建中...</>
+                    ) : (
+                      <><Wand2 className="w-4 h-4 mr-2" />开始生成<ArrowRight className="w-3.5 h-3.5 ml-1.5" /></>
+                    )}
+                  </RippleButton>
+                </div>
               </div>
             </div>
 
@@ -282,7 +297,7 @@ export default function Home() {
               key={`generate-${clarifyProjectId ?? 'new'}`}
               intent={intent}
               answers={pendingAnswers}
-              stepMode={false}
+              stepMode={stepMode}
               inline
               onClose={handleReset}
               onSaved={() => { handleReset(); navigate("/workspace") }}
