@@ -2,7 +2,10 @@
  * P2-1: 质量门禁系统 (Quality Gate)
  *
  * 对提示词进行 ≥10 项自动化检查，输出质量评分和改进建议。
+ * AI 增强：使用 LLM 生成深度分析和个性化改进建议。
  */
+
+import { callAI } from "../../lib/ai-service-v3/client";
 
 export interface QualityCheck {
   id: string;
@@ -21,6 +24,8 @@ export interface QualityGateResult {
   checks: QualityCheck[];
   summary: string;
   topIssues: QualityCheck[];
+  aiAnalysis?: string;
+  usingAI: boolean;
 }
 
 export interface GateConfig {
@@ -218,7 +223,36 @@ const CHECKERS: Record<string, (prompt: string) => Omit<QualityCheck, "id" | "na
 // 主入口
 // ============================================================================
 
+function buildQualityAnalysisPrompt(prompt: string, checks: QualityCheck[]): string {
+  const failedChecks = checks.filter((c) => !c.passed);
+  const checkSummary = checks.map((c) =>
+    `- ${c.name}: ${c.score}/10 — ${c.message}${c.passed ? "" : `（建议：${c.suggestion}）`}`
+  ).join("\n");
+
+  return `你是一位提示词工程专家。请根据以下质量检查结果，为用户提供一段简洁但专业的深度分析和改进建议。
+
+【待检查的提示词】
+${prompt}
+
+【质量检查结果】
+${checkSummary}
+
+请输出一段 100-200 字的分析，包含：
+1. 提示词的整体质量评价
+2. 最关键的 1-2 个改进点
+3. 具体的优化建议
+
+直接输出分析内容，不要标题。`;
+}
+
 export function runQualityGate(
+  prompt: string,
+  config: Partial<GateConfig> = {},
+): QualityGateResult {
+  return runQualityGateInternal(prompt, config);
+}
+
+function runQualityGateInternal(
   prompt: string,
   config: Partial<GateConfig> = {},
 ): QualityGateResult {
@@ -271,6 +305,31 @@ export function runQualityGate(
     checks,
     summary,
     topIssues: failedChecks.sort((a, b) => b.severity.localeCompare(a.severity)),
+    usingAI: false,
+  };
+}
+
+export async function runQualityGateWithAI(
+  prompt: string,
+  model: string,
+  apiKey: string,
+  config: Partial<GateConfig> = {},
+): Promise<QualityGateResult> {
+  const baseResult = runQualityGateInternal(prompt, config);
+
+  const aiPrompt = buildQualityAnalysisPrompt(prompt, baseResult.checks);
+  const aiResponse = await callAI(
+    model,
+    apiKey,
+    "你是一位提示词工程质量分析专家。",
+    aiPrompt,
+    0.5,
+  );
+
+  return {
+    ...baseResult,
+    aiAnalysis: aiResponse || undefined,
+    usingAI: true,
   };
 }
 

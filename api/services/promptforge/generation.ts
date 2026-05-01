@@ -37,7 +37,9 @@ export async function generatePromptForgeResult(
   userId: number,
   input: GeneratePromptInput,
 ) {
+  console.log("[PF] generate start", { userId, intent: input.intent.slice(0, 40), hasAnswers: !!input.answers, model: input.model })
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId, input.model);
+  console.log("[PF] resolved key", { model, hasKey: !!apiKey })
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
   // analyzeIntent handles missing apiKey gracefully (local keyword fallback)
@@ -62,7 +64,8 @@ export async function generatePromptForgeResult(
   let results: Awaited<ReturnType<typeof generateMultipleVersions>>;
   if (apiKey) {
     try {
-      const frameworks = recommendations.slice(0, 3).map((recommendation) => recommendation.framework);
+      // Use top-1 framework by default for speed; user can regenerate for more variants
+      const frameworks = recommendations.slice(0, 1).map((recommendation) => recommendation.framework);
       results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey);
     } catch (error) {
       console.error("AI generation failed, using fallback:", error);

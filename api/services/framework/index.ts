@@ -19,6 +19,7 @@ export {
 
 export {
   matchFrameworks,
+  matchFrameworksWithAI,
   type EnhancedFrameworkRecommendation,
   type CombinationRecommendation,
   type MatcherResult,

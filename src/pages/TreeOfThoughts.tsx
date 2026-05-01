@@ -37,6 +37,7 @@ export default function TreeOfThoughtsPage() {
 
   const result = solveMutation.data;
   const isLoading = solveMutation.isPending;
+  const error = solveMutation.error;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -138,6 +139,13 @@ export default function TreeOfThoughtsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Error */}
+      {error && (
+        <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+          推理失败：{error.message}
+        </div>
+      )}
 
       {/* Results */}
       {result && (

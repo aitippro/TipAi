@@ -4,8 +4,8 @@
  * - Random IV for each encryption
  * - Secure key derived from API_KEY_SECRET via SHA-256
  *
- * IMPORTANT: API_KEY_SECRET env var MUST be set in production.
- * When absent in development, an ephemeral per-process fallback key is used.
+ * IMPORTANT: API_KEY_SECRET env var MUST be set before any encrypt/decrypt call.
+ * When absent, an ephemeral per-process fallback key is used (keys won't persist).
  */
 
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:crypto";
@@ -14,24 +14,32 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16; // 128-bit IV for GCM
 const TAG_LENGTH = 16; // 128-bit auth tag
 
-const SECRET = process.env.API_KEY_SECRET;
-const RUNTIME_FALLBACK_KEY = SECRET ? null : randomBytes(32);
+let runtimeFallbackKey: Buffer | null = null;
+let warnedMissingSecret = false;
 
-if (!SECRET) {
-  console.warn(
-    "[SECURITY] API_KEY_SECRET environment variable is not set. " +
-    "Using a runtime-generated encryption key. " +
-    "Set API_KEY_SECRET to persist encrypted keys across app restarts."
-  );
+function getSecret(): string | undefined {
+  return process.env.API_KEY_SECRET;
 }
 
 // Derive a 32-byte key from the secret using SHA-256
 function getKey(): Buffer {
-  if (SECRET) {
-    return createHash("sha256").update(SECRET).digest();
+  const secret = getSecret();
+  if (secret) {
+    return createHash("sha256").update(secret).digest();
   }
 
-  return RUNTIME_FALLBACK_KEY as Buffer;
+  if (!runtimeFallbackKey) {
+    runtimeFallbackKey = randomBytes(32);
+  }
+  if (!warnedMissingSecret) {
+    warnedMissingSecret = true;
+    console.warn(
+      "[SECURITY] API_KEY_SECRET environment variable is not set. " +
+      "Using a runtime-generated encryption key. " +
+      "Set API_KEY_SECRET to persist encrypted keys across app restarts."
+    );
+  }
+  return runtimeFallbackKey;
 }
 
 /**

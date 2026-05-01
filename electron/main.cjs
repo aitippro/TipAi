@@ -60,6 +60,12 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const prefix = '[RENDERER]';
+    if (level === 3) logError(`${prefix} ${message}`);
+    else log(`${prefix} ${message}`);
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
@@ -251,6 +257,9 @@ app.whenReady().then(async () => {
   log('Starting...');
   try {
     await startBackend();
+    // Clear HTTP cache on every start to prevent stale Vite chunks after rebuilds
+    const defaultSession = require('electron').session.defaultSession;
+    await defaultSession.clearCache();
     createWindow();
     initUpdater(mainWindow);
     createApplicationMenu();

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from "react"
-import { useNavigate } from "react-router"
+import { useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
 import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search } from "lucide-react"
 
@@ -99,6 +99,27 @@ export default function Home() {
   const [isCreating, setIsCreating] = useState(false)
 
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlProjectId = searchParams.get("projectId")
+  const urlStage = searchParams.get("stage")
+  const shouldLoadProject = urlStage === "generate" && !!urlProjectId
+
+  const projectFromUrl = trpc.project.get.useQuery(
+    { id: Number(urlProjectId) },
+    { enabled: shouldLoadProject }
+  )
+
+  useEffect(() => {
+    if (!shouldLoadProject) return
+    if (!projectFromUrl.data) return
+    const project = projectFromUrl.data
+    setIntent(project.intent || "")
+    setClarifyProjectId(project.id)
+    setPendingAnswers({})
+    setStage("results")
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldLoadProject, projectFromUrl.data])
   const { isAuthenticated } = useAuth()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -254,6 +275,7 @@ export default function Home() {
               </Button>
             </div>
             <GenerateModal
+              key={`generate-${clarifyProjectId ?? 'new'}`}
               intent={intent}
               answers={pendingAnswers}
               stepMode={false}

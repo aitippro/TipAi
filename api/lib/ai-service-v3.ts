@@ -411,23 +411,18 @@ export async function generateMultipleVersions(
   apiKey: string,
   decodeStrategy?: DecodeStrategy,
 ): Promise<GeneratedPrompt[]> {
-  const results: GeneratedPrompt[] = [];
-
-  for (const framework of frameworks.slice(0, 3)) {
+  // Parallel generation for speed; cap at 2 frameworks to limit API load
+  const limited = frameworks.slice(0, 2);
+  const promises = limited.map(async (framework) => {
     try {
-      const prompt = await generatePrompt(
-        intent,
-        analysis,
-        framework,
-        provider,
-        apiKey,
-        decodeStrategy,
-      );
-      results.push(prompt);
+      return await generatePrompt(intent, analysis, framework, provider, apiKey, decodeStrategy);
     } catch (error) {
       console.error(`Framework ${framework} failed:`, error);
+      return null;
     }
-  }
+  });
+
+  const results = (await Promise.all(promises)).filter((r): r is GeneratedPrompt => r !== null);
 
   return results.length > 0
     ? results

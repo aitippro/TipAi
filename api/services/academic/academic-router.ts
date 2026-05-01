@@ -2,29 +2,40 @@
  * P3-3: 学术合作工具 tRPC 路由
  */
 import { z } from "zod";
-import { createRouter, publicQuery } from "../../middleware";
+import { createRouter, authedQuery } from "../../middleware";
 import {
   generateCitations,
+  generateCitationsWithAI,
   generateReproducibilityReport,
   reportToMarkdown,
   getCitationFormats,
 } from "./academic";
+import { getAvailableModels } from "../promptforge/settings";
 
 export const academicRouter = createRouter({
-  /** 生成学术引用 */
-  citations: publicQuery
+  /** 生成学术引用（需要登录） */
+  citations: authedQuery
     .input(
       z.object({
         text: z.string().min(1).max(5000),
         format: z.enum(["apa", "mla", "gb7714", "ieee", "chicago"]),
       }),
     )
-    .query(({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const { getPromptForgeSettingsRecord } = await import("../promptforge/settings");
+      const settings = await getPromptForgeSettingsRecord(ctx.user.id);
+      const models = getAvailableModels(settings);
+
+      if (models.length > 0) {
+        const { model, apiKey } = models[0];
+        return generateCitationsWithAI(input.text, input.format, model, apiKey);
+      }
+
       return generateCitations(input.text, input.format);
     }),
 
   /** 生成实验复现报告 */
-  reproducibility: publicQuery
+  reproducibility: authedQuery
     .input(
       z.object({
         title: z.string().min(1).max(200),
@@ -48,7 +59,7 @@ export const academicRouter = createRouter({
     }),
 
   /** 获取支持的引用格式 */
-  formats: publicQuery.query(() => {
+  formats: authedQuery.query(() => {
     return getCitationFormats();
   }),
 });

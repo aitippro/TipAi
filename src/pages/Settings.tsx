@@ -11,7 +11,7 @@ import { toast } from "sonner"
 import {
   Key, Eye, EyeOff, Shield, Globe, Database, Settings2,
   Download, Upload, RefreshCw, Sparkles, CheckCircle2, XCircle,
-  Monitor, Moon, Sun, Type, Gauge, Palette
+  Monitor, Moon, Sun, Type, Gauge, Palette, Lock, Unlock
 } from "lucide-react"
 import { ScrollReveal } from "@/components/effects/ScrollReveal"
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer"
@@ -228,42 +228,53 @@ export default function SettingsPage() {
         {/* Models Tab */}
         {activeTab === "models" && (
           <>
-            {MODELS.map((model) => (
-              <StaggerItem key={model.key}>
-                <Card className={`border-0 shadow-sm rounded-2xl ${model.color} bg-opacity-30 backdrop-blur-sm`}>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <model.icon className="w-5 h-5" />
-                        <div>
-                          <div className="text-sm font-semibold">{model.fullName}</div>
-                          <div className="text-xs opacity-70">{model.site}</div>
+            {MODELS.map((model) => {
+              const keyField = `has${model.key === "openai" ? "OpenAI" : model.key === "deepseek" ? "DeepSeek" : model.key === "claude" ? "Claude" : "Kimi"}Key` as const
+              const hasKeyConfigured = settings ? (settings as Record<string, boolean>)[keyField] : false
+              return (
+                <StaggerItem key={model.key}>
+                  <Card className={`border-0 shadow-sm rounded-2xl ${model.color} bg-opacity-30 backdrop-blur-sm`}>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <model.icon className="w-5 h-5" />
+                          <div>
+                            <div className="text-sm font-semibold">{model.fullName}</div>
+                            <div className="text-xs opacity-70">{model.site}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {model.key !== "ollama" && (
+                            <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${hasKeyConfigured ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-slate-50 text-slate-400 border border-slate-200"}`}>
+                              {hasKeyConfigured ? <><Lock className="w-3 h-3" />已配置</> : <><Unlock className="w-3 h-3" />未配置</>}
+                            </span>
+                          )}
+                          <Switch
+                            checked={defaultModel === model.key}
+                            onCheckedChange={() => setDefaultModel(model.key)}
+                          />
                         </div>
                       </div>
-                      <Switch
-                        checked={defaultModel === model.key}
-                        onCheckedChange={() => setDefaultModel(model.key)}
-                      />
-                    </div>
-                    <div className="relative">
-                      <Input
-                        type={showKeys[model.key] ? "text" : "password"}
-                        placeholder={model.placeholder}
-                        value={keys[model.key] || ""}
-                        onChange={(e) => setKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
-                        className="pr-10 bg-white/80 rounded-xl"
-                      />
-                      <button
-                        onClick={() => setShowKeys((prev) => ({ ...prev, [model.key]: !prev[model.key] }))}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showKeys[model.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-            ))}
+                      <div className="relative">
+                        <Input
+                          type={showKeys[model.key] ? "text" : "password"}
+                          placeholder={model.key === "ollama" ? model.placeholder : hasKeyConfigured ? "••• 已保存，留空则保持原值，填写则覆盖" : model.placeholder}
+                          value={keys[model.key] || ""}
+                          onChange={(e) => setKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
+                          className="pr-10 bg-white/80 rounded-xl"
+                        />
+                        <button
+                          onClick={() => setShowKeys((prev) => ({ ...prev, [model.key]: !prev[model.key] }))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showKeys[model.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              )
+            })}
           </>
         )}
 
@@ -311,9 +322,9 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium">云端同步</Label>
-                      <p className="text-xs text-slate-400">跨设备同步设置和项目数据</p>
+                      <p className="text-xs text-slate-400">跨设备同步设置和项目数据（预留功能，尚未实现）</p>
                     </div>
-                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} />
+                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} disabled />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

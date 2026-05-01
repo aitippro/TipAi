@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
+import { Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import { trpc } from "@/providers/trpc"
 
@@ -26,13 +29,21 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState(0)
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set())
-  const [hasStarted, setHasStarted] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const hasStartedRef = useRef(false)
+
+  // Stable refs for values that mutate too often to be effect dependencies
+  const answersRef = useRef(answers)
+  answersRef.current = answers
+  const stepModeRef = useRef(stepMode)
+  stepModeRef.current = stepMode
 
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
 
   const generateMutation = trpc.promptForge.generate.useMutation({
     onSuccess: (rawData) => {
+      setIsGenerating(false)
       const validated = validateGenResult(rawData)
       if (!validated) {
         setErrorMsg("生成结果解析失败，请重试")
@@ -41,8 +52,22 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       setResult(validated)
       setErrorMsg(null)
       setActiveTab(0)
+
+      // Auto-save the first result to library
+      if (validated.results.length > 0 && isAuthenticated) {
+        const firstItem = validated.results[0]
+        autoSaveMutation.mutate({
+          title: firstItem.title,
+          originalIntent: intent,
+          generatedPrompt: firstItem.prompt,
+          framework: firstItem.framework,
+          domain: validated.analysis.domain,
+        })
+        setSavedIds((prev) => new Set(prev).add(0))
+      }
     },
     onError: (error) => {
+      setIsGenerating(false)
       const msg = error.message || "生成失败"
       setErrorMsg(msg)
       if (msg.includes("API Key")) {
@@ -53,26 +78,20 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     },
   })
 
-  const triggerGenerate = useCallback(() => {
-    generateMutation.mutate({
-      intent: intent.trim(),
-      answers,
-      stepMode,
-    })
-  }, [answers, generateMutation, intent, stepMode])
+  const mutateRef = useRef(generateMutation.mutate)
+  mutateRef.current = generateMutation.mutate
 
   useEffect(() => {
-    if (hasStarted) return
+    if (hasStartedRef.current) return
     if (!intent.trim()) { onClose(); return }
-    const timer = setTimeout(() => {
-      setHasStarted(true)
-      triggerGenerate()
-    }, 50)
-    return () => clearTimeout(timer)
-  }, [hasStarted, intent, onClose, triggerGenerate])
+    hasStartedRef.current = true
+    setIsGenerating(true)
+    mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent, onClose])
 
   useEffect(() => {
-    if (!generateMutation.isPending) return
+    if (!isGenerating) return
     const steps = [1, 2, 3]
     let idx = 0
     const interval = setInterval(() => {
@@ -80,14 +99,27 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       setActiveStep(steps[idx])
     }, 1500)
     return () => clearInterval(interval)
-  }, [generateMutation.isPending])
+  }, [isGenerating])
 
+  const utils = trpc.useUtils()
   const saveMutation = trpc.promptForge.saveToLibrary.useMutation({
     onSuccess: () => {
       toast.success("已保存到提示词库")
+      utils.promptForge.getLibrary.invalidate()
       onSaved?.()
     },
     onError: (e) => toast.error(e.message),
+  })
+
+  const autoSaveMutation = trpc.promptForge.saveToLibrary.useMutation({
+    onSuccess: () => {
+      toast.success("已自动保存到提示词库")
+      utils.promptForge.getLibrary.invalidate()
+    },
+    onError: (e) => {
+      // silent fail for auto-save
+      console.warn("Auto-save failed:", e.message)
+    },
   })
 
   const handleSave = useCallback((index: number) => {
@@ -129,16 +161,21 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   }, [])
 
   const handleRegenerate = useCallback(() => {
-    setResult(null)
-    setErrorMsg(null)
-    setActiveStep(1)
-    setCopiedIndex(null)
-    setActiveTab(0)
-    setSavedIds(new Set())
-    triggerGenerate()
-  }, [triggerGenerate])
+    flushSync(() => {
+      setResult(null)
+      setErrorMsg(null)
+      setActiveStep(1)
+      setCopiedIndex(null)
+      setActiveTab(0)
+      setSavedIds(() => new Set())
+    })
+    generateMutation.reset()
+    setIsGenerating(true)
+    mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generateMutation, intent])
 
-  if (generateMutation.isPending && !result) {
+  if (isGenerating) {
     return (
       <GenerateLoadingState
         intent={intent}
@@ -159,7 +196,17 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     )
   }
 
-  if (!result) return null
+  if (!result) {
+    return (
+      <div className={inline ? "bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col p-8 items-center gap-3" : "fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center gap-3"}>
+        <p className="text-sm text-slate-500">生成未自动触发，请点击开始</p>
+        <Button onClick={() => mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })} className="rounded-xl">
+          <Sparkles className="w-4 h-4 mr-2" />
+          开始生成
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <GenerateResultState

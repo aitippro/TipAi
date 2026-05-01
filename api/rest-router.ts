@@ -6,7 +6,7 @@
 import { Hono } from "hono";
 import { matchFrameworks } from "./services/framework";
 import { runQualityGate } from "./services/quality/gate";
-import { generateMultimodalPrompt } from "./services/multimodal/multimodal-engine";
+import { generateMultimodalPromptMock } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";
 import { generateCitations } from "./services/academic/academic";
 
@@ -88,7 +88,7 @@ rest.post("/multimodal/generate", async (c) => {
   const mode = body.mode || "text-to-image";
   if (!request) return c.json({ error: "Missing 'request' field" }, 400);
 
-  const result = generateMultimodalPrompt(request, mode as "text-to-image" | "image-to-text" | "video-storyboard");
+  const result = generateMultimodalPromptMock(request, mode as "text-to-image" | "image-to-text" | "video-storyboard");
   return c.json(result);
 });
 

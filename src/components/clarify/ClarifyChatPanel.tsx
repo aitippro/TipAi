@@ -140,21 +140,29 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, intent])
 
-  const handleAnswerSubmit = useCallback(async () => {
-    if (!currentQuestion) return
+  const handleAnswerSubmit = useCallback(async (forcedOptions?: string[]) => {
+    console.log("[Clarify] handleAnswerSubmit called", { forcedOptions, currentQuestion: currentQuestion?.id, type: currentQuestion?.type })
+    if (!currentQuestion) { console.log("[Clarify] no currentQuestion, returning"); return }
 
     const isText = currentQuestion.type === "text"
-    const isMulti = currentQuestion.type === "multichoice"
+    const isMulti = currentQuestion.type === "multichoice" || currentQuestion.type === "choice"
+    const finalOptions = forcedOptions || selectedOptions
 
     let answerValue: string | undefined
     if (isText) {
       answerValue = answerText.trim()
-      if (!answerValue) return
+      if (!answerValue) { console.log("[Clarify] text empty, returning"); return }
+    }
+    if (isMulti && finalOptions.length === 0) {
+      console.log("[Clarify] multi with no options, showing toast")
+      toast.error("请至少选择一个选项")
+      return
     }
 
+    const answerValueStr = isText ? answerValue! : finalOptions.join(", ") || "（未选择）"
     const answerData: ClarifyAnswer = {
-      value: answerValue,
-      selectedOptions: isMulti ? selectedOptions : undefined,
+      value: answerValueStr,
+      selectedOptions: isMulti ? finalOptions : undefined,
     }
 
     const turnNumber = messages.length + 1
@@ -162,7 +170,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     const userMsg: ClarifyMessage = {
       id: generateMessageId(),
       role: "user",
-      content: isText ? answerText : selectedOptions.join(", "),
+      content: answerValueStr,
       answerData,
       turnNumber,
     }
@@ -284,6 +292,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   }, [currentQuestion, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
   const toggleOption = (option: string) => {
+    console.log("[Clarify] toggleOption", option)
     setSelectedOptions((prev) =>
       prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
     )
@@ -297,7 +306,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {errMsg ? (
@@ -326,14 +335,16 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Summary panel */}
+      {/* Summary overlay — full panel cover */}
       {summary && (
-        <SummaryPanel
-          summary={summary}
-          onProceed={() => completeOnce({}, summary)}
-          onRegenerate={generateSummaryAndShow}
-          isGenerating={generateSummaryMutation.isPending}
-        />
+        <div className="absolute inset-0 z-20 bg-white overflow-y-auto">
+          <SummaryPanel
+            summary={summary}
+            onProceed={() => completeOnce({}, summary)}
+            onRegenerate={generateSummaryAndShow}
+            isGenerating={generateSummaryMutation.isPending}
+          />
+        </div>
       )}
 
       {/* Input area */}
@@ -357,10 +368,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
                     key={option}
                     variant="outline"
                     className="justify-start text-left h-auto py-2 px-3 rounded-xl"
-                    onClick={() => {
-                      setSelectedOptions([option])
-                      handleAnswerSubmit()
-                    }}
+                    onClick={() => handleAnswerSubmit([option])}
                   >
                     {option}
                   </Button>
@@ -386,7 +394,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
                 <Button
                   className="w-full rounded-xl"
                   disabled={!canSubmit()}
-                  onClick={handleAnswerSubmit}
+                  onClick={() => handleAnswerSubmit()}
                 >
                   <Send className="w-4 h-4 mr-2" />
                   确认选择
@@ -423,7 +431,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
                   <Button
                     className="rounded-xl ml-auto"
                     disabled={!canSubmit() || isLoading}
-                    onClick={handleAnswerSubmit}
+                    onClick={() => handleAnswerSubmit()}
                   >
                     <Send className="w-4 h-4 mr-2" />
                     发送

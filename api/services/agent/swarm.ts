@@ -4,7 +4,11 @@
  * 5 种角色 × 3 种协作模式：
  *  - 角色: Planner / Executor / Reviewer / Optimizer / Coordinator
  *  - 模式: Sequential / Parallel / Hierarchical
+ *
+ * AI 驱动：每个 Agent 调用真实 LLM 执行任务。
  */
+
+import { callAI } from "../../lib/ai-service-v3/client";
 
 export type AgentRole = "planner" | "executor" | "reviewer" | "optimizer" | "coordinator";
 export type CollaborationMode = "sequential" | "parallel" | "hierarchical";
@@ -41,6 +45,7 @@ export interface SwarmResult {
     failedTasks: number;
     totalTimeMs: number;
   };
+  usingAI: boolean;
 }
 
 // ============================================================================
@@ -86,11 +91,10 @@ export function createAgent(role: AgentRole, id?: string): Agent {
 }
 
 // ============================================================================
-// 模拟执行引擎
+// Mock 执行引擎（Fallback）
 // ============================================================================
 
 function simulateAgentWork(agent: Agent, input: string): { output: string; timeMs: number } {
-  // 基于角色的模拟输出
   const outputs: Record<AgentRole, string> = {
     planner: `📋 规划结果：\n1. 分析需求: "${input.substring(0, 30)}..."\n2. 分解为 3 个子任务\n3. 确定执行顺序和依赖\n4. 识别潜在风险点`,
     executor: `✅ 执行结果：\n基于输入 "${input.substring(0, 30)}..."\n已完成核心任务，生成详细输出。包含所有必要步骤和细节。`,
@@ -99,13 +103,30 @@ function simulateAgentWork(agent: Agent, input: string): { output: string; timeM
     coordinator: `🎯 协调结果：\n整合所有子任务输出：\n- 统一术语和格式\n- 解决冲突点\n- 生成最终交付物\n整体一致性: 优秀`,
   };
 
-  // 模拟执行时间 (50-300ms)
   const timeMs = 50 + Math.floor(Math.random() * 250);
+  return { output: outputs[agent.role], timeMs };
+}
 
-  return {
-    output: outputs[agent.role],
-    timeMs,
-  };
+// ============================================================================
+// AI 执行引擎
+// ============================================================================
+
+async function runAgentWithAI(
+  agent: Agent,
+  input: string,
+  model: string,
+  apiKey: string,
+): Promise<{ output: string; timeMs: number }> {
+  const start = Date.now();
+  const response = await callAI(
+    model,
+    apiKey,
+    agent.systemPrompt,
+    `【任务描述】\n${input}\n\n请根据你的角色专长完成上述任务，直接输出结果，不要有多余寒暄。`,
+    0.7,
+  );
+  const timeMs = Date.now() - start;
+  return { output: response || "（AI 无返回）", timeMs };
 }
 
 // ============================================================================
@@ -116,11 +137,14 @@ export async function runSwarm(
   description: string,
   mode: CollaborationMode,
   selectedRoles: AgentRole[],
+  model?: string,
+  apiKey?: string,
 ): Promise<SwarmResult> {
   const start = Date.now();
   const taskId = `swarm-${Date.now()}`;
   const agents = selectedRoles.map((role, i) => createAgent(role, `${role}-${i}`));
   const log: string[] = [];
+  const usingAI = !!(model && apiKey);
 
   function logEntry(msg: string) {
     const ts = new Date().toLocaleTimeString("zh-CN", { hour12: false });
@@ -129,8 +153,14 @@ export async function runSwarm(
 
   const tasks: SwarmTask[] = [];
 
+  const runAgent = async (agent: Agent, input: string) => {
+    if (usingAI) {
+      return runAgentWithAI(agent, input, model!, apiKey!);
+    }
+    return simulateAgentWork(agent, input);
+  };
+
   if (mode === "sequential") {
-    // 顺序模式：每个代理依次执行
     for (const agent of agents) {
       const task: SwarmTask = {
         id: `${taskId}-${agent.role}`,
@@ -143,8 +173,8 @@ export async function runSwarm(
       tasks.push(task);
       logEntry(`${agent.name} 开始执行...`);
 
-      const result = simulateAgentWork(agent, task.input);
-      await new Promise((r) => setTimeout(r, result.timeMs));
+      const result = await runAgent(agent, task.input);
+      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
 
       task.output = result.output;
       task.status = "completed";
@@ -152,7 +182,6 @@ export async function runSwarm(
       logEntry(`${agent.name} 完成 (${result.timeMs}ms)`);
     }
   } else if (mode === "parallel") {
-    // 并行模式：所有代理同时执行不同方面
     const parallelTasks: SwarmTask[] = agents.map((agent) => ({
       id: `${taskId}-${agent.role}`,
       description: `${agent.name} 并行处理 ${description}`,
@@ -168,8 +197,8 @@ export async function runSwarm(
     await Promise.all(
       parallelTasks.map(async (task) => {
         const agent = agents.find((a) => a.role === task.assignedTo)!;
-        const result = simulateAgentWork(agent, task.input);
-        await new Promise((r) => setTimeout(r, result.timeMs));
+        const result = await runAgent(agent, task.input);
+        await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
         task.output = result.output;
         task.status = "completed";
         task.completedAt = Date.now();
@@ -177,14 +206,13 @@ export async function runSwarm(
       }),
     );
   } else {
-    // 层级模式：Planner → 分配任务 → Executor 并行 → Reviewer → Optimizer → Coordinator
+    // 层级模式
     const planner = agents.find((a) => a.role === "planner");
     const executors = agents.filter((a) => a.role === "executor");
     const reviewer = agents.find((a) => a.role === "reviewer");
     const optimizer = agents.find((a) => a.role === "optimizer");
     const coordinator = agents.find((a) => a.role === "coordinator");
 
-    // Step 1: Planner
     if (planner) {
       const task: SwarmTask = {
         id: `${taskId}-plan`,
@@ -196,15 +224,14 @@ export async function runSwarm(
       };
       tasks.push(task);
       logEntry("规划者开始分解任务...");
-      const result = simulateAgentWork(planner, description);
-      await new Promise((r) => setTimeout(r, result.timeMs));
+      const result = await runAgent(planner, description);
+      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
       task.output = result.output;
       task.status = "completed";
       task.completedAt = Date.now();
       logEntry(`规划完成 (${result.timeMs}ms)`);
     }
 
-    // Step 2: Executors in parallel
     if (executors.length > 0) {
       logEntry(`启动 ${executors.length} 个执行者并行工作...`);
       await Promise.all(
@@ -218,8 +245,8 @@ export async function runSwarm(
             startedAt: Date.now(),
           };
           tasks.push(task);
-          const result = simulateAgentWork(exec, description);
-          await new Promise((r) => setTimeout(r, result.timeMs));
+          const result = await runAgent(exec, description);
+          await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
           task.output = result.output;
           task.status = "completed";
           task.completedAt = Date.now();
@@ -228,7 +255,6 @@ export async function runSwarm(
       );
     }
 
-    // Step 3: Reviewer
     if (reviewer) {
       const task: SwarmTask = {
         id: `${taskId}-review`,
@@ -240,15 +266,14 @@ export async function runSwarm(
       };
       tasks.push(task);
       logEntry("审查者开始审查...");
-      const result = simulateAgentWork(reviewer, task.input);
-      await new Promise((r) => setTimeout(r, result.timeMs));
+      const result = await runAgent(reviewer, task.input);
+      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
       task.output = result.output;
       task.status = "completed";
       task.completedAt = Date.now();
       logEntry(`审查完成 (${result.timeMs}ms)`);
     }
 
-    // Step 4: Optimizer
     if (optimizer) {
       const task: SwarmTask = {
         id: `${taskId}-optimize`,
@@ -260,15 +285,14 @@ export async function runSwarm(
       };
       tasks.push(task);
       logEntry("优化者开始优化...");
-      const result = simulateAgentWork(optimizer, task.input);
-      await new Promise((r) => setTimeout(r, result.timeMs));
+      const result = await runAgent(optimizer, task.input);
+      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
       task.output = result.output;
       task.status = "completed";
       task.completedAt = Date.now();
       logEntry(`优化完成 (${result.timeMs}ms)`);
     }
 
-    // Step 5: Coordinator
     if (coordinator) {
       const task: SwarmTask = {
         id: `${taskId}-coordinate`,
@@ -280,8 +304,8 @@ export async function runSwarm(
       };
       tasks.push(task);
       logEntry("协调者整合最终结果...");
-      const result = simulateAgentWork(coordinator, task.input);
-      await new Promise((r) => setTimeout(r, result.timeMs));
+      const result = await runAgent(coordinator, task.input);
+      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
       task.output = result.output;
       task.status = "completed";
       task.completedAt = Date.now();
@@ -293,7 +317,6 @@ export async function runSwarm(
   const completed = tasks.filter((t) => t.status === "completed").length;
   const failed = tasks.filter((t) => t.status === "failed").length;
 
-  // 最终输出：取最后一个 completed 任务的 output，或 coordinator 的 output
   const coordinatorTask = tasks.find((t) => t.assignedTo === "coordinator" && t.output);
   const lastTask = tasks.filter((t) => t.output).pop();
   const finalOutput = coordinatorTask?.output || lastTask?.output || "执行完成";
@@ -312,6 +335,7 @@ export async function runSwarm(
       failedTasks: failed,
       totalTimeMs: elapsed,
     },
+    usingAI,
   };
 }
 

@@ -17,6 +17,7 @@ import {
   getHybridRecommendations,
 } from "./framework-graph";
 import { FRAMEWORKS, getFrameworkByKey } from "../../lib/ai-service-v3/catalog";
+import { callAI } from "../../lib/ai-service-v3/client";
 
 export interface EnhancedFrameworkRecommendation {
   /** 推荐框架 key */
@@ -69,14 +70,8 @@ export interface MatcherResult {
  */
 export function matchFrameworks(userIntent: string): MatcherResult {
   const classification = classifyIntent(userIntent);
-
-  // 单框架推荐
   const recommendations = generateRecommendations(classification);
-
-  // 组合推荐
   const combinations = generateCombinations(classification);
-
-  // 知识图谱统计
   const relations = getFrameworkRelations();
 
   return {
@@ -88,6 +83,46 @@ export function matchFrameworks(userIntent: string): MatcherResult {
       totalRelations: relations.length,
     },
   };
+}
+
+/**
+ * AI 增强：使用 LLM 生成更自然的推荐理由
+ */
+export async function matchFrameworksWithAI(
+  userIntent: string,
+  model: string,
+  apiKey: string,
+): Promise<MatcherResult & { usingAI: boolean }> {
+  const base = matchFrameworks(userIntent);
+
+  const prompt = `你是一位提示词框架推荐专家。请根据用户的需求，为以下框架推荐生成自然、专业的推荐理由。
+
+【用户需求】
+${userIntent}
+
+【推荐框架】
+${base.recommendations.slice(0, 3).map((r) => `- ${r.frameworkName}（${r.framework}）：当前匹配度 ${r.score} 分，匹配维度：${r.matchDimensions.join("、")}`).join("\n")}
+
+请为每个框架生成一段 30-50 字的自然语言推荐理由，直接输出（不要编号）：
+推荐理由1
+推荐理由2
+推荐理由3`;
+
+  const response = await callAI(model, apiKey, "你是一位提示词框架推荐专家。", prompt, 0.6);
+
+  if (response) {
+    const reasons = response
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 10 && !l.match(/^推荐|^框架|^-/));
+
+    base.recommendations = base.recommendations.map((r, i) => ({
+      ...r,
+      reason: reasons[i] || r.reason,
+    }));
+  }
+
+  return { ...base, usingAI: true };
 }
 
 /**

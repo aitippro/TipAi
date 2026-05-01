@@ -21,9 +21,11 @@ import {
   PanelRight,
   PanelRightClose,
   Send,
+  Sparkles,
 } from "lucide-react"
 import { ScrollReveal } from "@/components/effects/ScrollReveal"
 import { Skeleton } from "@/components/ui/Skeleton"
+import GenerateModal from "@/components/GenerateModal"
 
 const DOMAIN_LABELS: Record<string, string> = {
   "content-marketing": "内容营销",
@@ -76,6 +78,7 @@ export default function ProjectDetail() {
   const projectId = parseInt(id || "0", 10)
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [inputValue, setInputValue] = useState("")
+  const [showGenerate, setShowGenerate] = useState(false)
 
   const { data: project, isLoading: isLoadingProject } = trpc.project.get.useQuery(
     { id: projectId },
@@ -253,7 +256,7 @@ export default function ProjectDetail() {
             )}
           </div>
 
-          {/* Input Bar */}
+          {/* Input Bar — context-aware placeholder */}
           <div className="shrink-0 px-6 py-3 border-t border-slate-100/80 bg-white/70 backdrop-blur-xl">
             <div className="flex items-center gap-3 max-w-3xl mx-auto">
               <div className="flex-1 relative">
@@ -261,8 +264,15 @@ export default function ProjectDetail() {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="输入消息继续对话..."
+                  placeholder={
+                    project.status === "ready"
+                      ? "项目已就绪，点击右侧「生成提示词」继续"
+                      : project.status === "completed"
+                        ? "项目已完成，可在提示词库查看结果"
+                        : "输入消息继续对话..."
+                  }
                   className="w-full h-10 px-4 pr-10 rounded-full bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all"
+                  disabled={project.status !== "draft" && project.status !== "in_progress"}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && inputValue.trim()) {
                       toast.info("对话功能开发中")
@@ -274,7 +284,7 @@ export default function ProjectDetail() {
               <Button
                 size="icon"
                 className="rounded-full bg-gradient-to-br from-apple-blue to-apple-purple text-white shadow-md shrink-0"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || (project.status !== "draft" && project.status !== "in_progress")}
                 onClick={() => {
                   toast.info("对话功能开发中")
                   setInputValue("")
@@ -406,6 +416,34 @@ export default function ProjectDetail() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Generate Prompt Action */}
+                    {project.status === "ready" && !showGenerate && (
+                      <Button
+                        className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200/50"
+                        onClick={() => setShowGenerate(true)}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        生成提示词
+                      </Button>
+                    )}
+
+                    {showGenerate && project.status === "ready" && (
+                      <div className="mt-2">
+                        <GenerateModal
+                          intent={project.intent || ""}
+                          answers={{}}
+                          stepMode={false}
+                          inline
+                          onClose={() => setShowGenerate(false)}
+                          onSaved={() => {
+                            setShowGenerate(false)
+                            toast.success("已保存到提示词库")
+                            utils.project.get.invalidate({ id: projectId })
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

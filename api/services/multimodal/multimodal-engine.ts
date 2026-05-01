@@ -5,7 +5,11 @@
  *  - 文生图 (text-to-image): 生成 Stable Diffusion / DALL-E 优化提示词
  *  - 图生文 (image-to-text): 生成图像分析、描述、OCR 等提示词
  *  - 视频分镜 (video-storyboard): 生成视频分镜脚本和镜头描述
+ *
+ * AI 驱动：使用 LLM 根据用户请求生成专业的多模态提示词。
  */
+
+import { callAI } from "../../lib/ai-service-v3/client";
 
 export type MultimodalMode = "text-to-image" | "image-to-text" | "video-storyboard";
 
@@ -15,6 +19,7 @@ export interface MultimodalPromptResult {
   generatedPrompts: GeneratedPrompt[];
   tips: string[];
   recommendedModel: string;
+  usingAI: boolean;
 }
 
 export interface GeneratedPrompt {
@@ -26,47 +31,100 @@ export interface GeneratedPrompt {
 }
 
 // ============================================================================
-// 文生图: Text-to-Image
+// AI Prompt 构建
 // ============================================================================
 
-function generateTextToImagePrompts(request: string): GeneratedPrompt[] {
-  const base = request.trim();
+function buildTextToImagePrompt(request: string): string {
+  return `你是一位专业的 AI 图像生成提示词工程师。请根据用户的描述，生成 3 个不同风格的优化提示词。
 
-  return [
-    {
-      title: "标准版 (DALL-E 3)",
-      prompt: enhanceImagePrompt(base, "standard"),
-      purpose: "适合 DALL-E 3、Midjourney 等现代模型",
-      parameters: { quality: "hd", style: "vivid" },
-    },
-    {
-      title: "细节增强版 (Stable Diffusion)",
-      prompt: enhanceImagePrompt(base, "detailed"),
-      negativePrompt: "blurry, low quality, distorted, deformed, ugly, bad anatomy",
-      purpose: "适合 Stable Diffusion、ComfyUI 等开源模型",
-      parameters: { steps: 30, cfg: 7.5, sampler: "DPM++ 2M Karras" },
-    },
-    {
-      title: "极简版 (快速迭代)",
-      prompt: enhanceImagePrompt(base, "minimal"),
-      purpose: "快速验证概念，减少 token 消耗",
-      parameters: { quality: "standard", style: "natural" },
-    },
-  ];
+用户请求：${request}
+
+请按以下 JSON 数组格式严格输出（不要有任何其他内容）：
+[
+  {
+    "title": "标准版 (DALL-E 3)",
+    "prompt": "英文优化后的提示词，包含主体、风格、光线、构图等细节",
+    "negativePrompt": "可选的负面提示词",
+    "parameters": { "quality": "hd", "style": "vivid" },
+    "purpose": "适合 DALL-E 3、Midjourney 等现代模型"
+  },
+  {
+    "title": "细节增强版 (Stable Diffusion)",
+    "prompt": "更详细的英文提示词，包含大量质量标签",
+    "negativePrompt": "blurry, low quality, distorted, deformed, ugly, bad anatomy",
+    "parameters": { "steps": 30, "cfg": 7.5, "sampler": "DPM++ 2M Karras" },
+    "purpose": "适合 Stable Diffusion、ComfyUI 等开源模型"
+  },
+  {
+    "title": "极简版 (快速迭代)",
+    "prompt": "精简但有效的英文提示词",
+    "parameters": { "quality": "standard", "style": "natural" },
+    "purpose": "快速验证概念，减少 token 消耗"
+  }
+]`;
 }
 
-function enhanceImagePrompt(request: string, style: "standard" | "detailed" | "minimal"): string {
-  if (style === "minimal") return request;
+function buildImageToTextPrompt(request: string): string {
+  return `你是一位专业的图像分析提示词工程师。请根据用户的分析需求，生成 3 个不同用途的图像分析提示词。
 
-  const qualityTags =
-    style === "detailed"
-      ? ", highly detailed, 8k uhd, masterpiece, best quality, sharp focus, professional photography"
-      : ", high quality, detailed, well-lit";
+用户请求：${request}
 
-  const styleTags = detectStyle(request);
-
-  return `${request}${qualityTags}${styleTags ? ", " + styleTags : ""}`;
+请按以下 JSON 数组格式严格输出（不要有任何其他内容）：
+[
+  {
+    "title": "详细描述",
+    "prompt": "请详细描述这张图片。包括：\n1. 主体内容和场景\n2. 色彩、光线、构图\n3. 情感和氛围\n4. 任何文字或标志\n\n用户意图：${request}",
+    "purpose": "生成全面的图像描述"
+  },
+  {
+    "title": "结构化分析",
+    "prompt": "请对这张图片进行结构化分析，以 JSON 格式输出：\n{\n  \"subject\": \"主体\",\n  \"setting\": \"场景环境\",\n  \"colors\": [\"主要颜色\"],\n  \"mood\": \"情感氛围\",\n  \"composition\": \"构图特点\",\n  \"text_elements\": [\"图中文字\"],\n  \"action\": \"动作或事件\"\n}\n\n用户意图：${request}",
+    "purpose": "便于程序化处理的结构化输出"
+  },
+  {
+    "title": "创意解读",
+    "prompt": "请以创意写作的角度解读这张图片：\n1. 写一个短故事开头（100字以内）\n2. 提出3个可能的标题\n3. 分析图片的象征意义\n\n用户意图：${request}",
+    "purpose": "激发创意灵感"
+  }
+]`;
 }
+
+function buildVideoStoryboardPrompt(request: string): string {
+  return `你是一位资深视频分镜师。请根据用户的视频创意，生成一份专业的分镜脚本。
+
+用户请求：${request}
+
+请按以下 JSON 格式严格输出（不要有任何其他内容）：
+{
+  "scenes": [
+    "Scene 1: 镜头描述，包含景别、运镜、画面内容",
+    "Scene 2: 镜头描述...",
+    "Scene 3: 镜头描述..."
+  ],
+  "variants": [
+    {
+      "title": "完整分镜脚本",
+      "prompt": "将所有场景组合成完整脚本",
+      "purpose": "完整的视频分镜，可直接用于拍摄或 AI 视频生成"
+    },
+    {
+      "title": "镜头列表 (Shot List)",
+      "prompt": "简化的镜头清单",
+      "purpose": "简化的镜头清单，便于现场调度"
+    },
+    {
+      "title": "AI 视频生成提示词",
+      "prompt": "适配 AI 视频工具的提示词",
+      "parameters": { "motion": "medium", "camera": "smooth" },
+      "purpose": "适配 Runway、Pika 等 AI 视频生成工具"
+    }
+  ]
+}`;
+}
+
+// ============================================================================
+// Mock 引擎（Fallback）
+// ============================================================================
 
 function detectStyle(request: string): string {
   const lower = request.toLowerCase();
@@ -79,11 +137,36 @@ function detectStyle(request: string): string {
   return "";
 }
 
-// ============================================================================
-// 图生文: Image-to-Text
-// ============================================================================
+function mockTextToImage(request: string): GeneratedPrompt[] {
+  const base = request.trim();
+  const qualityTags = ", highly detailed, 8k uhd, masterpiece, best quality, sharp focus";
+  const styleTags = detectStyle(request);
+  const styleSuffix = styleTags ? ", " + styleTags : "";
 
-function generateImageToTextPrompts(request: string): GeneratedPrompt[] {
+  return [
+    {
+      title: "标准版 (DALL-E 3)",
+      prompt: `${base}${qualityTags}, high quality, detailed, well-lit${styleSuffix}`,
+      purpose: "适合 DALL-E 3、Midjourney 等现代模型",
+      parameters: { quality: "hd", style: "vivid" },
+    },
+    {
+      title: "细节增强版 (Stable Diffusion)",
+      prompt: `${base}${qualityTags}, professional photography${styleSuffix}`,
+      negativePrompt: "blurry, low quality, distorted, deformed, ugly, bad anatomy",
+      purpose: "适合 Stable Diffusion、ComfyUI 等开源模型",
+      parameters: { steps: 30, cfg: 7.5, sampler: "DPM++ 2M Karras" },
+    },
+    {
+      title: "极简版 (快速迭代)",
+      prompt: base,
+      purpose: "快速验证概念，减少 token 消耗",
+      parameters: { quality: "standard", style: "natural" },
+    },
+  ];
+}
+
+function mockImageToText(request: string): GeneratedPrompt[] {
   return [
     {
       title: "详细描述",
@@ -103,12 +186,20 @@ function generateImageToTextPrompts(request: string): GeneratedPrompt[] {
   ];
 }
 
-// ============================================================================
-// 视频分镜: Video Storyboard
-// ============================================================================
-
-function generateVideoStoryboard(request: string): GeneratedPrompt[] {
-  const scenes = generateScenes(request);
+function mockVideoStoryboard(request: string): GeneratedPrompt[] {
+  const base = request.trim();
+  const sceneCount = Math.min(8, Math.max(3, Math.floor(base.length / 20)));
+  const templates = [
+    `镜头1 - 广角 establishing shot: 展示"${base}"的整体场景，慢推近。`,
+    `镜头2 - 中景: 主体进入画面，展示关键动作或表情。`,
+    `镜头3 - 特写: 强调重要细节或情感瞬间。`,
+    `镜头4 - 过肩镜头: 建立人物关系或对话场景。`,
+    `镜头5 - 运动镜头: 跟随主体移动，增加动感。`,
+    `镜头6 - 俯拍/仰拍: 改变视角，提供新的视觉信息。`,
+    `镜头7 - 反应镜头: 捕捉观众或配角的反应。`,
+    `镜头8 - 收尾镜头: 广角或空镜头，暗示结局或过渡。`,
+  ];
+  const scenes = templates.slice(0, sceneCount);
 
   return [
     {
@@ -118,89 +209,108 @@ function generateVideoStoryboard(request: string): GeneratedPrompt[] {
     },
     {
       title: "镜头列表 (Shot List)",
-      prompt: scenes
-        .map((s, i) => `SHOT ${String(i + 1).padStart(2, "0")}: ${s.split("\n")[0]}`)
-        .join("\n"),
+      prompt: scenes.map((s, i) => `SHOT ${String(i + 1).padStart(2, "0")}: ${s.split("\n")[0]}`).join("\n"),
       purpose: "简化的镜头清单，便于现场调度",
     },
     {
       title: "AI 视频生成提示词",
-      prompt: scenes
-        .map((s, i) => `Scene ${i + 1}: ${s.replace(/.*?: /, "").split("\n")[0]}`)
-        .join("\n"),
+      prompt: scenes.map((s, i) => `Scene ${i + 1}: ${s.replace(/.*?: /, "").split("\n")[0]}`).join("\n"),
       purpose: "适配 Runway、Pika 等 AI 视频生成工具",
       parameters: { motion: "medium", camera: "smooth" },
     },
   ];
 }
 
-function generateScenes(request: string): string[] {
-  const base = request.trim();
-  // 基于内容推断分镜数量
-  const sceneCount = Math.min(8, Math.max(3, Math.floor(base.length / 20)));
+// ============================================================================
+// AI 调用
+// ============================================================================
 
-  const templates = [
-    `镜头1 - 广角 establishing shot: 展示${base}的整体场景，慢推近。`,
-    `镜头2 - 中景: 主体进入画面，展示关键动作或表情。`,
-    `镜头3 - 特写: 强调重要细节或情感瞬间。`,
-    `镜头4 - 过肩镜头: 建立人物关系或对话场景。`,
-    `镜头5 - 运动镜头: 跟随主体移动，增加动感。`,
-    `镜头6 - 俯拍/仰拍: 改变视角，提供新的视觉信息。`,
-    `镜头7 - 反应镜头: 捕捉观众或配角的反应。`,
-    `镜头8 - 收尾镜头: 广角或空镜头，暗示结局或过渡。`,
-  ];
-
-  return templates.slice(0, sceneCount).map((t, i) => {
-    // 个性化每个镜头
-    if (i === 0) return t.replace("展示", `展示"${base}"的`);
-    return t;
-  });
+function parseGeneratedPrompts(text: string | null): GeneratedPrompt[] | null {
+  if (!text) return null;
+  try {
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    const objMatch = text.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      const parsed = JSON.parse(objMatch[0]);
+      if (parsed.variants && Array.isArray(parsed.variants)) return parsed.variants;
+    }
+  } catch {
+    // ignore parse error
+  }
+  return null;
 }
 
-// ============================================================================
-// 主入口
-// ============================================================================
+export async function generateMultimodalPromptWithAI(
+  request: string,
+  mode: MultimodalMode,
+  model: string,
+  apiKey: string,
+): Promise<MultimodalPromptResult> {
+  let systemPrompt = "你是一位专业的多模态提示词工程师。";
+  let userPrompt = "";
+  let recommendedModel = "";
 
-export function generateMultimodalPrompt(
+  switch (mode) {
+    case "text-to-image":
+      userPrompt = buildTextToImagePrompt(request);
+      recommendedModel = "DALL-E 3 / Stable Diffusion XL";
+      systemPrompt += "你擅长为图像生成模型（DALL-E、Midjourney、Stable Diffusion）撰写高质量的英文提示词。";
+      break;
+    case "image-to-text":
+      userPrompt = buildImageToTextPrompt(request);
+      recommendedModel = "GPT-4V / Claude 3 Vision / Gemini Pro Vision";
+      systemPrompt += "你擅长为视觉语言模型撰写结构化、精确的图像分析提示词。";
+      break;
+    case "video-storyboard":
+      userPrompt = buildVideoStoryboardPrompt(request);
+      recommendedModel = "Runway Gen-3 / Pika Labs / Sora";
+      systemPrompt += "你擅长为 AI 视频生成工具撰写专业的分镜脚本和镜头描述。";
+      break;
+  }
+
+  const response = await callAI(model, apiKey, systemPrompt, userPrompt, 0.7);
+  const prompts = parseGeneratedPrompts(response);
+
+  if (prompts && prompts.length > 0) {
+    return {
+      mode,
+      originalRequest: request,
+      generatedPrompts: prompts,
+      tips: getTips(mode),
+      recommendedModel,
+      usingAI: true,
+    };
+  }
+
+  // Fallback to mock
+  return generateMultimodalPromptMock(request, mode);
+}
+
+export { generateMultimodalPromptMock as generateMultimodalPrompt };
+
+export function generateMultimodalPromptMock(
   request: string,
   mode: MultimodalMode,
 ): MultimodalPromptResult {
   let prompts: GeneratedPrompt[];
   let recommendedModel: string;
-  let tips: string[];
 
   switch (mode) {
     case "text-to-image":
-      prompts = generateTextToImagePrompts(request);
+      prompts = mockTextToImage(request);
       recommendedModel = "DALL-E 3 / Stable Diffusion XL";
-      tips = [
-        "使用英文提示词可获得更好的生成效果",
-        "Negative prompt 对开源模型效果更明显",
-        "适当添加风格关键词可大幅提升一致性",
-        "CFG Scale 7-8 是大多数场景的最佳平衡点",
-      ];
       break;
-
     case "image-to-text":
-      prompts = generateImageToTextPrompts(request);
+      prompts = mockImageToText(request);
       recommendedModel = "GPT-4V / Claude 3 Vision / Gemini Pro Vision";
-      tips = [
-        "上传高清原图可获得更准确的分析",
-        "明确指定输出格式（JSON/Markdown/纯文本）",
-        "如需 OCR，建议额外指定文字语言",
-        "多轮追问可深入挖掘图片细节",
-      ];
       break;
-
     case "video-storyboard":
-      prompts = generateVideoStoryboard(request);
+      prompts = mockVideoStoryboard(request);
       recommendedModel = "Runway Gen-3 / Pika Labs / Sora";
-      tips = [
-        "每个镜头建议控制在 3-5 秒",
-        "镜头运动描述越具体，AI 生成越稳定",
-        "保持角色和场景描述的一致性",
-        "先完成静态分镜，再生成动态视频",
-      ];
       break;
   }
 
@@ -208,9 +318,36 @@ export function generateMultimodalPrompt(
     mode,
     originalRequest: request,
     generatedPrompts: prompts,
-    tips,
+    tips: getTips(mode),
     recommendedModel,
+    usingAI: false,
   };
+}
+
+function getTips(mode: MultimodalMode): string[] {
+  switch (mode) {
+    case "text-to-image":
+      return [
+        "使用英文提示词可获得更好的生成效果",
+        "Negative prompt 对开源模型效果更明显",
+        "适当添加风格关键词可大幅提升一致性",
+        "CFG Scale 7-8 是大多数场景的最佳平衡点",
+      ];
+    case "image-to-text":
+      return [
+        "上传高清原图可获得更准确的分析",
+        "明确指定输出格式（JSON/Markdown/纯文本）",
+        "如需 OCR，建议额外指定文字语言",
+        "多轮追问可深入挖掘图片细节",
+      ];
+    case "video-storyboard":
+      return [
+        "每个镜头建议控制在 3-5 秒",
+        "镜头运动描述越具体，AI 生成越稳定",
+        "保持角色和场景描述的一致性",
+        "先完成静态分镜，再生成动态视频",
+      ];
+  }
 }
 
 /** 获取所有支持的模式 */

@@ -154,7 +154,7 @@ describe("promptForge generation service", () => {
     expect(generateMultipleVersions).toHaveBeenCalledWith(
       finalIntent,
       baseAnalysis,
-      ["react", "ape-optimized", "langgpt"],
+      ["react"],
       "kimi",
       "secret",
     );

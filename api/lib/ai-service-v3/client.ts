@@ -27,7 +27,7 @@ const MODEL_CONFIGS: Record<
   },
 };
 
-const AI_CALL_TIMEOUT_MS = 30000
+const AI_CALL_TIMEOUT_MS = 20000
 
 function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController()
@@ -110,6 +110,7 @@ async function callAISingle(
   userMessage: string,
   temperature = 0.5,
 ): Promise<string | null> {
+  console.log("[AI] callAISingle", { provider, hasKey: !!apiKey, msgLen: userMessage.length })
   if (!apiKey) {
     console.warn(`No API key for ${provider}`);
     return null;
@@ -178,6 +179,8 @@ async function callAISingle(
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`${provider} API call failed: ${msg}`);
     return null;
+  } finally {
+    console.log("[AI] callAISingle done", { provider })
   }
 }
 
