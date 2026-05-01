@@ -6,11 +6,24 @@ import {
   quickRate,
   type FeedbackSubmission,
 } from "./feedback-engine";
-import { getDb } from "../../queries/connection";
+import { getDb, getRawDb } from "../../queries/connection";
 import { evaluations } from "@db/schema";
 
 describe("feedback-engine", () => {
   beforeEach(async () => {
+    const rawDb = getRawDb();
+    rawDb.exec(`
+      CREATE TABLE IF NOT EXISTS evaluations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        projectId INTEGER NOT NULL,
+        stepId INTEGER,
+        userId INTEGER NOT NULL,
+        dimension TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        feedback TEXT,
+        createdAt INTEGER
+      )
+    `);
     const db = getDb();
     await db.delete(evaluations);
   });

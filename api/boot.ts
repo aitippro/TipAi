@@ -63,7 +63,7 @@ function checkRateLimit(
   if (opts.pathPattern && !opts.pathPattern.test(c.req.path)) return null;
 
   // Desktop app: disable rate limiting — all requests are local
-  if (process.env.TIPAI_ELECTRON) return null;
+  if (process.env.TIPAI_ELECTRON || process.env.DISABLE_RATE_LIMIT) return null;
 
   const key = getRateLimitKey(c);
   const now = Date.now();

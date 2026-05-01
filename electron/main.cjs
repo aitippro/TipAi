@@ -4,7 +4,7 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
-const isDev = !app.isPackaged;
+const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 const dataDir = isDev
   ? path.join(__dirname, 'data')
   : path.join(app.getPath('userData'), 'data');
