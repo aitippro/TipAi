@@ -98,7 +98,7 @@ export function normalizeText(text: string, level: "soft" | "hard" = "soft"): st
   if (level === "hard") {
     // 去除常见标点、括号、引号
     normalized = normalized
-      .replace(/[.,;:!?。，；：！？、"'""''（）()\[\]{}]/g, "")
+      .replace(/[.,;:!?。，；：！？、"'""''（）()[\]{}]/g, "")
       .replace(/\s+/g, " ");
   }
 

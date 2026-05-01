@@ -4,8 +4,6 @@ import {
   createAgent,
   getAvailableRoles,
   getCollaborationModes,
-  AGENT_TEMPLATES,
-  type AgentRole,
 } from "./swarm";
 
 describe("Agent Swarm", () => {

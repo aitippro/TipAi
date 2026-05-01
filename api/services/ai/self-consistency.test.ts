@@ -6,7 +6,7 @@ import {
   runSelfConsistency,
   scResultToChatResponse,
 } from "./self-consistency";
-import type { AIModelProvider, ChatMessage, ChatResponse } from "./provider";
+import type { AIModelProvider, ChatResponse } from "./provider";
 
 describe("Self-Consistency Engine", () => {
   describe("normalizeText", () => {

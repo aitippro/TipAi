@@ -51,7 +51,7 @@ const SIMULATED_STRATEGIES: Record<string, string[]> = {
 
 function detectDomain(problem: string): string {
   const p = problem.toLowerCase();
-  if (/\d+.*[\+\-\*\/\=]|方程|求解|计算|math/i.test(p)) return "math";
+  if (/\d+.*[+\-*/=]|方程|求解|计算|math/i.test(p)) return "math";
   if (/代码|程序|算法|函数|python|javascript|bug|debug/i.test(p)) return "coding";
   if (/文章|写作|文案|邮件|报告|essay|write/i.test(p)) return "writing";
   return "general";

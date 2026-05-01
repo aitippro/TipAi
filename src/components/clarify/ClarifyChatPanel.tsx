@@ -78,7 +78,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, generateSummaryMutation, onComplete])
+  }, [projectId, generateSummaryMutation, completeOnce])
 
   // Auto-scroll to bottom
   useEffect(() => {

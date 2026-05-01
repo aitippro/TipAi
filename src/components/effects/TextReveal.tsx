@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface TextRevealProps {
@@ -8,6 +8,11 @@ interface TextRevealProps {
   stagger?: number;
   mode?: "word" | "char" | "line";
   shimmer?: boolean;
+}
+
+function useRandomOffsets(count: number) {
+  const [offsets] = useState(() => Array.from({ length: count }, () => Math.random() * 15));
+  return offsets;
 }
 
 /**
@@ -31,9 +36,7 @@ export function TextReveal({
 
   const items = mode === "char" ? text.split("") : text.split(" ");
 
-  const randomOffsets = useMemo(() => {
-    return items.map(() => Math.random() * 15);
-  }, [text, mode]);
+  const randomOffsets = useRandomOffsets(items.length);
 
   return (
     <span className={cn("inline-flex flex-wrap", className)}>

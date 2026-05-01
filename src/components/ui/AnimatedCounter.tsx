@@ -16,18 +16,15 @@ export function AnimatedCounter({
 }) {
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(value);
+  const displayRef = useRef(value);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
-  const fromRef = useRef(value);
 
   useEffect(() => {
-    if (reduced) {
-      fromRef.current = value;
-      return;
-    }
+    if (reduced) return;
 
-    fromRef.current = display;
     startRef.current = null;
+    const from = displayRef.current;
 
     const animate = (timestamp: number) => {
       if (!startRef.current) startRef.current = timestamp;
@@ -36,8 +33,9 @@ export function AnimatedCounter({
 
       // easeOutQuart
       const eased = 1 - Math.pow(1 - progress, 4);
-      const current = Math.round(fromRef.current + (value - fromRef.current) * eased);
+      const current = Math.round(from + (value - from) * eased);
       setDisplay(current);
+      displayRef.current = current;
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(animate);
@@ -52,6 +50,5 @@ export function AnimatedCounter({
     };
   }, [value, duration, reduced]);
 
-  const shown = reduced ? value : display;
-  return <span className={className}>{shown}</span>;
+  return <span className={className}>{reduced ? value : display}</span>;
 }

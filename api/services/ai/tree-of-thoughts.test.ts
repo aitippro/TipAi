@@ -4,8 +4,6 @@ import {
   setTotGenerator,
   setTotEvaluator,
   flattenTreeLevels,
-  DEFAULT_TOT_CONFIG,
-  type ThoughtNode,
 } from "./tree-of-thoughts";
 
 describe("Tree of Thoughts Engine", () => {
@@ -173,14 +171,14 @@ describe("Tree of Thoughts Engine", () => {
   });
 
   it("should throw if generator not set", async () => {
-    setTotGenerator(null as any);
+    setTotGenerator(null);
     await expect(
       runTreeOfThoughts("test", { maxNodes: 10 }),
     ).rejects.toThrow("not initialized");
   });
 
   it("should throw if evaluator not set", async () => {
-    setTotEvaluator(null as any);
+    setTotEvaluator(null);
     await expect(
       runTreeOfThoughts("test", { maxNodes: 10 }),
     ).rejects.toThrow("not initialized");

@@ -78,11 +78,11 @@ export type ThoughtEvaluator = (
 let globalGenerator: CandidateGenerator | null = null;
 let globalEvaluator: ThoughtEvaluator | null = null;
 
-export function setTotGenerator(gen: CandidateGenerator) {
+export function setTotGenerator(gen: CandidateGenerator | null) {
   globalGenerator = gen;
 }
 
-export function setTotEvaluator(evaluator: ThoughtEvaluator) {
+export function setTotEvaluator(evaluator: ThoughtEvaluator | null) {
   globalEvaluator = evaluator;
 }
 

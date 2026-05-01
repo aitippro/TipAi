@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   generateMultimodalPrompt,
   getMultimodalModes,
-  type MultimodalMode,
 } from "./multimodal-engine";
 
 describe("multimodal-engine", () => {

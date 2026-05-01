@@ -51,7 +51,7 @@ export default function AgentSwarmPage() {
     runMutation.mutate({
       description: description.trim(),
       mode,
-      roles: selectedRoles as any,
+      roles: selectedRoles as ("planner" | "executor" | "reviewer" | "optimizer" | "coordinator")[],
     });
   };
 

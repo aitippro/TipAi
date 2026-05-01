@@ -53,7 +53,9 @@ export function useMagnetic<T extends HTMLElement>(
     }
   }, [ref]);
 
-  animateRef.current = animate;
+  useEffect(() => {
+    animateRef.current = animate;
+  }, [animate]);
 
   useEffect(() => {
     const el = ref.current;

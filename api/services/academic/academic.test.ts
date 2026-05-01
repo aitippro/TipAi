@@ -4,7 +4,6 @@ import {
   generateReproducibilityReport,
   reportToMarkdown,
   getCitationFormats,
-  extractKeywords,
 } from "./academic";
 
 describe("academic tools", () => {

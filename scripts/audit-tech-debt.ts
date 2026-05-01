@@ -75,7 +75,9 @@ async function scan(): Promise<TechDebtReport> {
         });
       }
     }
-  } catch {}
+  } catch {
+    // tsc 输出解析失败时忽略，报告保持为空
+  }
 
   // 2. 扫描前端-后端不同步
   // 前端调用的 tRPC endpoint

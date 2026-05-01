@@ -73,46 +73,40 @@ export function useSpring(
   config: SpringConfig | SpringPreset = "smooth"
 ): number {
   const resolved = typeof config === "string" ? SPRINGS[config] : config;
-  const [current, setCurrent] = useState(targetValue);
-  const velocityRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const targetRef = useRef(targetValue);
+  const [displayValue, setDisplayValue] = useState(targetValue);
+  const stateRef = useRef({
+    current: targetValue,
+    velocity: 0,
+    target: targetValue,
+  });
 
   useEffect(() => {
-    targetRef.current = targetValue;
+    stateRef.current.target = targetValue;
   }, [targetValue]);
 
   useEffect(() => {
     const tick = () => {
-      const result = solveSpring(
-        current,
-        targetRef.current,
-        velocityRef.current,
-        resolved,
-        1 / 60
-      );
+      const s = stateRef.current;
+      const result = solveSpring(s.current, s.target, s.velocity, resolved, 1 / 60);
 
-      velocityRef.current = result.velocity;
+      s.velocity = result.velocity;
 
       if (result.settled) {
-        setCurrent(targetRef.current);
-        rafRef.current = null;
+        s.current = s.target;
+        setDisplayValue(s.target);
         return;
       }
 
-      setCurrent(result.value);
-      rafRef.current = requestAnimationFrame(tick);
+      s.current = result.value;
+      setDisplayValue(result.value);
+      requestAnimationFrame(tick);
     };
 
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
+    const raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [targetValue, resolved]);
 
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [targetValue, resolved.stiffness, resolved.damping, resolved.mass]);
-
-  return current;
+  return displayValue;
 }
 
 /**
@@ -189,16 +183,20 @@ export function measureFPS(): Promise<number> {
 /**
  * 测量布局抖动
  */
+interface LayoutShiftEntry extends PerformanceEntry {
+  value: number;
+}
+
 export function measureLayoutShift(): number {
   if (typeof PerformanceObserver === "undefined") return 0;
   let totalShift = 0;
   const observer = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
       if (entry.entryType === "layout-shift") {
-        totalShift += (entry as any).value;
+        totalShift += (entry as LayoutShiftEntry).value;
       }
     }
   });
-  observer.observe({ entryTypes: ["layout-shift"] } as any);
+  observer.observe({ entryTypes: ["layout-shift"] as unknown as string[] });
   return totalShift;
 }

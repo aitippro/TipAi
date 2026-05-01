@@ -394,14 +394,14 @@ export default function ProjectDetail() {
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                         <div className="text-[10px] text-slate-400 mb-0.5">领域</div>
                         <div className="text-xs font-medium text-slate-700">
-                          {DOMAIN_LABELS[(summaryData as any).intentAnalysis?.domain] || "通用"}
+                          {DOMAIN_LABELS[(summaryData as { intentAnalysis?: { domain?: string } }).intentAnalysis?.domain] || "通用"}
                         </div>
                       </div>
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                         <div className="text-[10px] text-slate-400 mb-0.5">复杂度</div>
                         <div className="text-xs font-medium text-slate-700">
-                          {(summaryData as any).intentAnalysis?.complexity === "simple" ? "简单"
-                            : (summaryData as any).intentAnalysis?.complexity === "medium" ? "中等"
+                          {(summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "simple" ? "简单"
+                            : (summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "medium" ? "中等"
                             : "复杂"}
                         </div>
                       </div>

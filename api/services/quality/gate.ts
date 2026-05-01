@@ -112,7 +112,7 @@ const CHECKERS: Record<string, (prompt: string) => Omit<QualityCheck, "id" | "na
   },
 
   format_consistency: (prompt) => {
-    const hasMarkdown = /[#\*\-\`\[\]\(\)\|]/.test(prompt);
+    const hasMarkdown = /[#*\-`[\]()|]/.test(prompt);
     const hasXML = /<\/?[a-z]+>/i.test(prompt);
     const hasJSON = /\{|\}/.test(prompt);
     const formats = [hasMarkdown, hasXML, hasJSON].filter(Boolean).length;

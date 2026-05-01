@@ -22,7 +22,7 @@ const SIMULATED_STRATEGIES: Record<string, string[]> = {
 
 function detectDomain(problem: string): string {
   const p = problem.toLowerCase();
-  if (/\d+.*[+\-*\/=]|方程|求解|计算|math/i.test(p)) return "math";
+  if (/\d+.*[+\-*/=]|方程|求解|计算|math/i.test(p)) return "math";
   if (/代码|程序|算法|函数|python|javascript|bug|debug/i.test(p)) return "coding";
   if (/文章|写作|文案|邮件|报告|essay|write/i.test(p)) return "writing";
   return "general";
@@ -88,7 +88,7 @@ rest.post("/multimodal/generate", async (c) => {
   const mode = body.mode || "text-to-image";
   if (!request) return c.json({ error: "Missing 'request' field" }, 400);
 
-  const result = generateMultimodalPrompt(request, mode as any);
+  const result = generateMultimodalPrompt(request, mode as "text-to-image" | "image-to-text" | "video-storyboard");
   return c.json(result);
 });
 
@@ -111,7 +111,7 @@ rest.post("/academic/citations", async (c) => {
   const format = body.format || "apa";
   if (!text) return c.json({ error: "Missing 'text' field" }, 400);
 
-  const result = generateCitations(text, format as any);
+  const result = generateCitations(text, format as "apa" | "mla" | "gb7714" | "ieee" | "chicago");
   return c.json(result);
 });
 

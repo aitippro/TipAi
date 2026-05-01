@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runQualityGate, getAvailableChecks, DEFAULT_GATE_CONFIG } from "./gate";
+import { runQualityGate, getAvailableChecks } from "./gate";
 
 describe("Quality Gate", () => {
   it("should pass a high-quality prompt", () => {

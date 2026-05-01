@@ -39,7 +39,9 @@ export function useTilt<T extends HTMLElement>(
     }
   }, [perspective, scale]);
 
-  animateRef.current = animate;
+  useEffect(() => {
+    animateRef.current = animate;
+  }, [animate]);
 
   useEffect(() => {
     const el = ref.current;
