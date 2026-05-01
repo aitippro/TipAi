@@ -1,5 +1,3 @@
-import { TRPCError } from "@trpc/server";
-
 import {
   DEFAULT_FRAMEWORK_KEY,
   analyzeIntent,
@@ -22,13 +20,6 @@ import type {
 } from "./schemas";
 import { resolvePromptForgeModelApiKey } from "./settings";
 
-function buildApiKeyError(message: string) {
-  return new TRPCError({
-    code: "PRECONDITION_FAILED",
-    message,
-  });
-}
-
 function appendClarificationAnswers(
   intent: string,
   answers?: Record<string, string>,
@@ -47,11 +38,9 @@ export async function generatePromptForgeResult(
   input: GeneratePromptInput,
 ) {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId, input.model);
-  if (!apiKey) {
-    throw buildApiKeyError(`未配置 ${model} 的API Key，请先在设置中配置`);
-  }
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
+  // analyzeIntent handles missing apiKey gracefully (local keyword fallback)
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);
   const finalIntent = appendClarificationAnswers(cleanIntent, input.answers);
   const recommendations = recommendFramework(
@@ -66,16 +55,22 @@ export async function generatePromptForgeResult(
     DEFAULT_FRAMEWORK_KEY;
 
   let stepDecomposition = null;
-  if (input.stepMode || analysis.complexity === "complex") {
+  if (apiKey && (input.stepMode || analysis.complexity === "complex")) {
     stepDecomposition = await decomposeSteps(finalIntent, analysis, model, apiKey);
   }
 
   let results: Awaited<ReturnType<typeof generateMultipleVersions>>;
-  try {
-    const frameworks = recommendations.slice(0, 3).map((recommendation) => recommendation.framework);
-    results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey);
-  } catch (error) {
-    console.error("AI generation failed, using fallback:", error);
+  if (apiKey) {
+    try {
+      const frameworks = recommendations.slice(0, 3).map((recommendation) => recommendation.framework);
+      results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey);
+    } catch (error) {
+      console.error("AI generation failed, using fallback:", error);
+      const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
+      results = [prompt];
+    }
+  } else {
+    // No API Key: use local fallback template generation
     const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
     results = [prompt];
   }
@@ -101,16 +96,13 @@ export async function generatePromptForgeClarification(
   input: ClarifyIntentInput,
 ) {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
-  if (!apiKey) {
-    throw buildApiKeyError("未配置API Key");
-  }
 
   const { cleanIntent } = parseSlashCommand(input.intent);
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);
 
   // P0-2: 并行运行策略路由（本地即时）和 AI 追问生成
   const [questions, strategy] = await Promise.all([
-    generateClarification(cleanIntent, analysis, model, apiKey),
+    apiKey ? generateClarification(cleanIntent, analysis, model, apiKey) : Promise.resolve([]),
     Promise.resolve(generateClarifyStrategy(cleanIntent, input.answers || {})),
   ]);
 
@@ -181,13 +173,12 @@ export async function generatePromptForgeDecomposition(
   input: DecomposeIntentInput,
 ) {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
-  if (!apiKey) {
-    throw buildApiKeyError("未配置API Key");
-  }
 
   const { cleanIntent } = parseSlashCommand(input.intent);
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);
-  const decomposition = await decomposeSteps(cleanIntent, analysis, model, apiKey);
+  const decomposition = apiKey
+    ? await decomposeSteps(cleanIntent, analysis, model, apiKey)
+    : { steps: [], reasoning: "需要配置 API Key 才能使用任务拆解功能" };
 
   return {
     analysis,
@@ -200,9 +191,6 @@ export async function quickGeneratePromptForgeResult(
   input: QuickGenerateInput,
 ) {
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
-  if (!apiKey) {
-    throw buildApiKeyError("未配置API Key，请先在设置中配置");
-  }
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);

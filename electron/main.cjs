@@ -118,6 +118,19 @@ async function startBackend() {
   process.env.APP_SECRET = process.env.APP_SECRET || 'tipai-desktop-secret';
   process.env.APP_URL = 'http://localhost:0';
 
+  // Ensure persistent API_KEY_SECRET so encrypted API keys survive app restarts
+  if (!process.env.API_KEY_SECRET) {
+    const keyFile = path.join(dataDir, '.key');
+    if (fs.existsSync(keyFile)) {
+      process.env.API_KEY_SECRET = fs.readFileSync(keyFile, 'utf-8').trim();
+    } else {
+      const { randomBytes } = require('crypto');
+      const key = randomBytes(32).toString('hex');
+      fs.writeFileSync(keyFile, key, { mode: 0o600 });
+      process.env.API_KEY_SECRET = key;
+    }
+  }
+
   if (isDev) {
     backendBaseUrl = 'http://localhost:5173';
     process.env.VITE_DEV_SERVER_URL = backendBaseUrl;
