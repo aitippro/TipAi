@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Sparkles, FileText, Settings, Download, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,10 @@ interface CommandItem {
   label: string;
   shortcut?: string;
   action: () => void;
+}
+
+function navigateTo(path: string) {
+  window.location.assign(path);
 }
 
 /**
@@ -25,13 +29,14 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevOpenRef = useRef(open);
 
   const commands: CommandItem[] = [
-    { id: "new", icon: <Plus className="w-4 h-4" />, label: "新建项目", shortcut: "⌘N", action: () => window.location.href = "/" },
-    { id: "optimize", icon: <Sparkles className="w-4 h-4" />, label: "打开优化器", shortcut: "⌘O", action: () => window.location.href = "/optimizer" },
-    { id: "export", icon: <Download className="w-4 h-4" />, label: "批量导出", shortcut: "⌘E", action: () => window.location.href = "/export" },
-    { id: "library", icon: <FileText className="w-4 h-4" />, label: "提示词库", action: () => window.location.href = "/library" },
-    { id: "settings", icon: <Settings className="w-4 h-4" />, label: "设置", action: () => window.location.href = "/settings" },
+    { id: "new", icon: <Plus className="w-4 h-4" />, label: "新建项目", shortcut: "⌘N", action: () => navigateTo("/") },
+    { id: "optimize", icon: <Sparkles className="w-4 h-4" />, label: "打开优化器", shortcut: "⌘O", action: () => navigateTo("/optimizer") },
+    { id: "export", icon: <Download className="w-4 h-4" />, label: "批量导出", shortcut: "⌘E", action: () => navigateTo("/export") },
+    { id: "library", icon: <FileText className="w-4 h-4" />, label: "提示词库", action: () => navigateTo("/library") },
+    { id: "settings", icon: <Settings className="w-4 h-4" />, label: "设置", action: () => navigateTo("/settings") },
   ];
 
   const filtered = commands.filter((c) =>
@@ -39,24 +44,26 @@ export function CommandPalette({
   );
 
   useEffect(() => {
-    if (open) {
+    if (open && !prevOpenRef.current) {
       setQuery("");
       setSelected(0);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
+    prevOpenRef.current = open;
   }, [open]);
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (!open) return;
-      if (e.key === "Escape") { onClose(); return; }
-      if (e.key === "ArrowDown") { setSelected((s) => Math.min(s + 1, filtered.length - 1)); e.preventDefault(); }
-      if (e.key === "ArrowUp") { setSelected((s) => Math.max(s - 1, 0)); e.preventDefault(); }
-      if (e.key === "Enter") { filtered[selected]?.action(); onClose(); }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!open) return;
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "ArrowDown") { setSelected((s) => Math.min(s + 1, filtered.length - 1)); e.preventDefault(); }
+    if (e.key === "ArrowUp") { setSelected((s) => Math.max(s - 1, 0)); e.preventDefault(); }
+    if (e.key === "Enter") { filtered[selected]?.action(); onClose(); }
   }, [open, filtered, selected, onClose]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <AnimatePresence>

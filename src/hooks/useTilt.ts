@@ -19,6 +19,7 @@ export function useTilt<T extends HTMLElement>(
   const [style, setStyle] = useState<React.CSSProperties>({});
   const rafRef = useRef<number | null>(null);
   const stateRef = useRef({ rotateX: 0, rotateY: 0, targetRotateX: 0, targetRotateY: 0 });
+  const animateRef = useRef<(() => void) | null>(null);
 
   const animate = useCallback(() => {
     const s = stateRef.current;
@@ -34,9 +35,11 @@ export function useTilt<T extends HTMLElement>(
     });
 
     if (!settled) {
-      rafRef.current = requestAnimationFrame(animate);
+      rafRef.current = requestAnimationFrame(animateRef.current!);
     }
   }, [perspective, scale]);
+
+  animateRef.current = animate;
 
   useEffect(() => {
     const el = ref.current;

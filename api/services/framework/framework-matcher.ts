@@ -15,8 +15,6 @@ import {
   getComplementaryFrameworks,
   getUpgradePath,
   getHybridRecommendations,
-  type FrameworkNode,
-  type FrameworkRelation,
 } from "./framework-graph";
 import { FRAMEWORKS, getFrameworkByKey } from "../../lib/ai-service-v3/catalog";
 
@@ -363,46 +361,4 @@ function buildReason(key: string, score: number, parts: string[]): string {
 
   const strength = score >= 80 ? "强烈推荐" : score >= 60 ? "推荐" : "备选";
   return `${base} — ${strength}：${parts.join("、")}，匹配度 ${score} 分`;
-}
-
-/**
- * 获取框架知识图谱的完整数据（用于可视化）
- */
-export function getFrameworkGraphData(): {
-  nodes: FrameworkNode[];
-  relations: FrameworkRelation[];
-} {
-  const nodes = Object.entries(FRAMEWORKS).map(([key, fw]) => ({
-    key,
-    name: fw.name,
-    complexity: ({
-      rtf: "simple", ape: "simple", tag: "simple", care: "simple",
-      bab: "simple", smart: "simple",
-      "co-star": "medium", risen: "medium", crispe: "medium",
-      broke: "medium", scqa: "medium", prompt: "medium", "few-shot": "medium",
-      "chain-of-thought": "complex", "tree-of-thoughts": "complex",
-      react: "complex", langgpt: "complex", "ape-optimized": "complex",
-      "self-refine": "complex", "meta-prompting": "complex",
-    } as Record<string, "simple" | "medium" | "complex">)[key] || "medium",
-    category: ({
-      rtf: "minimal", ape: "minimal", tag: "minimal", care: "minimal",
-      bab: "minimal", smart: "minimal",
-      "co-star": "comprehensive", risen: "structured", crispe: "persona",
-      broke: "goal", scqa: "narrative", prompt: "comprehensive",
-      "chain-of-thought": "reasoning", "tree-of-thoughts": "reasoning",
-      react: "agent", langgpt: "agent", "ape-optimized": "structured",
-      "self-refine": "iterative", "few-shot": "learning", "meta-prompting": "meta",
-      "security-audit": "security", "multi-translate": "communication",
-      "scientific-experiment": "research", "medical-diagnosis": "healthcare",
-      "legal-analysis": "legal", "persona-plus": "persona",
-      "compare-contrast": "analytical", "brainstorming": "creative",
-      "crisis-response": "management", "data-storytelling": "communication",
-    } as Record<string, string>)[key] || "general",
-    componentCount: fw.components.length,
-  }));
-
-  return {
-    nodes,
-    relations: getFrameworkRelations(),
-  };
 }

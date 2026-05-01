@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { matchFrameworks, getFrameworkGraphData } from "./framework-matcher";
+import { matchFrameworks } from "./framework-matcher";
+import { getFrameworkGraphData } from "./framework-graph";
 
 describe("framework-matcher", () => {
   describe("matchFrameworks", () => {

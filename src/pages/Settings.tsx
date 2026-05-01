@@ -44,9 +44,12 @@ export default function SettingsPage() {
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("tipai_font_size") || "14"))
 
   const { data: settings, isLoading } = trpc.promptForge.getSettings.useQuery(undefined)
+  const settingsSyncedRef = useRef(false)
   useEffect(() => {
-    if (settings?.defaultModel)
+    if (settings?.defaultModel && !settingsSyncedRef.current) {
       setDefaultModel(settings.defaultModel)
+      settingsSyncedRef.current = true
+    }
   }, [settings])
   const utils = trpc.useUtils()
   const updateMutation = trpc.promptForge.updateSettings.useMutation({

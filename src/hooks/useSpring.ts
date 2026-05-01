@@ -38,7 +38,7 @@ export function useSpringValue({ from = 0, to, config = "smooth", onRest }: UseS
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [to, resolved.stiffness, resolved.damping, resolved.mass]);
+  }, [to, resolved, value, onRest]);
 
   return value;
 }
@@ -50,8 +50,10 @@ export function useAnimatedValue<T extends number | string>(
   target: T,
   config?: SpringConfig | SpringPreset
 ): T {
+  const numericTarget = typeof target === "number" ? target : 0;
+  const animated = useSpringValue({ to: numericTarget, config });
   if (typeof target === "number") {
-    return useSpringValue({ to: target, config }) as T;
+    return animated as T;
   }
   return target;
 }

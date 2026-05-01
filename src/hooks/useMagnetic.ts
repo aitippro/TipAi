@@ -17,6 +17,7 @@ export function useMagnetic<T extends HTMLElement>(
 ) {
   const { strength = 8, radius = 60 } = options;
   const stateRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0, vx: 0, vy: 0 });
+  const animateRef = useRef<(() => void) | null>(null);
 
   const animate = useCallback(() => {
     const el = ref.current;
@@ -42,7 +43,7 @@ export function useMagnetic<T extends HTMLElement>(
     const settled = Math.abs(s.vx) < 0.01 && Math.abs(s.vy) < 0.01 && Math.abs(s.x - s.targetX) < 0.01 && Math.abs(s.y - s.targetY) < 0.01;
 
     if (!settled) {
-      requestAnimationFrame(animate);
+      requestAnimationFrame(animateRef.current!);
     } else {
       s.x = s.targetX;
       s.y = s.targetY;
@@ -51,6 +52,8 @@ export function useMagnetic<T extends HTMLElement>(
       el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0) scale(1.02)`;
     }
   }, [ref]);
+
+  animateRef.current = animate;
 
   useEffect(() => {
     const el = ref.current;

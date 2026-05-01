@@ -14,15 +14,15 @@ export function AnimatedCounter({
   duration?: number;
   className?: string;
 }) {
-  const [display, setDisplay] = useState(value);
   const reduced = useReducedMotion();
+  const [display, setDisplay] = useState(value);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
   const fromRef = useRef(value);
 
   useEffect(() => {
     if (reduced) {
-      setDisplay(value);
+      fromRef.current = value;
       return;
     }
 
@@ -52,5 +52,6 @@ export function AnimatedCounter({
     };
   }, [value, duration, reduced]);
 
-  return <span className={className}>{display}</span>;
+  const shown = reduced ? value : display;
+  return <span className={className}>{shown}</span>;
 }

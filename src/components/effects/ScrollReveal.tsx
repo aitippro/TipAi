@@ -22,14 +22,11 @@ export function ScrollReveal({
   threshold = 0.2,
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
   const reduced = useReducedMotion();
+  const [visible, setVisible] = useState(() => reduced);
 
   useEffect(() => {
-    if (reduced) {
-      setVisible(true);
-      return;
-    }
+    if (reduced) return;
 
     const el = ref.current;
     if (!el) return;

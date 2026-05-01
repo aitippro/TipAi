@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface TextRevealProps {
@@ -31,6 +31,10 @@ export function TextReveal({
 
   const items = mode === "char" ? text.split("") : text.split(" ");
 
+  const randomOffsets = useMemo(() => {
+    return items.map(() => Math.random() * 15);
+  }, [text, mode]);
+
   return (
     <span className={cn("inline-flex flex-wrap", className)}>
       {items.map((item, i) => (
@@ -44,7 +48,7 @@ export function TextReveal({
           style={{
             transitionDuration: "400ms",
             transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-            transitionDelay: `${i * stagger + Math.random() * 15}ms`,
+            transitionDelay: `${i * stagger + randomOffsets[i]}ms`,
           }}
         >
           {item}
