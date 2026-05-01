@@ -98,6 +98,37 @@ export default function Home() {
   const [pendingAnswers, setPendingAnswers] = useState<Record<string, string>>({})
   const [isCreating, setIsCreating] = useState(false)
   const [stepMode, setStepMode] = useState(false)
+  const [detectedComplexity, setDetectedComplexity] = useState<"simple" | "medium" | "complex" | null>(null)
+
+  const analyzeMutation = trpc.promptForge.analyze.useMutation()
+
+  // Auto-detect complexity based on user intent input
+  useEffect(() => {
+    const trimmed = intent.trim()
+    if (!trimmed || trimmed.length < 10) {
+      setDetectedComplexity(null)
+      return
+    }
+    const timer = setTimeout(() => {
+      analyzeMutation.mutate(
+        { intent: trimmed },
+        {
+          onSuccess: (data) => {
+            setDetectedComplexity(data.complexity)
+            setStepMode(data.complexity === "complex")
+          },
+          onError: () => {
+            // Fallback: use local length-based heuristic
+            const fallback = trimmed.length > 200 ? "complex" : trimmed.length > 80 ? "medium" : "simple"
+            setDetectedComplexity(fallback)
+            setStepMode(fallback === "complex")
+          },
+        }
+      )
+    }, 1000)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent])
 
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -222,8 +253,20 @@ export default function Home() {
 
               {/* Action bar */}
               <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-400 flex items-center gap-2">
                   {intent.length > 0 ? `${intent.length} 字` : "⌘↵ 快速生成"}
+                  {detectedComplexity && (
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      detectedComplexity === "complex" ? "bg-purple-100 text-purple-700" :
+                      detectedComplexity === "medium" ? "bg-blue-100 text-blue-700" :
+                      "bg-green-100 text-green-700"
+                    }`}>
+                      {detectedComplexity === "complex" ? "复杂任务" : detectedComplexity === "medium" ? "中等任务" : "简单任务"}
+                    </span>
+                  )}
+                  {analyzeMutation.isPending && (
+                    <span className="text-[10px] text-slate-300">AI 分析中...</span>
+                  )}
                 </span>
                 <div className="flex items-center gap-3">
                   <button

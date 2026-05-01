@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   getAllFrameworks,
   getFrameworkCount,
+  analyzeIntent,
 } from "./lib/ai-service-v3";
 import {
   deletePromptForgeLibraryItem,
@@ -27,6 +28,7 @@ import {
 import {
   getPromptForgeSettings,
   updatePromptForgeSettings,
+  resolvePromptForgeModelApiKey,
 } from "./services/promptforge/settings";
 import {
   generateDynamicOptions,
@@ -141,6 +143,19 @@ export const promptForgeRouter = createRouter({
 
   // P1-2: 框架知识图谱数据（用于可视化）
   frameworkGraph: publicQuery.query(() => getFrameworkGraphData()),
+
+  /** AI 分析用户意图复杂度 — 用于自动判断单步骤/分步骤 */
+  analyze: authedQuery
+    .input(z.object({ intent: z.string().min(1).max(3000) }))
+    .mutation(async ({ input, ctx }) => {
+      const { model, apiKey } = await resolvePromptForgeModelApiKey(ctx.user.id);
+      const analysis = await analyzeIntent(input.intent, model, apiKey);
+      return {
+        complexity: analysis.complexity,
+        domain: analysis.domain,
+        goal: analysis.goal,
+      };
+    }),
 
   /** 检查是否有 API Key 配置（环境变量或用户设置）——用于启动引导判断 */
   apiKeyStatus: publicQuery.query(() => {
