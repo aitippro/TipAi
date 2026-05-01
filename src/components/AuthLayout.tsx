@@ -20,8 +20,9 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LOGIN_PATH } from "@/const";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const LOGIN_PATH = "/login";
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { AuthLayoutSkeleton } from "./AuthLayoutSkeleton";

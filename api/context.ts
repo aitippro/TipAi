@@ -27,12 +27,15 @@ async function getOrCreateLocalUser(): Promise<User> {
 }
 
 let cachedUser: User | null = null;
+let cacheTs = 0;
+const CACHE_TTL_MS = 60_000; // Refresh user cache every 60s
 
 export async function createContext(
   opts: FetchCreateContextFnOptions,
 ): Promise<TrpcContext> {
-  if (!cachedUser) {
+  if (!cachedUser || Date.now() - cacheTs > CACHE_TTL_MS) {
     cachedUser = await getOrCreateLocalUser();
+    cacheTs = Date.now();
   }
   return { req: opts.req, resHeaders: opts.resHeaders, user: cachedUser };
 }
