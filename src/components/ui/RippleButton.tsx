@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface RippleButtonProps {
@@ -23,6 +23,7 @@ export function RippleButton({
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const btnRef = useRef<HTMLButtonElement>(null);
   const rippleId = useRef(0);
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -34,14 +35,24 @@ export function RippleButton({
       const id = rippleId.current++;
 
       setRipples((prev) => [...prev, { id, x, y }]);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        timersRef.current.delete(timer);
         setRipples((prev) => prev.filter((r) => r.id !== id));
       }, 600);
+      timersRef.current.add(timer);
 
       onClick?.();
     },
     [onClick]
   );
+
+  // Cleanup all pending timers on unmount
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach((t) => clearTimeout(t));
+      timersRef.current.clear();
+    };
+  }, []);
 
   const sizeClasses = {
     sm: "h-8 px-3 text-xs rounded-lg",

@@ -99,45 +99,55 @@ export default function Home() {
   const [isCreating, setIsCreating] = useState(false)
   const [stepMode, setStepMode] = useState(false)
   const [detectedComplexity, setDetectedComplexity] = useState<"simple" | "medium" | "complex" | null>(null)
+  const userToggledRef = useRef(false)
 
-  const analyzeMutation = trpc.promptForge.analyze.useMutation()
+  const { data: analyzeData, isFetching: isAnalyzing } = trpc.promptForge.analyze.useQuery(
+    { intent: intent.trim() },
+    {
+      enabled: intent.trim().length >= 10,
+      staleTime: 30000,
+    }
+  )
 
-  // Auto-detect complexity based on user intent input
+  // Auto-detect complexity based on AI analysis result
+  // Does NOT override if user has manually toggled stepMode
+  useEffect(() => {
+    if (!analyzeData) return
+    setDetectedComplexity(analyzeData.complexity)
+    if (!userToggledRef.current) {
+      setStepMode(analyzeData.complexity === "complex")
+    }
+  }, [analyzeData])
+
+  // Fallback heuristic when query errors (caught by onError not available in useQuery v5)
   useEffect(() => {
     const trimmed = intent.trim()
     if (!trimmed || trimmed.length < 10) {
       setDetectedComplexity(null)
       return
     }
+    // Local fallback: length-based heuristic after brief delay
     const timer = setTimeout(() => {
-      analyzeMutation.mutate(
-        { intent: trimmed },
-        {
-          onSuccess: (data) => {
-            setDetectedComplexity(data.complexity)
-            setStepMode(data.complexity === "complex")
-          },
-          onError: () => {
-            // Fallback: use local length-based heuristic
-            const fallback = trimmed.length > 200 ? "complex" : trimmed.length > 80 ? "medium" : "simple"
-            setDetectedComplexity(fallback)
-            setStepMode(fallback === "complex")
-          },
+      if (!analyzeData && !isAnalyzing) {
+        const fallback = trimmed.length > 200 ? "complex" : trimmed.length > 80 ? "medium" : "simple"
+        setDetectedComplexity(fallback)
+        if (!userToggledRef.current) {
+          setStepMode(fallback === "complex")
         }
-      )
-    }, 1000)
+      }
+    }, 1500)
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intent])
+  }, [intent, analyzeData, isAnalyzing])
 
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const urlProjectId = searchParams.get("projectId")
   const urlStage = searchParams.get("stage")
-  const shouldLoadProject = urlStage === "generate" && !!urlProjectId
+  const projectIdNum = urlProjectId ? Number(urlProjectId) : NaN
+  const shouldLoadProject = urlStage === "generate" && !isNaN(projectIdNum) && projectIdNum > 0
 
   const projectFromUrl = trpc.project.get.useQuery(
-    { id: Number(urlProjectId) },
+    { id: projectIdNum },
     { enabled: shouldLoadProject }
   )
 
@@ -202,7 +212,10 @@ export default function Home() {
     setClarifyProjectId(null)
     setPendingAnswers({})
     setIntent("")
-    setTimeout(() => textareaRef.current?.focus(), 100)
+    setDetectedComplexity(null)
+    userToggledRef.current = false
+    const timer = setTimeout(() => textareaRef.current?.focus(), 100)
+    return () => clearTimeout(timer)
   }, [])
 
   return (
@@ -264,13 +277,13 @@ export default function Home() {
                       {detectedComplexity === "complex" ? "复杂任务" : detectedComplexity === "medium" ? "中等任务" : "简单任务"}
                     </span>
                   )}
-                  {analyzeMutation.isPending && (
+                  {isAnalyzing && (
                     <span className="text-[10px] text-slate-300">AI 分析中...</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setStepMode(v => !v)}
+                    onClick={() => { userToggledRef.current = true; setStepMode(v => !v) }}
                     className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all ${
                       stepMode
                         ? "bg-violet-100 text-violet-700 border border-violet-200"

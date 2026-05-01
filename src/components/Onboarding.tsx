@@ -29,14 +29,21 @@ export function Onboarding({ onComplete }: Props) {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const updateSettings = trpc.promptForge.updateSettings.useMutation();
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(false);
     const t = setTimeout(() => setVisible(true), 250);
     return () => clearTimeout(t);
   }, [step]);
+
+  // Cleanup exit timer on unmount
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, []);
 
   const handleSaveKeys = useCallback(async () => {
     setSaving(true);
@@ -55,7 +62,7 @@ export function Onboarding({ onComplete }: Props) {
       setStep(s => s + 1);
     } else {
       setExiting(true);
-      setTimeout(onComplete, 600);
+      exitTimerRef.current = setTimeout(onComplete, 600);
     }
   }, [keys, step, onComplete, updateSettings]);
 

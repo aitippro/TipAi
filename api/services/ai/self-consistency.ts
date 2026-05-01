@@ -283,9 +283,9 @@ export async function runSelfConsistency(
   const scConfig = { ...DEFAULT_SC_CONFIG, ...config };
   const sampleCount = strategy.sampleCount ?? 5;
 
-  console.log(
-    `[Self-Consistency] Starting ${sampleCount} paths with ${scConfig.votingMethod} voting...`,
-  );
+  // console.log(
+  //   `[Self-Consistency] Starting ${sampleCount} paths with ${scConfig.votingMethod} voting...`,
+  // );
 
   // 1. 并行采样
   const paths = await samplePaths(
@@ -333,9 +333,9 @@ export async function runSelfConsistency(
 
   const elapsedMs = Date.now() - startTime;
 
-  console.log(
-    `[Self-Consistency] Completed in ${elapsedMs}ms. Winner: ${winner.votes}/${validPaths.length} votes (confidence=${confidence})`,
-  );
+  // console.log(
+  //   `[Self-Consistency] Completed in ${elapsedMs}ms. Winner: ${winner.votes}/${validPaths.length} votes (confidence=${confidence})`,
+  // );
 
   return {
     finalAnswer: winner.representative,

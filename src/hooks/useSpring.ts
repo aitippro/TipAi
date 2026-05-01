@@ -17,9 +17,14 @@ export function useSpringValue({ from = 0, to, config = "smooth", onRest }: UseS
   const velocityRef = useRef(0);
   const rafRef = useRef<number | null>(null);
 
+  // Use a ref to track the current animated value so we don't restart the
+  // effect on every frame (value changes each frame → infinite restart loop).
+  const valueRef = useRef(from);
+  valueRef.current = value;
+
   useEffect(() => {
     const tick = () => {
-      const result = solveSpring(value, to, velocityRef.current, resolved, 1 / 60);
+      const result = solveSpring(valueRef.current, to, velocityRef.current, resolved, 1 / 60);
       velocityRef.current = result.velocity;
 
       if (result.settled) {
@@ -38,7 +43,7 @@ export function useSpringValue({ from = 0, to, config = "smooth", onRest }: UseS
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [to, resolved, value, onRest]);
+  }, [to, resolved, onRest]);
 
   return value;
 }

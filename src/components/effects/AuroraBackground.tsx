@@ -5,6 +5,12 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
  * AuroraBackground — 动态极光背景引擎
  * 3-4 层 blob 色块漂移，响应鼠标磁场扰动
  * WebGL/Canvas2D fallback
+ *
+ * 性能优化：
+ * - 页面不可见时暂停 raf（visibilitychange）
+ * - 不在视口时暂停（IntersectionObserver）
+ * - 限制帧率到 ~30fps
+ * - reduced motion 只绘制静态帧
  */
 export function AuroraBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,6 +27,8 @@ export function AuroraBackground() {
       phase: number;
     }>
   >([]);
+  const visibleRef = useRef(true);
+  const lastTimeRef = useRef(0);
 
   const initBlobs = useCallback((w: number, h: number) => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -68,10 +76,42 @@ export function AuroraBackground() {
       mouseRef.current.y = e.clientY / h;
     };
 
+    const handleVisibility = () => {
+      visibleRef.current = document.visibilityState === "visible";
+      if (visibleRef.current && !rafRef.current) {
+        rafRef.current = requestAnimationFrame(draw);
+      }
+    };
+
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouse);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // IntersectionObserver: pause when canvas is not visible (e.g. scrolled away)
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting && document.visibilityState === "visible";
+        if (visibleRef.current && !rafRef.current) {
+          rafRef.current = requestAnimationFrame(draw);
+        }
+      },
+      { threshold: 0 }
+    );
+    io.observe(canvas);
 
     const draw = (time: number) => {
+      // Frame rate limiter: ~30fps
+      if (time - lastTimeRef.current < 33) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      lastTimeRef.current = time;
+
+      if (!visibleRef.current) {
+        rafRef.current = null;
+        return;
+      }
+
       ctx.clearRect(0, 0, w, h);
 
       // Fill background
@@ -80,16 +120,18 @@ export function AuroraBackground() {
       ctx.fillRect(0, 0, w, h);
 
       if (reduced) {
-        // Static gradient for reduced motion
+        // Static gradient for reduced motion — draw once then stop
         const gradient = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.8);
         gradient.addColorStop(0, blobsRef.current[0]?.color || "rgba(0,122,255,0.1)");
         gradient.addColorStop(1, "transparent");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
+        rafRef.current = null;
         return;
       }
 
       // Draw blobs
+      ctx.globalCompositeOperation = "source-over";
       for (const blob of blobsRef.current) {
         const t = time * blob.speed + blob.phase;
         const driftX = Math.sin(t) * w * 0.3;
@@ -122,7 +164,10 @@ export function AuroraBackground() {
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouse);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      io.disconnect();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     };
   }, [reduced, initBlobs]);
 

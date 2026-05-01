@@ -37,9 +37,9 @@ export async function generatePromptForgeResult(
   userId: number,
   input: GeneratePromptInput,
 ) {
-  console.log("[PF] generate start", { userId, intent: input.intent.slice(0, 40), hasAnswers: !!input.answers, model: input.model })
+  // console.log("[PF] generate start", { userId, intent: input.intent.slice(0, 40), hasAnswers: !!input.answers, model: input.model })
   const { model, apiKey } = await resolvePromptForgeModelApiKey(userId, input.model);
-  console.log("[PF] resolved key", { model, hasKey: !!apiKey })
+  // console.log("[PF] resolved key", { model, hasKey: !!apiKey })
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
   // analyzeIntent handles missing apiKey gracefully (local keyword fallback)

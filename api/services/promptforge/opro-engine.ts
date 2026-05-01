@@ -259,7 +259,7 @@ export async function runOPRO(
   const startTime = Date.now();
   const config: OPROConfig = { ...DEFAULT_CONFIG, ...userConfig } as OPROConfig;
 
-  console.log(`[OPRO] Starting optimization: maxIterations=${config.maxIterations}, candidatesPerIteration=${config.candidatesPerIteration}`);
+  // console.log(`[OPRO] Starting optimization: maxIterations=${config.maxIterations}, candidatesPerIteration=${config.candidatesPerIteration}`);
 
   // 1. 评估原始提示词作为 baseline
   const baselineJudge = await judgePrompt(
@@ -270,7 +270,7 @@ export async function runOPRO(
   );
   const originalScore = baselineJudge.dimensions.overall;
 
-  console.log(`[OPRO] Baseline score: ${originalScore}/10`);
+  // console.log(`[OPRO] Baseline score: ${originalScore}/10`);
 
   // 如果原始分已经很高，直接返回
   if (originalScore >= config.targetScore) {
@@ -308,7 +308,7 @@ export async function runOPRO(
   let estimatedTokens = 0;
 
   for (let iteration = 1; iteration <= config.maxIterations; iteration++) {
-    console.log(`[OPRO] Iteration ${iteration}/${config.maxIterations}`);
+    // console.log(`[OPRO] Iteration ${iteration}/${config.maxIterations}`);
 
     // 生成 candidates
     let rawCandidates: Array<{ prompt: string; strategy: string }>;
@@ -330,7 +330,7 @@ export async function runOPRO(
       console.warn(`[OPRO] Iteration ${iteration}: all candidates are duplicates`);
       noImprovementCount++;
       if (noImprovementCount >= config.earlyStopPatience) {
-        console.log(`[OPRO] Early stop: no new candidates for ${config.earlyStopPatience} rounds`);
+        // console.log(`[OPRO] Early stop: no new candidates for ${config.earlyStopPatience} rounds`);
         break;
       }
       continue;
@@ -373,10 +373,10 @@ export async function runOPRO(
     if (iterationBest && iterationBest.score > bestEver.score) {
       bestEver = iterationBest;
       noImprovementCount = 0;
-      console.log(`[OPRO] New best: ${bestEver.score}/10 (was ${previousBest})`);
+      // console.log(`[OPRO] New best: ${bestEver.score}/10 (was ${previousBest})`);
     } else {
       noImprovementCount++;
-      console.log(`[OPRO] No improvement. Best remains: ${bestEver.score}/10`);
+      // console.log(`[OPRO] No improvement. Best remains: ${bestEver.score}/10`);
     }
 
     // 记录本轮
@@ -405,12 +405,12 @@ export async function runOPRO(
 
     // 终止检查
     if (bestEver.score >= config.targetScore) {
-      console.log(`[OPRO] Target score ${config.targetScore} reached!`);
+      // console.log(`[OPRO] Target score ${config.targetScore} reached!`);
       break;
     }
 
     if (noImprovementCount >= config.earlyStopPatience) {
-      console.log(`[OPRO] Early stop: no improvement for ${config.earlyStopPatience} rounds`);
+      // console.log(`[OPRO] Early stop: no improvement for ${config.earlyStopPatience} rounds`);
       break;
     }
   }
@@ -425,9 +425,9 @@ export async function runOPRO(
         ? "no_improvement"
         : "max_iterations";
 
-  console.log(
-    `[OPRO] Finished in ${elapsedMs}ms. Final score: ${bestEver.score}/10 (improvement: +${improvementPercent}%)`,
-  );
+  // console.log(
+  //   `[OPRO] Finished in ${elapsedMs}ms. Final score: ${bestEver.score}/10 (improvement: +${improvement}%)`,
+  // );
 
   return {
     finalPrompt: bestEver.prompt,

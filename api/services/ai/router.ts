@@ -178,7 +178,7 @@ export class AIRouter {
       try {
         const instance = factory(providerConfig);
         this.providerInstances.set(name, instance);
-        console.log(`[AI Router] Provider registered: ${name}`);
+        // console.log(`[AI Router] Provider registered: ${name}`);
       } catch (error) {
         console.error(`[AI Router] Failed to init ${name}:`, error);
       }
@@ -264,9 +264,9 @@ export class AIRouter {
       }
 
       try {
-        console.log(
-          `[AI Router] Using ${providerName} for ${taskType} | Strategy: ${strategyToLabel(decodeStrategy)}`,
-        );
+        // console.log(
+        //   `[AI Router] Using ${providerName} for ${taskType} | Strategy: ${strategyToLabel(decodeStrategy)}`,
+        // );
 
         let response: ChatResponse;
 
@@ -364,7 +364,7 @@ export class AIRouter {
       }
 
       try {
-        console.log(`[AI Router] Streaming with ${providerName} for ${taskType} | Strategy: ${strategyToLabel(streamingStrategy)}`);
+        // console.log(`[AI Router] Streaming with ${providerName} for ${taskType} | Strategy: ${strategyToLabel(streamingStrategy)}`);
 
         const finalOptions: ChatOptions = {
           ...chatOptions,

@@ -120,12 +120,11 @@ async function runAgentWithAI(
   timeoutMs: number = 25000,
 ): Promise<{ output: string; timeMs: number; timedOut: boolean }> {
   const start = Date.now();
-  const deadline = start + timeoutMs;
 
-  // Create a timeout promise
-  const timeoutPromise = new Promise<null>((_, reject) => {
-    const timer = setTimeout(() => {
-      clearTimeout(timer);
+  // Create a cancellable timeout promise
+  let timeoutHandle: ReturnType<typeof setTimeout>;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
       reject(new Error("Agent timeout"));
     }, timeoutMs);
   });
@@ -141,9 +140,11 @@ async function runAgentWithAI(
       ),
       timeoutPromise,
     ]);
+    clearTimeout(timeoutHandle!);
     const timeMs = Date.now() - start;
     return { output: response || "（AI 无返回）", timeMs, timedOut: false };
   } catch (_e) {
+    clearTimeout(timeoutHandle!);
     const timeMs = Date.now() - start;
     return {
       output: `【${agent.name} 执行超时】\n该代理在 ${timeoutMs / 1000} 秒内未能完成，已跳过。可尝试减少角色数量或缩短任务描述后重试。`,

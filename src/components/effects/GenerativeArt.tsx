@@ -59,20 +59,24 @@ export function GenerativeArt({
     }
 
     let raf = 0;
+    let visible = true;
 
     const draw = () => {
+      if (!visible) { raf = 0; return; }
+
       ctx.clearRect(0, 0, w, h);
 
-      // 连线（星座效果）
+      // 连线（星座效果）— O(n²) 但对于小密度可接受
       ctx.strokeStyle = "rgba(148, 163, 184, 0.08)"; // slate-400 @ low opacity
       ctx.lineWidth = 0.5;
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[i].x - nodes[j].x;
           const dy = nodes[i].y - nodes[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.globalAlpha = (1 - dist / 120) * 0.15;
+          const dist = dx * dx + dy * dy; // skip sqrt for comparison
+          if (dist < 14400) { // 120²
+            const d = Math.sqrt(dist);
+            ctx.globalAlpha = (1 - d / 120) * 0.15;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
@@ -112,8 +116,18 @@ export function GenerativeArt({
       raf = requestAnimationFrame(draw);
     };
 
+    const handleVisibility = () => {
+      visible = document.visibilityState === "visible";
+      if (visible && !raf) raf = requestAnimationFrame(draw);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
   }, [density, speed, prefersReduced]);
 
   useEffect(() => {

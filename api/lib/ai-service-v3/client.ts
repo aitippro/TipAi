@@ -56,7 +56,7 @@ async function runSelfConsistencyCallAI(
   sampleCount: number,
   temperature: number,
 ): Promise<string | null> {
-  console.log(`[callAI SC] Running ${sampleCount} paths for ${provider}`);
+  // console.log(`[callAI SC] Running ${sampleCount} paths for ${provider}`);
 
   const promises: Promise<string | null>[] = [];
   for (let i = 0; i < sampleCount; i++) {
@@ -93,9 +93,9 @@ async function runSelfConsistencyCallAI(
 
   const winner = voteCounts.get(bestKey);
   const confidence = Number((bestCount / results.length).toFixed(4));
-  console.log(
-    `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
-  );
+  // console.log(
+  //   `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
+  // );
 
   return winner?.representative ?? null;
 }
@@ -110,7 +110,7 @@ async function callAISingle(
   userMessage: string,
   temperature = 0.5,
 ): Promise<string | null> {
-  console.log("[AI] callAISingle", { provider, hasKey: !!apiKey, msgLen: userMessage.length })
+  // console.log("[AI] callAISingle", { provider, hasKey: !!apiKey, msgLen: userMessage.length })
   if (!apiKey) {
     console.warn(`No API key for ${provider}`);
     return null;
@@ -180,7 +180,7 @@ async function callAISingle(
     console.error(`${provider} API call failed: ${msg}`);
     return null;
   } finally {
-    console.log("[AI] callAISingle done", { provider })
+    // console.log("[AI] callAISingle done", { provider })
   }
 }
 

@@ -126,23 +126,21 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
           await generateSummaryAndShow()
         }
       } catch (error) {
-        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
-        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
-        toast.error("初始化对话失败")
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
+      if (cancelled) return
+      setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+      logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
+      toast.error("初始化对话失败")
+    } finally {
+      if (!cancelled) setIsLoading(false)
+    }
     }
 
     init()
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, intent])
+  }, [projectId, intent, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
   const handleAnswerSubmit = useCallback(async (forcedOptions?: string[]) => {
-    console.log("[Clarify] handleAnswerSubmit called", { forcedOptions, currentQuestion: currentQuestion?.id, type: currentQuestion?.type })
-    if (!currentQuestion) { console.log("[Clarify] no currentQuestion, returning"); return }
+    if (!currentQuestion) return
 
     const isText = currentQuestion.type === "text"
     const isMulti = currentQuestion.type === "multichoice" || currentQuestion.type === "choice"
@@ -151,10 +149,9 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     let answerValue: string | undefined
     if (isText) {
       answerValue = answerText.trim()
-      if (!answerValue) { console.log("[Clarify] text empty, returning"); return }
+      if (!answerValue) return
     }
     if (isMulti && finalOptions.length === 0) {
-      console.log("[Clarify] multi with no options, showing toast")
       toast.error("请至少选择一个选项")
       return
     }
@@ -220,10 +217,10 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         await generateSummaryAndShow()
       }
     } catch (error) {
-        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
-        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
+      if (!mountedRef.current) return
+      setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+      logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存回答失败")
-      console.error(error)
     }
   }, [currentQuestion, answerText, selectedOptions, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
@@ -284,15 +281,14 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         await generateSummaryAndShow()
       }
     } catch (error) {
-        setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
-        logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
+      if (!mountedRef.current) return
+      setErrMsg(error instanceof Error ? error.message : "初始化对话失败，请检查 API Key 配置")
+      logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存跳过失败")
-      console.error(error)
     }
   }, [currentQuestion, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
 
   const toggleOption = (option: string) => {
-    console.log("[Clarify] toggleOption", option)
     setSelectedOptions((prev) =>
       prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
     )

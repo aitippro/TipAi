@@ -160,8 +160,8 @@ const TS_SDK = `class TipAiClient {
 
 // Usage
 const client = new TipAiClient();
-console.log(await client.ping());
-console.log(await client.matchFramework("帮我写Python爬虫"));
+// console.log(await client.ping());
+// console.log(await client.matchFramework("帮我写Python爬虫"));
 `;
 
 export default function ApiDocsPage() {

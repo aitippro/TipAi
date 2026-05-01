@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface TextRevealProps {
@@ -11,7 +11,8 @@ interface TextRevealProps {
 }
 
 function useRandomOffsets(count: number) {
-  const [offsets] = useState(() => Array.from({ length: count }, () => Math.random() * 15));
+  // useMemo ensures offsets are recalculated when count changes
+  const offsets = useMemo(() => Array.from({ length: count }, () => Math.random() * 15), [count]);
   return offsets;
 }
 
