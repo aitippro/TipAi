@@ -1,4 +1,4 @@
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 
 use crate::{UpdateSettings, UserSettings};
 use crate::crypto;
@@ -27,7 +27,7 @@ impl Database {
         }).optional()?;
 
         if let Some((uid, dm, df, dl, kk, ok, ck, dk)) = row {
-            let sk = self.secret_key();
+            let _sk = self.secret_key();
             let has_kimi = kk.as_ref().map_or(false, |v| !v.is_empty());
             let has_openai = ok.as_ref().map_or(false, |v| !v.is_empty());
             let has_claude = ck.as_ref().map_or(false, |v| !v.is_empty());
@@ -132,12 +132,15 @@ impl Database {
             return Ok(());
         }
 
-        // Add userId as final param
+        // Compute explicit parameter indices before appending final values
+        let user_id_idx = values.len() + 1;
+        let created_at_idx = values.len() + 2;
+        let updated_at_idx = values.len() + 3;
+
         let sql = format!(
             "INSERT INTO user_settings (userId, defaultModel, defaultFramework, defaultLanguage, createdAt, updatedAt)
-             VALUES (?{}, 'kimi', 'auto', 'zh', ?, ?)
+             VALUES (?{user_id_idx}, 'kimi', 'auto', 'zh', ?{created_at_idx}, ?{updated_at_idx})
              ON CONFLICT(userId) DO UPDATE SET {}",
-            values.len() + 2,
             fields.join(", "),
         );
 

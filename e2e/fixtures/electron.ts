@@ -94,7 +94,7 @@ export const test = base.extend<ElectronFixtures>({
         },
         // Record video for debugging
         recordVideo: {
-          dir: path.join(process.cwd(), 'e2e-results', 'videos', testInfo.title.replace(/[^a-z0-9]/gi, '_')),
+          dir: path.join(process.cwd(), 'e2e-results', 'videos', `worker-${testInfo.workerIndex}`),
           size: { width: 1280, height: 800 },
         },
       });

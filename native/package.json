@@ -5,14 +5,12 @@
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "tipai-core",
-    "triples": {
-      "additional": [
-        "aarch64-apple-darwin",
-        "x86_64-apple-darwin",
-        "x86_64-pc-windows-msvc"
-      ]
-    }
+    "binaryName": "tipai-core",
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc"
+    ]
   },
   "license": "MIT",
   "devDependencies": {

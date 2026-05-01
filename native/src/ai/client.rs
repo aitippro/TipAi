@@ -136,7 +136,7 @@ struct ClaudeResponse {
 
 // ── Core async functions ────────────────────────────────────
 
-async fn call_ai_single(req: &AiCallRequest) -> Result<AiCallResponse, String> {
+async fn call_ai_single(req: &AiCallRequest) -> std::result::Result<AiCallResponse, String> {
     if req.api_key.is_empty() {
         return Ok(AiCallResponse {
             content: String::new(),
@@ -181,7 +181,7 @@ async fn call_openai_compatible(
     user_message: &str,
     temperature: f64,
     max_tokens: i32,
-) -> Result<String, String> {
+) -> std::result::Result<String, String> {
     let body = OpenAiRequest {
         model: config.model_id.clone(),
         messages: vec![
@@ -224,7 +224,7 @@ async fn call_claude(
     user_message: &str,
     temperature: f64,
     max_tokens: i32,
-) -> Result<String, String> {
+) -> std::result::Result<String, String> {
     let body = ClaudeRequest {
         model: config.model_id.clone(),
         max_tokens,

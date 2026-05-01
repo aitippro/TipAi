@@ -1,8 +1,6 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
-use std::sync::Arc;
+use std::sync::Mutex;
 
 mod ai;
 mod crypto;
@@ -11,13 +9,13 @@ mod db;
 use db::connection::Database;
 
 /// Global database handle — initialized once at app startup
-static DB: Lazy<Mutex<Option<Arc<Database>>>> = Lazy::new(|| Mutex::new(None));
+static DB: Mutex<Option<Database>> = Mutex::new(None);
 
 fn with_db<F, T>(f: F) -> Result<T>
 where
     F: FnOnce(&Database) -> Result<T>,
 {
-    let guard = DB.lock();
+    let guard = DB.lock().map_err(|e| Error::from_reason(format!("DB lock error: {e}")))?;
     match guard.as_ref() {
         Some(db) => f(db),
         None => Err(Error::from_reason("Database not initialized. Call dbOpen() first.")),
@@ -37,22 +35,26 @@ pub fn version() -> String {
 pub fn db_open(path: String, secret_key: Option<String>) -> Result<()> {
     let db = Database::open(&path, secret_key.as_deref())
         .map_err(|e| Error::from_reason(format!("Failed to open database: {e}")))?;
-    *DB.lock() = Some(Arc::new(db));
+    *DB.lock().map_err(|e| Error::from_reason(format!("DB lock error: {e}")))? = Some(db);
     Ok(())
 }
 
 #[napi]
 pub fn db_migrate(migrations_dir: String) -> Result<()> {
-    with_db(|db| {
-        db.run_migrations(&migrations_dir)
-            .map_err(|e| Error::from_reason(format!("Migration failed: {e}")))?;
-        Ok(())
-    })
+    let mut guard = DB.lock().map_err(|e| Error::from_reason(format!("DB lock error: {e}")))?;
+    match guard.as_mut() {
+        Some(db) => {
+            db.run_migrations(&migrations_dir)
+                .map_err(|e| Error::from_reason(format!("Migration failed: {e}")))?;
+            Ok(())
+        }
+        None => Err(Error::from_reason("Database not initialized. Call dbOpen() first.")),
+    }
 }
 
 #[napi]
 pub fn db_close() -> Result<()> {
-    *DB.lock() = None;
+    *DB.lock().map_err(|e| Error::from_reason(format!("DB lock error: {e}")))? = None;
     Ok(())
 }
 
@@ -60,8 +62,18 @@ pub fn db_close() -> Result<()> {
 
 pub use ai::client::ai_call;
 pub use ai::client::ai_call_self_consistency;
-pub use crypto::decrypt_aes;
-pub use crypto::encrypt_aes;
+
+#[napi]
+pub fn encrypt(plaintext: String, password: String) -> Result<String> {
+    crate::crypto::encrypt(&plaintext, &password)
+        .map_err(|e| Error::from_reason(e.to_string()))
+}
+
+#[napi]
+pub fn decrypt(ciphertext: String, password: String) -> Result<String> {
+    crate::crypto::decrypt(&ciphertext, &password)
+        .map_err(|e| Error::from_reason(e.to_string()))
+}
 
 // User settings with encrypted API keys
 #[napi(object)]

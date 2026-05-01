@@ -26,10 +26,12 @@ let backendBaseUrl = '';
 // Native Addon (Rust core) — replaces better-sqlite3 for DB + AI calls
 let nativeAddon = null;
 try {
-  const nativePath = isDev
-    ? require('path').join(__dirname, '../native/tipai_core.node')
-    : require('path').join(require('path').dirname(process.execPath), 'resources/native/tipai_core.node');
-  nativeAddon = require(nativePath);
+  if (isDev) {
+    nativeAddon = require('../native');
+  } else {
+    const nativePath = require('path').join(require('path').dirname(process.execPath), 'resources/native/tipai_core.node');
+    nativeAddon = require(nativePath);
+  }
   log(`Native addon loaded: v${nativeAddon.version()}`);
 } catch (err) {
   logError('Failed to load native addon, falling back to JS', err);

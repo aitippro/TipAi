@@ -1,5 +1,4 @@
 use rusqlite::{Connection, OpenFlags};
-use std::path::Path;
 use thiserror::Error;
 
 use super::migrations;
@@ -10,6 +9,7 @@ pub enum DbError {
     Sqlite(#[from] rusqlite::Error),
     #[error("Migration error: {0}")]
     Migration(String),
+    #[allow(dead_code)]
     #[error("Not found")]
     NotFound,
     #[error("Crypto error: {0}")]
@@ -18,11 +18,17 @@ pub enum DbError {
     Other(String),
 }
 
+impl From<crate::crypto::CryptoError> for DbError {
+    fn from(e: crate::crypto::CryptoError) -> Self {
+        DbError::Crypto(e.to_string())
+    }
+}
+
 pub type DbResult<T> = Result<T, DbError>;
 
 /// Thread-safe database wrapper
 pub struct Database {
-    conn: Connection,
+    pub(crate) conn: Connection,
     secret_key: Option<String>,
 }
 
@@ -57,11 +63,12 @@ impl Database {
         self.secret_key.as_deref()
     }
 
-    pub fn run_migrations(&self, migrations_dir: &str) -> DbResult<()> {
-        migrations::run(&self.conn, migrations_dir)
+    pub fn run_migrations(&mut self, migrations_dir: &str) -> DbResult<()> {
+        migrations::run(&mut self.conn, migrations_dir)
             .map_err(|e| DbError::Migration(e.to_string()))
     }
 
+    #[allow(dead_code)]
     pub fn conn(&self) -> &Connection {
         &self.conn
     }

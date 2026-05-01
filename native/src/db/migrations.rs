@@ -4,7 +4,7 @@ use std::path::Path;
 
 /// Run pending SQL migrations from a directory
 /// Each file named like `0001_description.sql` is executed in order
-pub fn run(conn: &Connection, migrations_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(conn: &mut Connection, migrations_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Ensure __migrations tracking table exists
     conn.execute(
         "CREATE TABLE IF NOT EXISTS __migrations (
@@ -44,12 +44,13 @@ pub fn run(conn: &Connection, migrations_dir: &str) -> Result<(), Box<dyn std::e
 
     pending.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let mut insert = conn.prepare("INSERT INTO __migrations (filename) VALUES (?1)")?;
-
     for (filename, sql) in pending {
         let tx = conn.transaction()?;
         tx.execute_batch(&sql)?;
-        insert.execute([&filename])?;
+        tx.execute(
+            "INSERT INTO __migrations (filename) VALUES (?1)",
+            [&filename],
+        )?;
         tx.commit()?;
     }
 

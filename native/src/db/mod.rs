@@ -8,4 +8,5 @@ pub mod prompts;
 pub mod templates;
 pub mod projects;
 
+#[allow(unused_imports)]
 pub use connection::Database;
