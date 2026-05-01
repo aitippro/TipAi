@@ -1,0 +1,82 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: '0 2 * * *'      # 每天凌晨 2 点 UTC (北京时间 10 点)
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── 全矩阵 CI ───
+  ci:
+    name: CI Check
+    uses: ./.github/workflows/ci.yml
+
+  # ─── 桌面端构建 ───
+  build-desktop:
+    name: Desktop Build (${{ matrix.os }})
+    needs: ci
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win
+            ext: exe
+          - os: macos-latest
+            target: mac
+            ext: dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Smoke test
+        shell: bash
+        run: |
+          node dist/boot.js &
+          PID=$!
+          for i in $(seq 1 15); do
+            sleep 2
+            if curl -sf http://localhost:3000/api/health; then
+              echo "✅ Backend OK"
+              break
+            fi
+            echo "⏳ Waiting... ($i)"
+          done
+          kill $PID 2>/dev/null || true
+      - name: Build desktop
+        run: npm run build:desktop:${{ matrix.target }} -- --publish never
+      - name: Upload nightly artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TipAi-nightly-${{ matrix.target }}-${{ github.run_id }}
+          path: release/*.${{ matrix.ext }}
+          retention-days: 7
+
+  # ─── 生成 Nightly Report ───
+  report:
+    name: Nightly Report
+    needs: [ci, build-desktop]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate report
+        run: |
+          echo "# 🌙 Nightly Build Report" >> $GITHUB_STEP_SUMMARY
+          echo "Date: $(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CI | ${{ needs.ci.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Desktop Builds | ${{ needs.build-desktop.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

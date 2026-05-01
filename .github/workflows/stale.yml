@@ -1,0 +1,37 @@
+name: Stale Bot
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 每天凌晨 1 点 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark and close stale
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issue 配置
+          stale-issue-message: '🤖 This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs.'
+          close-issue-message: '🤖 This issue has been automatically closed due to inactivity.'
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          exempt-issue-labels: 'pinned,security,enhancement'
+          
+          # PR 配置
+          stale-pr-message: '🤖 This PR has been automatically marked as stale because it has not had recent activity.'
+          close-pr-message: '🤖 This PR has been automatically closed due to inactivity.'
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 14
+          days-before-pr-close: 7
+          exempt-pr-labels: 'WIP,draft'
+          
+          # 其他
+          remove-stale-when-updated: true
+          operations-per-run: 30

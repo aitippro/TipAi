@@ -1,0 +1,83 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ─── PR 标题规范 ───
+  title-check:
+    name: PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            ui
+            api
+            db
+            desktop
+            ci
+            deps
+          requireScope: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── 文件变更检查 ───
+  file-checks:
+    name: File Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check file count
+        run: |
+          COUNT=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          echo "Changed files: $COUNT"
+          if [ "$COUNT" -gt 50 ]; then
+            echo "::warning::PR changes $COUNT files (>50). Consider splitting."
+          fi
+      - name: Check large files
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | while read file; do
+            if [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+              if [ "$SIZE" -gt 524288 ]; then
+                echo "::warning::Large file detected: $file ($SIZE bytes >500KB)"
+              fi
+            fi
+          done
+
+  # ─── Lockfile 完整性 ───
+  lockfile-check:
+    name: Lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify lockfile sync
+        run: |
+          npm ci --package-lock-only
+          if [ -n "$(git diff --name-only package-lock.json)" ]; then
+            echo "::error::package-lock.json is out of sync. Run 'npm install' and commit."
+            exit 1
+          fi
+          echo "✅ Lockfile is in sync"

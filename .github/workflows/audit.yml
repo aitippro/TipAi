@@ -1,0 +1,72 @@
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # 每周一 6 点 UTC (北京时间 14 点)
+  workflow_dispatch:
+
+jobs:
+  # ─── 漏洞扫描 ───
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Run audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+      - name: Check for critical vulnerabilities
+        run: |
+          npm audit --json > audit.json || true
+          CRITICAL=$(cat audit.json | node -e "const d=require('/dev/stdin'); const c=d?.vulnerabilities || {}; console.log(Object.values(c).filter(v=>v.severity==='critical').length)" 2>/dev/null || echo 0)
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities!"
+            exit 1
+          fi
+          echo "✅ No critical vulnerabilities"
+
+  # ─── 过期依赖报告 ───
+  outdated:
+    name: Outdated Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Generate outdated report
+        run: |
+          npm outdated --json > outdated.json 2>/dev/null || true
+          if [ -s outdated.json ] && [ "$(cat outdated.json)" != "{}" ]; then
+            echo "⚠️ Outdated dependencies found:"
+            cat outdated.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); Object.entries(d).forEach(([k,v])=>console.log(' -',k,':',v.current,'→',v.latest))"
+          else
+            echo "✅ All dependencies up to date"
+          fi
+
+  # ─── 自动创建 Issue (高危漏洞) ───
+  create-issue:
+    name: Create Security Issue
+    needs: audit
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔒 Security audit failed - ${new Date().toISOString().split('T')[0]}`;
+            const body = `Weekly dependency audit detected critical/high vulnerabilities.\n\nRun \`npm audit\` locally and check the [latest audit run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['security', 'dependencies']
+            });

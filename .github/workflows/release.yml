@@ -8,23 +8,55 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ─── CI 验证 ───
   ci:
     name: CI Check
+    uses: ./.github/workflows/ci.yml
+
+  # ─── 生成 Changelog ───
+  changelog:
+    name: Generate Changelog
+    needs: ci
     runs-on: ubuntu-latest
+    outputs:
+      body: ${{ steps.changelog.outputs.body }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npm run check
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
+        with:
+          fetch-depth: 0
+      - name: Parse version
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          if [[ "$TAG" =~ -(alpha|beta|rc) ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Generate changelog body
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            git log --pretty=format:'- %s (%h)' "$PREV_TAG..HEAD" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "body=🎉 First release!" >> $GITHUB_OUTPUT
+          fi
 
+  # ─── Windows 发布 ───
   release-windows:
     name: Windows Release
-    needs: ci
+    needs: [ci, changelog]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,25 +67,30 @@ jobs:
       - name: Smoke test
         run: |
           $proc = Start-Process -NoNewWindow -FilePath "node" -ArgumentList "dist/boot.js" -PassThru
-          for ($i = 0; $i -lt 10; $i++) {
+          for ($i = 0; $i -lt 15; $i++) {
             Start-Sleep -Seconds 2
             try {
               $r = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -UseBasicParsing -TimeoutSec 3
-              if ($r.StatusCode -eq 200) { Write-Host "OK"; break }
+              if ($r.StatusCode -eq 200) { Write-Host "✅ Backend OK"; break }
             } catch {}
           }
           Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
       - run: npm run build:desktop:win -- --publish never
       - uses: actions/upload-artifact@v4
-        with: { name: TipAi-Windows-Portable, path: release/*.exe }
+        with:
+          name: TipAi-Windows-Portable
+          path: release/*.exe
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*.exe
+          body: ${{ needs.changelog.outputs.body }}
+          prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+  # ─── macOS 发布 ───
   release-macos:
     name: macOS Release
-    needs: ci
+    needs: [ci, changelog]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,12 +101,35 @@ jobs:
       - name: Smoke test
         run: |
           node dist/boot.js &
-          for i in $(seq 1 10); do sleep 2; curl -sf http://localhost:3000/api/health && echo "OK" && break; done
+          for i in $(seq 1 15); do
+            sleep 2
+            curl -sf http://localhost:3000/api/health && echo "✅ Backend OK" && break
+          done
           kill %1 2>/dev/null || true
       - run: npm run build:desktop:mac -- --publish never
       - uses: actions/upload-artifact@v4
-        with: { name: TipAi-macOS, path: release/*.dmg }
+        with:
+          name: TipAi-macOS
+          path: release/*.dmg
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*.dmg
+          body: ${{ needs.changelog.outputs.body }}
+          prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── 完成报告 ───
+  report:
+    name: Release Report
+    needs: [release-windows, release-macos]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "# 🚀 Release ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | ${{ needs.release-windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ${{ needs.release-macos.result }} |" >> $GITHUB_STEP_SUMMARY
