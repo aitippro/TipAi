@@ -45,7 +45,7 @@ export function TextReveal({
           key={i}
           className={cn(
             "inline-block transition-all",
-            visible ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-4 blur-[4px]",
+            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
             shimmer && visible && "animate-shimmer"
           )}
           style={{

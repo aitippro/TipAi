@@ -182,18 +182,14 @@ export default function Home() {
 
         {/* STAGE 1: Input */}
         {stage === "input" && (
-          <div className="w-full max-w-2xl animate-fade-in-up">
+          <div className="w-full max-w-2xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-3">
                 <TextReveal text="模糊需求" mode="word" stagger={80} />
                 <span className="mx-3 text-slate-300 font-light">→</span>
-                <TextReveal
-                  text="完美提示词"
-                  mode="word"
-                  stagger={80}
-                  delay={200}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"
-                />
+                <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                  完美提示词
+                </span>
               </h1>
               <p className="text-slate-400 max-w-md mx-auto text-sm">
                 <TextReveal text="用自然语言描述任务，AI 自动分析意图并生成专业级提示词" mode="word" stagger={20} delay={400} />
