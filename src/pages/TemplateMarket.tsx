@@ -222,21 +222,19 @@ export default function TemplateMarket() {
               <TrendingUp className="w-4 h-4 text-apple-blue" />
               <h2 className="text-base font-semibold text-slate-800">精选模板</h2>
             </div>
-            <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
-                    <StaggerContainer>
-                {featuredTemplates.map((template) => (
-                  <StaggerItem key={template.id}>
-                    <TiltCard maxTilt={4} scale={1.01}>
-                      <TemplateMarketCard
-                        template={template}
-                        onUse={handleUseTemplate}
-                        onRate={handleRateTemplate}
-                      />
-                    </TiltCard>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
+            <StaggerContainer className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+              {featuredTemplates.map((template) => (
+                <StaggerItem key={template.id}>
+                  <TiltCard maxTilt={4} scale={1.01}>
+                    <TemplateMarketCard
+                      template={template}
+                      onUse={handleUseTemplate}
+                      onRate={handleRateTemplate}
+                    />
+                  </TiltCard>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
         </ScrollReveal>
       )}
@@ -265,9 +263,27 @@ export default function TemplateMarket() {
               action={{ label: "清除筛选", onClick: () => { setSearch(""); setSelectedDomain("all") } }}
             />
           ) : (
-            <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
-              <StaggerContainer>
-                {filteredTemplates.map((template) => (
+            <StaggerContainer className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+              {filteredTemplates.map((template) => (
+                <StaggerItem key={template.id}>
+                  <TiltCard maxTilt={4} scale={1.01}>
+                    <TemplateMarketCard
+                      template={template}
+                      onUse={handleUseTemplate}
+                      onRate={handleRateTemplate}
+                    />
+                  </TiltCard>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          )}
+        </TabsContent>
+
+        {isAuthenticated && (
+          <TabsContent value="my">
+            {myTemplates && myTemplates.length > 0 ? (
+              <StaggerContainer className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
+                {myTemplates.map((template) => (
                   <StaggerItem key={template.id}>
                     <TiltCard maxTilt={4} scale={1.01}>
                       <TemplateMarketCard
@@ -279,28 +295,6 @@ export default function TemplateMarket() {
                   </StaggerItem>
                 ))}
               </StaggerContainer>
-            </div>
-          )}
-        </TabsContent>
-
-        {isAuthenticated && (
-          <TabsContent value="my">
-            {myTemplates && myTemplates.length > 0 ? (
-              <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}`}>
-                <StaggerContainer>
-                  {myTemplates.map((template) => (
-                    <StaggerItem key={template.id}>
-                      <TiltCard maxTilt={4} scale={1.01}>
-                        <TemplateMarketCard
-                          template={template}
-                          onUse={handleUseTemplate}
-                          onRate={handleRateTemplate}
-                        />
-                      </TiltCard>
-                    </StaggerItem>
-                  ))}
-                </StaggerContainer>
-              </div>
             ) : (
               <EmptyState
                 icon={<Store className="w-10 h-10" />}

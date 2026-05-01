@@ -39,7 +39,7 @@ export function TextReveal({
   const randomOffsets = useRandomOffsets(items.length);
 
   return (
-    <span className={cn("inline-flex flex-wrap", className)}>
+    <span className={cn("inline", className)}>
       {items.map((item, i) => (
         <span
           key={i}
