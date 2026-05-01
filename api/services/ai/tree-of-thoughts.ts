@@ -51,14 +51,16 @@ export interface ToTConfig {
   valueThreshold: number;
   /** 最大总节点数（防止爆炸） */
   maxNodes: number;
+  /** 全局超时（毫秒） */
+  timeoutMs?: number;
 }
 
 export const DEFAULT_TOT_CONFIG: ToTConfig = {
   strategy: "bfs",
-  breadth: 3,
-  maxDepth: 4,
-  valueThreshold: 6,
-  maxNodes: 50,
+  breadth: 2,
+  maxDepth: 3,
+  valueThreshold: 5,
+  maxNodes: 20,
 };
 
 /** 候选生成器接口 — 可注入 mock 或真实 LLM */
@@ -96,6 +98,7 @@ export async function runTreeOfThoughts(
 ): Promise<TreeOfThoughtsResult> {
   const cfg = { ...DEFAULT_TOT_CONFIG, ...config };
   const start = Date.now();
+  const deadline = start + (cfg.timeoutMs ?? 30000);
 
   if (!globalGenerator || !globalEvaluator) {
     throw new Error("ToT engine not initialized: call setTotGenerator() and setTotEvaluator() first");
@@ -103,6 +106,10 @@ export async function runTreeOfThoughts(
 
   const tree: Record<string, ThoughtNode> = {};
   let nodeCounter = 0;
+
+  function isTimedOut(): boolean {
+    return Date.now() > deadline;
+  }
 
   function createNode(content: string, parentId: string | null, depth: number): ThoughtNode {
     const id = `t${nodeCounter++}`;
@@ -133,12 +140,12 @@ export async function runTreeOfThoughts(
   }
 
   // ============================================================================
-  // BFS 策略
+  // BFS 策略（支持并行评估和超时）
   // ============================================================================
   async function bfsExpand(root: ThoughtNode) {
     const queue: ThoughtNode[] = [root];
 
-    while (queue.length > 0 && Object.keys(tree).length < cfg.maxNodes) {
+    while (queue.length > 0 && Object.keys(tree).length < cfg.maxNodes && !isTimedOut()) {
       const current = queue.shift()!;
       if (current.depth >= cfg.maxDepth || current.isTerminal) continue;
 
@@ -146,12 +153,20 @@ export async function runTreeOfThoughts(
       const currentThought = current.id === root.id ? null : current.content;
 
       const candidates = await globalGenerator!(problem, currentThought, cfg.breadth);
+      if (isTimedOut()) break;
 
-      for (const candidate of candidates) {
-        if (Object.keys(tree).length >= cfg.maxNodes) break;
-        const child = createNode(candidate, current.id, current.depth + 1);
-
+      // 并行评估所有候选
+      const evalPromises = candidates.map(async (candidate) => {
+        if (isTimedOut()) return null;
         const evalResult = await globalEvaluator!(problem, candidate, path);
+        return { candidate, evalResult };
+      });
+
+      const evaluated = (await Promise.all(evalPromises)).filter((r): r is NonNullable<typeof r> => r !== null);
+
+      for (const { candidate, evalResult } of evaluated) {
+        if (Object.keys(tree).length >= cfg.maxNodes || isTimedOut()) break;
+        const child = createNode(candidate, current.id, current.depth + 1);
         child.value = evalResult.value;
         child.isTerminal = evalResult.isTerminal;
 
@@ -163,24 +178,32 @@ export async function runTreeOfThoughts(
   }
 
   // ============================================================================
-  // DFS 策略
+  // DFS 策略（支持并行评估和超时）
   // ============================================================================
   async function dfsExpand(root: ThoughtNode) {
     async function dfs(node: ThoughtNode) {
-      if (node.depth >= cfg.maxDepth || node.isTerminal || Object.keys(tree).length >= cfg.maxNodes) {
+      if (node.depth >= cfg.maxDepth || node.isTerminal || Object.keys(tree).length >= cfg.maxNodes || isTimedOut()) {
         return;
       }
 
       const path = getPathToNode(node.id);
       const currentThought = node.id === root.id ? null : node.content;
       const candidates = await globalGenerator!(problem, currentThought, cfg.breadth);
+      if (isTimedOut()) return;
+
+      // 并行评估所有候选
+      const evalPromises = candidates.map(async (candidate) => {
+        if (isTimedOut()) return null;
+        const evalResult = await globalEvaluator!(problem, candidate, path);
+        return { candidate, evalResult };
+      });
+
+      const results = (await Promise.all(evalPromises)).filter((r): r is NonNullable<typeof r> => r !== null);
 
       const children: ThoughtNode[] = [];
-      for (const candidate of candidates) {
-        if (Object.keys(tree).length >= cfg.maxNodes) break;
+      for (const { candidate, evalResult } of results) {
+        if (Object.keys(tree).length >= cfg.maxNodes || isTimedOut()) break;
         const child = createNode(candidate, node.id, node.depth + 1);
-
-        const evalResult = await globalEvaluator!(problem, candidate, path);
         child.value = evalResult.value;
         child.isTerminal = evalResult.isTerminal;
         children.push(child);
@@ -190,6 +213,7 @@ export async function runTreeOfThoughts(
       children.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
       for (const child of children) {
+        if (isTimedOut()) break;
         if (child.value !== null && child.value >= cfg.valueThreshold) {
           await dfs(child);
         }

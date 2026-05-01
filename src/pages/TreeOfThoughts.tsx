@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,18 @@ export default function TreeOfThoughtsPage() {
   const [breadth, setBreadth] = useState([3]);
   const [maxDepth, setMaxDepth] = useState([4]);
 
-  const solveMutation = trpc.tot.solve.useMutation();
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const solveMutation = trpc.tot.solve.useMutation({
+    onMutate: () => {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    },
+    onSettled: () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    },
+  });
 
   const handleSolve = () => {
     if (!problem.trim()) return;
@@ -134,7 +145,7 @@ export default function TreeOfThoughtsPage() {
               ) : (
                 <Search className="w-4 h-4 mr-2" />
               )}
-              开始推理
+              {isLoading ? `推理中 (${elapsed}s)` : "开始推理"}
             </Button>
           </div>
         </CardContent>
@@ -144,6 +155,9 @@ export default function TreeOfThoughtsPage() {
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
           推理失败：{error.message}
+          {error.message?.includes("timeout") && (
+            <span className="block mt-1 text-xs opacity-70">已展示部分结果，可尝试减小分支数或深度后重试</span>
+          )}
         </div>
       )}
 

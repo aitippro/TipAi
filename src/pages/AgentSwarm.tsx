@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,10 +35,20 @@ export default function AgentSwarmPage() {
   const [description, setDescription] = useState("");
   const [mode, setMode] = useState<"sequential" | "parallel" | "hierarchical">("sequential");
   const [selectedRoles, setSelectedRoles] = useState<string[]>(["planner", "executor"]);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const rolesQuery = trpc.swarm.roles.useQuery();
   const modesQuery = trpc.swarm.modes.useQuery();
-  const runMutation = trpc.swarm.run.useMutation();
+  const runMutation = trpc.swarm.run.useMutation({
+    onMutate: () => {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    },
+    onSettled: () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    },
+  });
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -150,10 +160,17 @@ export default function AgentSwarmPage() {
             ) : (
               <Play className="w-4 h-4 mr-2" />
             )}
-            运行 Swarm
+            {runMutation.isPending ? `运行中 (${elapsed}s)` : "运行 Swarm"}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Timeout warning */}
+      {result?.timedOut && (
+        <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 text-sm">
+          ⚠️ 部分代理执行超时，已返回可用结果。建议减少角色数量或缩短任务描述后重试。
+        </div>
+      )}
 
       {/* Results */}
       {result && (

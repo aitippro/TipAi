@@ -17,6 +17,7 @@ import {
 
 import { FAB } from "./components/layout/FAB"
 import { BottomTabBar } from "./components/layout/BottomTabBar"
+import { ErrorBoundary } from "./components/ErrorBoundary"
 
 // Code-split pages — each loads on demand
 const Home = lazy(() => import("./pages/Home"))
@@ -116,6 +117,7 @@ export default function App() {
           <main className="flex-1 min-h-screen md:ml-[240px] pt-14 md:pt-0 pb-8 md:pb-8">
             <div className="h-full">
               <Suspense fallback={<PageFallback />}>
+                <ErrorBoundary>
                 <AnimatePresence mode="wait">
                   <PageTransition key={location.pathname}>
                     <Routes>
@@ -146,6 +148,7 @@ export default function App() {
                     </Routes>
                   </PageTransition>
                 </AnimatePresence>
+                </ErrorBoundary>
               </Suspense>
             </div>
           </main>

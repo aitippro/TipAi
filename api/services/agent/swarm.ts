@@ -46,6 +46,7 @@ export interface SwarmResult {
     totalTimeMs: number;
   };
   usingAI: boolean;
+  timedOut?: boolean;
 }
 
 // ============================================================================
@@ -116,17 +117,40 @@ async function runAgentWithAI(
   input: string,
   model: string,
   apiKey: string,
-): Promise<{ output: string; timeMs: number }> {
+  timeoutMs: number = 25000,
+): Promise<{ output: string; timeMs: number; timedOut: boolean }> {
   const start = Date.now();
-  const response = await callAI(
-    model,
-    apiKey,
-    agent.systemPrompt,
-    `【任务描述】\n${input}\n\n请根据你的角色专长完成上述任务，直接输出结果，不要有多余寒暄。`,
-    0.7,
-  );
-  const timeMs = Date.now() - start;
-  return { output: response || "（AI 无返回）", timeMs };
+  const deadline = start + timeoutMs;
+
+  // Create a timeout promise
+  const timeoutPromise = new Promise<null>((_, reject) => {
+    const timer = setTimeout(() => {
+      clearTimeout(timer);
+      reject(new Error("Agent timeout"));
+    }, timeoutMs);
+  });
+
+  try {
+    const response = await Promise.race([
+      callAI(
+        model,
+        apiKey,
+        agent.systemPrompt,
+        `【任务描述】\n${input}\n\n请根据你的角色专长完成上述任务，直接输出结果，不要有多余寒暄。`,
+        0.7,
+      ),
+      timeoutPromise,
+    ]);
+    const timeMs = Date.now() - start;
+    return { output: response || "（AI 无返回）", timeMs, timedOut: false };
+  } catch (_e) {
+    const timeMs = Date.now() - start;
+    return {
+      output: `【${agent.name} 执行超时】\n该代理在 ${timeoutMs / 1000} 秒内未能完成，已跳过。可尝试减少角色数量或缩短任务描述后重试。`,
+      timeMs,
+      timedOut: true,
+    };
+  }
 }
 
 // ============================================================================
@@ -145,6 +169,11 @@ export async function runSwarm(
   const agents = selectedRoles.map((role, i) => createAgent(role, `${role}-${i}`));
   const log: string[] = [];
   const usingAI = !!(model && apiKey);
+  const globalDeadline = start + 40000; // 40s global timeout
+
+  function isTimedOut(): boolean {
+    return Date.now() > globalDeadline;
+  }
 
   function logEntry(msg: string) {
     const ts = new Date().toLocaleTimeString("zh-CN", { hour12: false });
@@ -155,13 +184,19 @@ export async function runSwarm(
 
   const runAgent = async (agent: Agent, input: string) => {
     if (usingAI) {
-      return runAgentWithAI(agent, input, model!, apiKey!);
+      const remaining = globalDeadline - Date.now();
+      const agentTimeout = Math.max(5000, Math.min(25000, remaining - 2000));
+      return runAgentWithAI(agent, input, model!, apiKey!, agentTimeout);
     }
-    return simulateAgentWork(agent, input);
+    return { ...simulateAgentWork(agent, input), timedOut: false };
   };
 
   if (mode === "sequential") {
     for (const agent of agents) {
+      if (isTimedOut()) {
+        logEntry(`全局超时，剩余代理已跳过`);
+        break;
+      }
       const task: SwarmTask = {
         id: `${taskId}-${agent.role}`,
         description: `${agent.name} 执行 ${description}`,
@@ -177,9 +212,9 @@ export async function runSwarm(
       await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
 
       task.output = result.output;
-      task.status = "completed";
+      task.status = result.timedOut ? "failed" : "completed";
       task.completedAt = Date.now();
-      logEntry(`${agent.name} 完成 (${result.timeMs}ms)`);
+      logEntry(`${agent.name} ${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
     }
   } else if (mode === "parallel") {
     const parallelTasks: SwarmTask[] = agents.map((agent) => ({
@@ -196,13 +231,14 @@ export async function runSwarm(
 
     await Promise.all(
       parallelTasks.map(async (task) => {
+        if (isTimedOut()) return;
         const agent = agents.find((a) => a.role === task.assignedTo)!;
         const result = await runAgent(agent, task.input);
         await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
         task.output = result.output;
-        task.status = "completed";
+        task.status = result.timedOut ? "failed" : "completed";
         task.completedAt = Date.now();
-        logEntry(`${agent.name} 完成 (${result.timeMs}ms)`);
+        logEntry(`${agent.name} ${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
       }),
     );
   } else {
@@ -214,28 +250,32 @@ export async function runSwarm(
     const coordinator = agents.find((a) => a.role === "coordinator");
 
     if (planner) {
-      const task: SwarmTask = {
-        id: `${taskId}-plan`,
-        description: "规划任务分解",
-        assignedTo: "planner",
-        input: description,
-        status: "running",
-        startedAt: Date.now(),
-      };
-      tasks.push(task);
-      logEntry("规划者开始分解任务...");
-      const result = await runAgent(planner, description);
-      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
-      task.output = result.output;
-      task.status = "completed";
-      task.completedAt = Date.now();
-      logEntry(`规划完成 (${result.timeMs}ms)`);
+      if (isTimedOut()) { logEntry(`全局超时，跳过规划`); }
+      else {
+        const task: SwarmTask = {
+          id: `${taskId}-plan`,
+          description: "规划任务分解",
+          assignedTo: "planner",
+          input: description,
+          status: "running",
+          startedAt: Date.now(),
+        };
+        tasks.push(task);
+        logEntry("规划者开始分解任务...");
+        const result = await runAgent(planner, description);
+        await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
+        task.output = result.output;
+        task.status = result.timedOut ? "failed" : "completed";
+        task.completedAt = Date.now();
+        logEntry(`规划${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
+      }
     }
 
     if (executors.length > 0) {
       logEntry(`启动 ${executors.length} 个执行者并行工作...`);
       await Promise.all(
         executors.map(async (exec, i) => {
+          if (isTimedOut()) return;
           const task: SwarmTask = {
             id: `${taskId}-exec-${i}`,
             description: `执行子任务 ${i + 1}`,
@@ -248,78 +288,92 @@ export async function runSwarm(
           const result = await runAgent(exec, description);
           await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
           task.output = result.output;
-          task.status = "completed";
+          task.status = result.timedOut ? "failed" : "completed";
           task.completedAt = Date.now();
-          logEntry(`执行者 ${i + 1} 完成 (${result.timeMs}ms)`);
+          logEntry(`执行者 ${i + 1} ${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
         }),
       );
     }
 
     if (reviewer) {
-      const task: SwarmTask = {
-        id: `${taskId}-review`,
-        description: "审查执行结果",
-        assignedTo: "reviewer",
-        input: tasks.map((t) => t.output || "").join("\n"),
-        status: "running",
-        startedAt: Date.now(),
-      };
-      tasks.push(task);
-      logEntry("审查者开始审查...");
-      const result = await runAgent(reviewer, task.input);
-      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
-      task.output = result.output;
-      task.status = "completed";
-      task.completedAt = Date.now();
-      logEntry(`审查完成 (${result.timeMs}ms)`);
+      if (isTimedOut()) { logEntry(`全局超时，跳过审查`); }
+      else {
+        const task: SwarmTask = {
+          id: `${taskId}-review`,
+          description: "审查执行结果",
+          assignedTo: "reviewer",
+          input: tasks.map((t) => t.output || "").join("\n"),
+          status: "running",
+          startedAt: Date.now(),
+        };
+        tasks.push(task);
+        logEntry("审查者开始审查...");
+        const result = await runAgent(reviewer, task.input);
+        await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
+        task.output = result.output;
+        task.status = result.timedOut ? "failed" : "completed";
+        task.completedAt = Date.now();
+        logEntry(`审查${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
+      }
     }
 
     if (optimizer) {
-      const task: SwarmTask = {
-        id: `${taskId}-optimize`,
-        description: "优化执行结果",
-        assignedTo: "optimizer",
-        input: tasks.map((t) => t.output || "").join("\n"),
-        status: "running",
-        startedAt: Date.now(),
-      };
-      tasks.push(task);
-      logEntry("优化者开始优化...");
-      const result = await runAgent(optimizer, task.input);
-      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
-      task.output = result.output;
-      task.status = "completed";
-      task.completedAt = Date.now();
-      logEntry(`优化完成 (${result.timeMs}ms)`);
+      if (isTimedOut()) { logEntry(`全局超时，跳过优化`); }
+      else {
+        const task: SwarmTask = {
+          id: `${taskId}-optimize`,
+          description: "优化执行结果",
+          assignedTo: "optimizer",
+          input: tasks.map((t) => t.output || "").join("\n"),
+          status: "running",
+          startedAt: Date.now(),
+        };
+        tasks.push(task);
+        logEntry("优化者开始优化...");
+        const result = await runAgent(optimizer, task.input);
+        await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
+        task.output = result.output;
+        task.status = result.timedOut ? "failed" : "completed";
+        task.completedAt = Date.now();
+        logEntry(`优化${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
+      }
     }
 
     if (coordinator) {
-      const task: SwarmTask = {
-        id: `${taskId}-coordinate`,
-        description: "协调生成最终输出",
-        assignedTo: "coordinator",
-        input: tasks.map((t) => t.output || "").join("\n"),
-        status: "running",
-        startedAt: Date.now(),
-      };
-      tasks.push(task);
-      logEntry("协调者整合最终结果...");
-      const result = await runAgent(coordinator, task.input);
-      await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
-      task.output = result.output;
-      task.status = "completed";
-      task.completedAt = Date.now();
-      logEntry(`协调完成 (${result.timeMs}ms)`);
+      if (isTimedOut()) { logEntry(`全局超时，跳过协调`); }
+      else {
+        const task: SwarmTask = {
+          id: `${taskId}-coordinate`,
+          description: "协调生成最终输出",
+          assignedTo: "coordinator",
+          input: tasks.map((t) => t.output || "").join("\n"),
+          status: "running",
+          startedAt: Date.now(),
+        };
+        tasks.push(task);
+        logEntry("协调者整合最终结果...");
+        const result = await runAgent(coordinator, task.input);
+        await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
+        task.output = result.output;
+        task.status = result.timedOut ? "failed" : "completed";
+        task.completedAt = Date.now();
+        logEntry(`协调${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
+      }
     }
   }
 
   const elapsed = Date.now() - start;
   const completed = tasks.filter((t) => t.status === "completed").length;
   const failed = tasks.filter((t) => t.status === "failed").length;
+  const hasTimedOut = isTimedOut();
+
+  if (hasTimedOut) {
+    logEntry(`⚠️ 全局超时（${elapsed}ms），已返回部分结果`);
+  }
 
   const coordinatorTask = tasks.find((t) => t.assignedTo === "coordinator" && t.output);
   const lastTask = tasks.filter((t) => t.output).pop();
-  const finalOutput = coordinatorTask?.output || lastTask?.output || "执行完成";
+  const finalOutput = coordinatorTask?.output || lastTask?.output || (hasTimedOut ? "部分代理执行超时，已返回可用结果。建议减少角色数量或缩短任务描述后重试。" : "执行完成");
 
   return {
     taskId,
@@ -336,6 +390,7 @@ export async function runSwarm(
       totalTimeMs: elapsed,
     },
     usingAI,
+    timedOut: hasTimedOut,
   };
 }
 

@@ -248,6 +248,7 @@ export const totRouter = createRouter({
         maxDepth: input.maxDepth,
         valueThreshold: input.valueThreshold,
         maxNodes: input.maxNodes,
+        timeoutMs: 35000, // 35s global timeout
       });
 
       return {
