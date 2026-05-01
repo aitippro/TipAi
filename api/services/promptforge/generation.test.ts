@@ -312,21 +312,27 @@ describe("promptForge generation service", () => {
     expect(result.result).toEqual(basePrompt);
   });
 
-  it("throws a PRECONDITION_FAILED error when quick generation has no api key", async () => {
+  it("handles quick generation when api key is empty (uses local fallback)", async () => {
     vi.mocked(resolvePromptForgeModelApiKey).mockResolvedValue({
       model: "kimi",
       apiKey: "",
     });
-
-    await expect(
-      quickGeneratePromptForgeResult(1, { intent: "summarize this feature" }),
-    ).rejects.toBeInstanceOf(TRPCError);
-
-    await expect(
-      quickGeneratePromptForgeResult(1, { intent: "summarize this feature" }),
-    ).rejects.toMatchObject({
-      code: "PRECONDITION_FAILED",
-      message: "未配置API Key，请先在设置中配置",
+    vi.mocked(parseSlashCommand).mockReturnValue({
+      command: null,
+      cleanIntent: "summarize this feature",
     });
+    vi.mocked(analyzeIntent).mockResolvedValue(baseAnalysis);
+    vi.mocked(recommendFramework).mockReturnValue([
+      buildRecommendation("co-star"),
+    ]);
+    vi.mocked(generatePrompt).mockResolvedValue(basePrompt);
+
+    const result = await quickGeneratePromptForgeResult(1, {
+      intent: "summarize this feature",
+    });
+
+    expect(result.analysis).toEqual(baseAnalysis);
+    expect(result.framework).toBe("co-star");
+    expect(result.result).toEqual(basePrompt);
   });
 });
