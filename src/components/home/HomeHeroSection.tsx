@@ -49,7 +49,7 @@ export function HomeHeroSection({
         <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight mb-5 leading-[1.15]">
           <span className="text-slate-900">模糊需求</span>
           <span className="mx-3 text-slate-300 font-light">→</span>
-          <span className="gradient-text">完美提示词</span>
+          <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">完美提示词</span>
         </h1>
 
         <p className="text-lg text-slate-500 max-w-lg mx-auto mb-12 leading-relaxed font-light">

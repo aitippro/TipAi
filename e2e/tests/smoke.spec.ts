@@ -17,9 +17,22 @@ test.describe('App Launch & Basic UI', () => {
   });
 
   test('main title renders correctly', async ({ page }) => {
+    // Dismiss onboarding overlay if present
+    const onboarding = page.locator('[class*="fixed inset-0 z-50"]').first();
+    if (await onboarding.isVisible().catch(() => false)) {
+      const skipBtn = onboarding.locator('button:has-text("以后再说"), button:has-text("开始使用")').first();
+      if (await skipBtn.isVisible().catch(() => false)) {
+        await skipBtn.click();
+      } else {
+        await page.evaluate(() => {
+          document.querySelectorAll('[class*="fixed inset-0 z-50"]').forEach(el => el.remove());
+        });
+      }
+      await page.waitForTimeout(500);
+    }
     // Wait for the main heading to appear
-    await expect(page.locator('text=模糊需求')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=完美提示词')).toBeVisible();
+    await expect(page.locator('h1 >> text=模糊需求')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1 >> text=完美提示词')).toBeVisible();
   });
 
   test('navigation sidebar is present', async ({ page }) => {

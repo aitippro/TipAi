@@ -39,12 +39,12 @@ export function TextReveal({
   const randomOffsets = useRandomOffsets(items.length);
 
   return (
-    <span className={cn("inline-flex flex-wrap", className)}>
+    <span className={cn("inline-block", className)}>
       {items.map((item, i) => (
         <span
           key={i}
           className={cn(
-            "inline-block transition-all will-change-transform",
+            "inline-block transition-all",
             visible ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-4 blur-[4px]",
             shimmer && visible && "animate-shimmer"
           )}
