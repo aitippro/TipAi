@@ -4,17 +4,17 @@
 
 # ✨ TipAi
 
-**智能提示词工程平台 · Electron 桌面端**
+**智能提示词工程平台**
 
 > 从模糊需求到精准提示词，全链路 AI 驱动
 
-<a href="https://github.com/aitippro/TipAi/actions/workflows/ci.yml"><img src="https://github.com/aitippro/TipAi/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://github.com/aitippro/TipAi/releases"><img src="https://img.shields.io/github/v/release/aitippro/TipAi?style=flat-square" alt="Release"></a>
 <img src="https://img.shields.io/badge/License-Non--Commercial-red?style=flat-square" alt="License">
-<img src="https://img.shields.io/badge/Electron-41-9feaf9?style=flat-square&logo=electron" alt="Electron">
 <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React">
 <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript" alt="TS">
-<img src="https://img.shields.io/badge/SQLite-local-003B57?style=flat-square&logo=sqlite" alt="SQLite">
+<img src="https://img.shields.io/badge/Tests-221%2F221-green?style=flat-square&logo=vitest" alt="Tests">
+<img src="https://img.shields.io/badge/Lint-0%20errors-brightgreen?style=flat-square&logo=eslint" alt="Lint">
+<img src="https://img.shields.io/badge/Frameworks-30-blue?style=flat-square" alt="Frameworks">
 
 </div>
 
@@ -22,30 +22,49 @@
 
 ## 简介
 
-**TipAi** 是一款本地优先的桌面端提示词工程工具。输入模糊需求，AI 自动分析意图、生成调优选项、输出精准可用的提示词。所有数据存储在本地 SQLite，无需注册账号。
+**TipAi** 是一款本地优先的提示词工程工具。输入模糊需求，AI 自动分析意图、多轮澄清、匹配最优框架、输出精准可用的提示词。所有数据存储在本地 SQLite，无需注册账号。
 
-### 亮点
+### 核心亮点
 
-| 🎨 Apple 风格 | 🔒 本地优先 | 🤖 多模型 AI |
-|:---|:---|:---|
-| 毛玻璃、SF Pro 字体、弹性动画 | SQLite 存储，无需联网 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
+| 🤖 AI 驱动 | 🎨 30+ 框架 | 🔒 本地优先 | 🌐 多模型 |
+|:---|:---|:---|:---|
+| 意图分析 → 策略路由 → 自动优化 | 从 RTF 到 ReAct，覆盖简单/中等/复杂全场景 | SQLite 存储，AES-256-GCM 加密 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
 
 ---
 
-## 功能
+## 功能全景
 
-### AI 模型层
-- **6 个 AI Provider** — 统一接口，支持 Kimi / OpenAI / Claude / DeepSeek / Gemini / Ollama
-- **智能路由** — 按任务类型自动选最优模型，故障自动降级
-- **离线模式** — Ollama 本地模型，断网也能用
+### 一期：学术 Debt 清零
+- **OPRO 自动优化引擎** — 多轮迭代优化提示词，LLM-as-Judge 六维评分，自动 early stopping
+- **Clarify 策略路由** — 11 领域 × 30+ 子领域分类（81.8% 准确率），AI 引导式多轮澄清
+- **Decode 策略层** — greedy / sampling / self-consistency 三种解码策略，任务类型自动推荐
 
-### 核心功能
-- **Clarify** — AI 引导式多轮对话，将模糊需求转化为结构化摘要
-- **Optimizer** — 策略选择 + Diff 对比，一键优化提示词
-- **Export** — JSON / Markdown 批量导出，支持筛选过滤
-- **API Key 管理** — AES-256-GCM 加密存储到本地数据库
-- **动态提示词生成** — 两层控件系统，实时重生成
-- **提示词生命周期** — 六阶段流水线管理
+### 二期：前沿追赶
+- **多模态提示词引擎** — 文生图 / 图生文 / 视频分镜，支持 Midjourney / DALL-E / Sora / Runway
+- **智能框架匹配引擎** — 30 框架知识图谱 + 5 维度评分 + Canvas 力导向图可视化
+- **Tree of Thoughts 推理引擎** — BFS/DFS 多路径探索 + SVG 树形可视化
+
+### 三期：工程化闭环
+- **质量门禁系统** — 12 项检查点（完整性/安全性/格式一致性/语言混合等）
+- **反馈闭环系统** — 5 维评分 + 趋势分析 + 进化建议
+- **Drift Detection** — 词频向量 + Cosine 相似度 + 需求漂移趋势告警
+
+### 四期：生态扩展
+- **REST API 开放** — 6 端点（生成/优化/多模态/ToT/学术引用/文档）+ Python/TS SDK 示例
+- **Agent Swarm** — 5 角色（规划/执行/审校/优化/协调）× 3 协作模式（顺序/并行/层级）
+- **学术合作工具** — APA/MLA/GB7714/IEEE/Chicago 五种引用格式 + 实验复现报告
+
+---
+
+## 30 个提示词框架
+
+| 复杂度 | 框架 |
+|--------|------|
+| **简单** (6) | RTF · APE · TAG · CARE · BAB · SMART · Compare-Contrast · Brainstorming |
+| **中等** (10) | CO-STAR · RISEN · CRISPE · BROKE · SCQA · PROMPT · Few-Shot · Multi-Translate · Persona+ · Crisis-Response · Data-Storytelling |
+| **复杂** (10) | Chain-of-Thought · Tree-of-Thoughts · ReAct · LangGPT · APE+ · Self-Refine · Meta-Prompting · Security-Audit · Scientific-Experiment · Medical-Diagnosis · Legal-Analysis |
+
+> 每个框架包含完整定义：适用场景、组件结构、模板、示例，以及框架间的关系网络（相似/互补/升级路径）。
 
 ---
 
@@ -53,13 +72,11 @@
 
 | 层级 | 技术 |
 |------|------|
-| 桌面 | Electron 41 |
-| 前端 | React 19 · TypeScript 5.9 · Vite 7 · Tailwind CSS 3 · shadcn/ui |
+| 前端 | React 19 · TypeScript 5.9 · Vite 7 · Tailwind CSS 3 · shadcn/ui · Framer Motion |
 | API | Hono 4 · tRPC 11 |
 | 数据库 | SQLite (better-sqlite3) · Drizzle ORM |
 | 加密 | AES-256-GCM · jose JWT · bcryptjs |
-| 测试 | Vitest 4 |
-| 打包 | Electron Builder (Portable / DMG) |
+| 测试 | Vitest 4 (221/221 通过) |
 | CI/CD | GitHub Actions |
 
 ---
@@ -77,16 +94,16 @@ git clone https://github.com/aitippro/TipAi.git
 cd TipAi
 npm install
 npm run db:push
-npm run dev              # Web 模式
-npm run dev:electron     # 桌面模式
+npm run dev              # 开发模式
 ```
 
-### 生产构建
+### 常用命令
 
 ```bash
-npm run build              # 构建
-npm run build:desktop:win  # Windows (.exe)
-npm run build:desktop:mac  # macOS (.dmg)
+npm run check     # TypeScript 类型检查
+npm run lint      # ESLint（当前 0 errors / 0 warnings）
+npm run test      # Vitest 测试（221/221 通过）
+npm run build     # 生产构建
 ```
 
 ---
@@ -94,29 +111,36 @@ npm run build:desktop:mac  # macOS (.dmg)
 ## 项目结构
 
 ```
-src/              React 前端
-  components/ui/  shadcn/ui 组件库
-  components/     clarify / optimizer / export / dynamic-prompt
-api/              tRPC 路由 + 服务层
-  services/ai/    6 个 AI Provider
-db/               Drizzle schema + 迁移
-electron/         主进程 + preload
-contracts/        共享类型定义
-docs/             项目文档
+src/                      React 前端
+  components/             UI 组件 + 特效组件
+  pages/                  页面路由（11 个功能页面）
+  hooks/                  自定义 Hooks（动画/交互）
+  lib/animation/          弹簧动画系统
+api/                      tRPC 路由 + 服务层
+  lib/ai-service-v3/      30 框架目录中心
+  services/ai/            6 个 AI Provider + 解码策略 + ToT
+  services/clarify/       任务分类器 + 领域知识 + 策略路由
+  services/promptforge/   OPRO 引擎 + LLM-as-Judge + 生成服务
+  services/framework/     框架知识图谱 + 匹配引擎
+  services/agent/         Agent Swarm 协作引擎
+  services/multimodal/    多模态提示词引擎
+  services/quality/       质量门禁 + Drift Detection
+  services/academic/      学术引用 + 实验复现报告
+  rest-router.ts          REST API 开放端点
+db/                       Drizzle schema + 迁移
 ```
 
 ---
 
-## 开发
+## 质量指标
 
-```bash
-npm run check     # tsc 类型检查
-npm run lint      # ESLint
-npm run test      # Vitest
-npm run build     # 生产构建
-```
-
-CI 管线：`check` → `lint` → `test` → `build`
+| 指标 | 状态 |
+|------|------|
+| 测试覆盖 | **221 / 221** 通过，19 个测试文件 |
+| Lint | **0 errors / 0 warnings** |
+| 类型检查 | 通过 |
+| 构建 | 通过 |
+| 框架分类准确率 | **81.8%** (9/11) |
 
 ---
 
@@ -124,13 +148,11 @@ CI 管线：`check` → `lint` → `test` → `build`
 
 | 文档 | 说明 |
 |------|------|
-| [许可协议](LICENSE.md) | 非商业使用许可 |
-| [贡献指南](docs/CONTRIBUTING.md) | 如何参与 |
-| [版本记录](docs/CHANGELOG.md) | 变更日志 |
-| [致谢引用](docs/ATTRIBUTION.md) | 论文与框架来源 |
-| [安全检查](docs/SECURITY_CHECKLIST.md) | 安全清单 |
-| [路线图](docs/ROADMAP.md) | 未来规划 |
-| [迭代进度](docs/ITERATION_PROGRESS.md) | 开发进度 |
+| [LICENSE](LICENSE.md) | 非商业使用许可 |
+| [CHANGELOG](docs/CHANGELOG.md) | 版本变更日志 |
+| [CONTRIBUTING](docs/CONTRIBUTING.md) | 贡献指南 |
+| [ATTRIBUTION](docs/ATTRIBUTION.md) | 论文与框架来源 |
+| [SECURITY](docs/SECURITY_CHECKLIST.md) | 安全检查清单 |
 
 ---
 
@@ -138,13 +160,15 @@ CI 管线：`check` → `lint` → `test` → `build`
 
 - [Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide) by DAIR.AI
 - [LangGPT](https://github.com/EmbraceAGI/LangGPT)
-- [Dynamic Prompt Middleware](https://arxiv.org/pdf/2412.02357) by Microsoft Research
+- [OPRO: Large Language Models as Optimizers](https://arxiv.org/abs/2309.03409)
+- [Tree of Thoughts](https://arxiv.org/abs/2305.10601)
+- [Self-Consistency Improves Chain of Thought](https://arxiv.org/abs/2203.11171)
 
 ---
 
 ## 许可证
 
-本项目采用**非商业使用许可**。允许个人学习、研究、教学、非盈利使用。禁止商业使用、转售、嵌入商业产品。详见 [LICENSE.md](LICENSE.md)。
+本项目采用**非商业使用许可**。允许个人学习、研究、教学、非盈利使用。禁止商业使用、转售、嵌入商业产品。详见 [LICENSE](LICENSE.md)。
 
 <div align="center">
 
