@@ -5,8 +5,9 @@ const { pathToFileURL } = require('url');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
 const isDev = !app.isPackaged;
-const appDir = isDev ? __dirname : path.dirname(app.getPath('exe'));
-const dataDir = path.join(appDir, 'data');
+const dataDir = isDev
+  ? path.join(__dirname, 'data')
+  : path.join(app.getPath('userData'), 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'tipai.db');
 const LOG_FILE = path.join(dataDir, 'tipai.log');
@@ -67,6 +68,48 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+// Run SQL migrations using better-sqlite3 (available in main process)
+function runMigrations(dbPath, migrationsDir) {
+  const Database = require('better-sqlite3');
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS __migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename TEXT NOT NULL UNIQUE,
+      appliedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  if (!fs.existsSync(migrationsDir)) {
+    db.close();
+    return;
+  }
+
+  const appliedRows = db.prepare('SELECT filename FROM __migrations').all();
+  const applied = new Set(appliedRows.map(r => r.filename));
+
+  const pending = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort()
+    .filter(f => !applied.has(f));
+
+  const insert = db.prepare('INSERT INTO __migrations (filename) VALUES (?)');
+
+  for (const filename of pending) {
+    const sql = fs.readFileSync(path.join(migrationsDir, filename), 'utf-8');
+    const runMigration = db.transaction(() => {
+      db.exec(sql);
+      insert.run(filename);
+    });
+    runMigration();
+    log(`Applied migration: ${filename}`);
+  }
+
+  db.close();
+}
+
 // Start backend — in dev Vite handles everything; in prod we load Hono in-process
 async function startBackend() {
   process.env.NODE_ENV = isDev ? 'development' : 'production';
@@ -84,6 +127,12 @@ async function startBackend() {
 
   // Production: load Hono app in-process for IPC-based API calls
   process.env.TIPAI_ELECTRON = '1';
+
+  // Ensure database tables exist before starting backend
+  const migrationsDir = isDev
+    ? path.join(__dirname, '../db/migrations')
+    : path.join(path.dirname(app.getPath('exe')), 'resources', 'db', 'migrations');
+  runMigrations(dbPath, migrationsDir);
 
   const bootPath = path.join(__dirname, '../dist/boot.js');
   const bootUrl = pathToFileURL(bootPath).href;

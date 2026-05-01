@@ -28,7 +28,7 @@ node_modules/
 *.db
 *.sqlite
 *.sqlite3
-db/migrations/*.sql
+# db/migrations/*.sql  ← 已注释：drizzle-kit 生成的迁移文件需要提交到版本库
 # TLS/SSL
 *.pem
 *.key
