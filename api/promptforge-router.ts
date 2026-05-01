@@ -141,4 +141,14 @@ export const promptForgeRouter = createRouter({
 
   // P1-2: 框架知识图谱数据（用于可视化）
   frameworkGraph: publicQuery.query(() => getFrameworkGraphData()),
+
+  /** 检查是否有 API Key 配置（环境变量或用户设置）——用于启动引导判断 */
+  apiKeyStatus: publicQuery.query(() => {
+    const envKeys = ["KIMI_API_KEY", "OPENAI_API_KEY", "CLAUDE_API_KEY", "DEEPSEEK_API_KEY"];
+    const hasEnvKey = envKeys.some((k) => !!process.env[k]);
+    return {
+      configured: hasEnvKey,
+      sources: envKeys.filter((k) => !!process.env[k]).map((k) => k.replace("_API_KEY", "").toLowerCase()),
+    };
+  }),
 });

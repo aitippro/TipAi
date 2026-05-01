@@ -6,7 +6,14 @@ import { PageTransition } from "./components/layout/PageTransition"
 import { KeyboardShortcutProvider } from "./components/layout/KeyboardShortcutProvider"
 import { CommandPalette } from "./components/search/CommandPalette"
 import { Onboarding } from "./components/Onboarding"
-import { isFirstLaunch, markOnboarded } from "./lib/onboarding"
+import { SplashScreen } from "./components/SplashScreen"
+import { trpc } from "./providers/trpc"
+import {
+  isFirstLaunch,
+  markOnboarded,
+  hasAnyApiKey,
+  shouldSkipSplash,
+} from "./lib/onboarding"
 
 import { FAB } from "./components/layout/FAB"
 import { BottomTabBar } from "./components/layout/BottomTabBar"
@@ -47,20 +54,44 @@ function PageFallback() {
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showSplash, setShowSplash] = useState(false)
   const [appReady, setAppReady] = useState(false)
 
   const location = useLocation()
 
+  // Check API Key status (public query — works even when not logged in)
+  const { data: keyStatus, isLoading: keyStatusLoading } =
+    trpc.promptForge.apiKeyStatus.useQuery(undefined, {
+      retry: false,
+      refetchOnWindowFocus: false,
+    })
+
+  // Check user settings (authed query — requires login)
+  const { data: settings, isLoading: settingsLoading } =
+    trpc.promptForge.getSettings.useQuery(undefined, {
+      retry: false,
+      refetchOnWindowFocus: false,
+    })
+
   useEffect(() => {
-    const t1 = setTimeout(() => {
-      if (isFirstLaunch()) {
-        setShowOnboarding(true)
-      } else {
-        setAppReady(true)
-      }
-    }, 300)
-    return () => clearTimeout(t1)
-  }, [])
+    if (keyStatusLoading) return
+
+    const envConfigured = keyStatus?.configured ?? false
+    const userConfigured = hasAnyApiKey(settings)
+    const configured = envConfigured || userConfigured
+    const firstLaunch = isFirstLaunch()
+
+    if (!configured || firstLaunch) {
+      // 没配置 API Key 或首次启动 → 强制引导
+      setShowOnboarding(true)
+    } else if (shouldSkipSplash()) {
+      // 已配置且选择跳过 Splash
+      setAppReady(true)
+    } else {
+      // 已配置 → 显示短暂欢迎界面
+      setShowSplash(true)
+    }
+  }, [keyStatus, keyStatusLoading, settings, settingsLoading])
 
   const handleOnboardingComplete = () => {
     markOnboarded()
@@ -68,10 +99,16 @@ export default function App() {
     setAppReady(true)
   }
 
+  const handleSplashComplete = () => {
+    setShowSplash(false)
+    setAppReady(true)
+  }
+
   return (
     <KeyboardShortcutProvider onCommandPalette={() => setSearchOpen(true)} onCloseModal={() => setSearchOpen(false)}>
       <div className="min-h-screen bg-background antialiased flex">
         {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
+        {showSplash && <SplashScreen onComplete={handleSplashComplete} duration={200} />}
 
         <div className={`flex flex-1 transition-opacity duration-500 ${appReady ? "opacity-100" : "opacity-0"}`}>
           <Sidebar />
