@@ -158,11 +158,26 @@ db/                       Drizzle schema + 迁移
 
 ## 致谢
 
-- [Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide) by DAIR.AI
-- [LangGPT](https://github.com/EmbraceAGI/LangGPT)
-- [OPRO: Large Language Models as Optimizers](https://arxiv.org/abs/2309.03409)
-- [Tree of Thoughts](https://arxiv.org/abs/2305.10601)
-- [Self-Consistency Improves Chain of Thought](https://arxiv.org/abs/2203.11171)
+本项目的设计思想和提示词框架体系，参考和借鉴了以下开源项目、学术论文与社区资源：
+
+### 开源项目
+- [Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide) by DAIR.AI — 提示词工程领域最权威的社区指南
+- [LangGPT](https://github.com/EmbraceAGI/LangGPT) — 结构化提示词编程框架
+- [awesome-prompts](https://github.com/ai-boost/awesome-prompts) by AI Boost
+- [awesome-prompt-engineering](https://github.com/tysoncung/awesome-prompt-engineering) by Tyson Cung
+- [prompt-architect](https://github.com/nati112/prompt-architect) by nati112
+
+### 学术论文
+- [OPRO: Large Language Models as Optimizers](https://arxiv.org/abs/2309.03409) — Yang et al., Google DeepMind, 2023
+- [Tree of Thoughts: Deliberate Problem Solving with Large Language Models](https://arxiv.org/abs/2305.10601) — Yao et al., NeurIPS 2023
+- [Self-Consistency Improves Chain of Thought Reasoning in LLMs](https://arxiv.org/abs/2203.11171) — Wang et al., ICLR 2023
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903) — Wei et al., NeurIPS 2022
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Yao et al., ICLR 2023
+- [Self-Refine: Iterative Refinement with Self-Feedback](https://arxiv.org/abs/2303.17651) — Madaan et al., NeurIPS 2023
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Brown et al., NeurIPS 2020
+- [LangGPT: Rethinking Structured Reusable Prompt Design](https://arxiv.org/abs/2402.16929) — Wang et al., 2024
+
+> 完整的引用列表、框架来源说明与技术栈致谢，请查阅 [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)。
 
 ---
 
