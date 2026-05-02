@@ -1,15 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
+import { native } from "./lib/native";
 import { z } from "zod";
 import { createRouter, authedQuery } from "./middleware";
-
-// ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
 import { optimizePrompt, evaluatePrompt } from "./lib/ai-service-v2";
 import { runOPRO } from "./services/promptforge/opro-engine";
 import { judgePrompt } from "./services/promptforge/llm-judge";

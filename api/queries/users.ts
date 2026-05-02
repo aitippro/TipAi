@@ -1,14 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
+import { native } from "../lib/native";
 import type { InsertUser } from "@db/schema";
-
-// ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../../native");
-} catch {
-  // Browser fallback
-}
 
 export async function findUserByUnionId(unionId: string) {
   if (!native) return null;

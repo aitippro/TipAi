@@ -10,12 +10,7 @@ import type { LifecycleStage, PipelineSummary } from "@contracts/lifecycle";
 import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 // ── Native Addon (Electron/Node main process) ─────────────
-let native: any = null;
-try {
-  native = require("../../../../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
+import { native } from "../../lib/native";
 
 function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
   if (!value) return fallback;

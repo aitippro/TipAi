@@ -1,15 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
-import { decrypt, encrypt } from "../../lib/crypto";
 import type { UpdatePromptForgeSettingsInput } from "./schemas";
 
 // ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
+import { native } from "../../lib/native";
 
 // Local UserSettings type (matches DB schema, camelCase)
 interface UserSettings {
@@ -30,7 +24,7 @@ interface UserSettings {
 function inferDefaultModel(settings?: UserSettings): string {
   const order = ["deepseek", "kimi", "openai", "claude"];
   for (const model of order) {
-    const key = getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
+    const key = resolveStoredApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
     if (key) return model;
   }
   return "kimi"; // ultimate fallback
@@ -126,21 +120,13 @@ function buildSettingsUpdateData(
   return updateData;
 }
 
-function getApiKey(model: string, settings?: UserSettings): string {
-  if (model === "kimi" && settings?.kimiApiKey) return decrypt(settings.kimiApiKey);
-  if (model === "openai" && settings?.openaiApiKey) return decrypt(settings.openaiApiKey);
-  if (model === "claude" && settings?.claudeApiKey) return decrypt(settings.claudeApiKey);
-  if (model === "deepseek" && settings?.deepseekApiKey) return decrypt(settings.deepseekApiKey);
-  return "";
-}
-
 /** Get all available models sorted by: preferred model first, then remaining by priority */
 export function getAvailableModels(settings?: UserSettings): { model: string; apiKey: string }[] {
   const result: { model: string; apiKey: string }[] = [];
   const preferred = settings?.defaultModel || "kimi";
 
   // Try preferred model first
-  const preferredKey = getApiKey(preferred, settings) || process.env[`${preferred.toUpperCase()}_API_KEY`] || "";
+  const preferredKey = resolveStoredApiKey(preferred, settings) || process.env[`${preferred.toUpperCase()}_API_KEY`] || "";
   if (preferredKey) {
     result.push({ model: preferred, apiKey: preferredKey });
   }
@@ -149,7 +135,7 @@ export function getAvailableModels(settings?: UserSettings): { model: string; ap
   const remainingOrder = ["deepseek", "kimi", "openai", "claude"];
   for (const model of remainingOrder) {
     if (model === preferred) continue; // already tried
-    const key = getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
+    const key = resolveStoredApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
     if (key) {
       result.push({ model, apiKey: key });
     }
@@ -159,7 +145,11 @@ export function getAvailableModels(settings?: UserSettings): { model: string; ap
 }
 
 export function resolveStoredApiKey(model: string, settings?: UserSettings): string {
-  return getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
+  if (model === "kimi" && settings?.kimiApiKey) return settings.kimiApiKey;
+  if (model === "openai" && settings?.openaiApiKey) return settings.openaiApiKey;
+  if (model === "claude" && settings?.claudeApiKey) return settings.claudeApiKey;
+  if (model === "deepseek" && settings?.deepseekApiKey) return settings.deepseekApiKey;
+  return "";
 }
 
 function mapNativeSettings(userId: number, s: any): UserSettings {
@@ -218,10 +208,10 @@ export async function updatePromptForgeSettings(
   if (updateData.defaultModel !== undefined) nativeUpdate.default_model = updateData.defaultModel;
   if (updateData.defaultFramework !== undefined) nativeUpdate.default_framework = updateData.defaultFramework;
   if (updateData.defaultLanguage !== undefined) nativeUpdate.default_language = updateData.defaultLanguage;
-  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = encrypt(String(updateData.kimiApiKey));
-  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = encrypt(String(updateData.openaiApiKey));
-  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = encrypt(String(updateData.claudeApiKey));
-  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = encrypt(String(updateData.deepseekApiKey));
+  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = String(updateData.kimiApiKey);
+  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = String(updateData.openaiApiKey);
+  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = String(updateData.claudeApiKey);
+  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = String(updateData.deepseekApiKey);
 
   native.settingsUpdate(userId, nativeUpdate);
   return { success: true };

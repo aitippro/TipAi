@@ -18,12 +18,7 @@ import { getPromptForgeSettingsRecord, getAvailableModels } from "../promptforge
 import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 // ── Native Addon ────────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../../../../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
+import { native } from "../../lib/native";
 
 interface ConversationTurn {
   role: string;

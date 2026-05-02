@@ -26,10 +26,10 @@ let backendBaseUrl = '';
 // Native Addon (Rust core) — replaces better-sqlite3 for DB + AI calls
 let nativeAddon = null;
 try {
-  if (isDev) {
+  if (isDev || !app.isPackaged) {
     nativeAddon = require('../native');
   } else {
-    const nativePath = require('path').join(require('path').dirname(process.execPath), 'resources/native/tipai_core.node');
+    const nativePath = path.join(path.dirname(process.execPath), 'resources/native/tipai_core.node');
     nativeAddon = require(nativePath);
   }
   log(`Native addon loaded: v${nativeAddon.version()}`);
@@ -69,7 +69,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(`http://localhost:${backendPort}`);
+    mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
   }
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
@@ -193,7 +193,7 @@ async function startBackend() {
     return;
   }
 
-  // Production: load Hono app in-process for IPC-based API calls
+  // Production: load Hono app in-process for IPC-based API calls (no HTTP server)
   process.env.TIPAI_ELECTRON = '1';
 
   // Ensure database tables exist before starting backend
@@ -205,33 +205,11 @@ async function startBackend() {
   const bootPath = path.join(__dirname, '../dist/boot.js');
   const bootUrl = pathToFileURL(bootPath).href;
 
-  const [{ serve }, mod] = await Promise.all([
-    import('@hono/node-server'),
-    import(bootUrl),
-  ]);
+  const mod = await import(bootUrl);
 
   honoApp = mod.default;
-  mod.serveStaticFiles(honoApp);
-
-  return new Promise((resolve, reject) => {
-    const server = serve({ fetch: honoApp.fetch, port: 0, hostname: '127.0.0.1' }, () => {
-      const addr = server.address();
-      if (addr && typeof addr === 'object') {
-        backendPort = addr.port;
-        backendBaseUrl = `http://localhost:${backendPort}`;
-        process.env.PORT = String(backendPort);
-        process.env.APP_URL = backendBaseUrl;
-        backendReady = true;
-        backendServer = server;
-        log(`Backend started on port ${backendPort} (IPC mode)`);
-        resolve();
-      } else {
-        reject(new Error('Could not determine port'));
-      }
-    });
-    server.on('error', reject);
-    setTimeout(() => reject(new Error('Backend startup timeout')), 30000);
-  });
+  backendReady = true;
+  log('Backend loaded in-process (IPC mode, no HTTP port)');
 }
 
 // ── IPC Handlers ────────────────────────────────────────────

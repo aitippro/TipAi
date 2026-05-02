@@ -8,12 +8,7 @@ import type {
 import type { ProjectEntry as Project } from "@db/schema";
 
 // ── Native Addon (Electron/Node main process) ─────────────
-let native: any = null;
-try {
-  native = require("../../../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
+import { native } from "../../lib/native";
 
 /** Map native snake_case ProjectEntry → Drizzle-compatible camelCase */
 function mapNativeProject(entry: any): Project | null {

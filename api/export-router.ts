@@ -1,15 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
+import { native } from "./lib/native";
 import { createRouter, authedQuery } from "./middleware";
 import { exportProjectsSchema, exportPromptsSchema } from "./services/export/schemas";
-
-// ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../native");
-} catch {
-  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-}
 
 export const exportRouter = createRouter({
   // Export projects

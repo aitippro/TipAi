@@ -10,38 +10,7 @@
  */
 
 // ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-if (process.env.VITEST) {
-  // Test mode: lazy-load mock to avoid binary dependency in CI
-  native = {
-    evaluationCreate: (opts: Record<string, unknown>) => ({ id: Math.floor(Math.random() * 100000), ...opts }),
-    evaluationStats: () => ({
-      total_count: 0,
-      avg_scores: { clarity: 0, relevance: 0, completeness: 0, actionability: 0, overall: 0 },
-      trends: { clarity: "stable", relevance: "stable", completeness: "stable", actionability: "stable", overall: "stable" },
-      top_issues: [],
-      evolution_suggestion: "暂无反馈数据",
-    }),
-    evaluationList: (_projectId: number | null, _limit: number) => [
-      {
-        id: 1,
-        project_id: _projectId ?? 1,
-        step_id: null,
-        user_id: 1,
-        dimension: "clarity",
-        score: 8,
-        feedback: "Test feedback",
-        created_at: new Date().toISOString(),
-      },
-    ],
-  };
-} else {
-  try {
-    native = require("../../../native");
-  } catch {
-    throw new Error("Native addon is required. Browser mode fallback removed in P5.");
-  }
-}
+import { native } from "../../lib/native";
 
 function mapNativeEvaluation(row: NativeEvalEntry): FeedbackHistoryItem {
   return {

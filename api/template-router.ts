@@ -1,16 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
+import { native } from "./lib/native";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery, authedQuery } from "./middleware";
-
-// ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../native");
-} catch {
-  // Browser fallback
-}
 
 export const templateRouter = createRouter({
   list: publicQuery.query(async () => {

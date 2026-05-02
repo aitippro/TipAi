@@ -3,12 +3,7 @@
 import type { SaveLibraryItemInput } from "./schemas";
 
 // ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../../native");
-} catch {
-  // Browser fallback
-}
+import { native } from "../../lib/native";
 
 export async function savePromptForgeLibraryItem(
   userId: number,

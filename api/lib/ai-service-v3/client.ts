@@ -1,5 +1,6 @@
 import type { DecodeStrategy } from "../../services/ai/decoding-strategies";
 import { resolveDecodeStrategy } from "../../services/ai/decoding-strategies";
+import { native } from "../native";
 
 const MODEL_CONFIGS: Record<
   string,
@@ -24,6 +25,16 @@ const MODEL_CONFIGS: Record<
     baseUrl: "https://api.deepseek.com/v1/chat/completions",
     modelId: "deepseek-chat",
     name: "DeepSeek",
+  },
+  gemini: {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+    modelId: "gemini-1.5-flash",
+    name: "Gemini",
+  },
+  ollama: {
+    baseUrl: "http://localhost:11434/v1/chat/completions",
+    modelId: "llama3.1",
+    name: "Ollama",
   },
 };
 
@@ -58,46 +69,72 @@ async function runSelfConsistencyCallAI(
 ): Promise<string | null> {
   // console.log(`[callAI SC] Running ${sampleCount} paths for ${provider}`);
 
-  const promises: Promise<string | null>[] = [];
-  for (let i = 0; i < sampleCount; i++) {
-    promises.push(callAISingle(provider, apiKey, systemPrompt, userMessage, temperature));
+  if (provider === "gemini") {
+    const promises: Promise<string | null>[] = [];
+    for (let i = 0; i < sampleCount; i++) {
+      promises.push(callAISingle(provider, apiKey, systemPrompt, userMessage, temperature));
+    }
+
+    const results = (await Promise.all(promises)).filter((r): r is string => r !== null);
+
+    if (results.length === 0) {
+      console.error("[callAI SC] All paths failed");
+      return null;
+    }
+
+    // 投票：按规范化文本计数
+    const voteCounts = new Map<string, { count: number; representative: string }>();
+    for (const result of results) {
+      const key = normalizeVoteKey(result);
+      const existing = voteCounts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        voteCounts.set(key, { count: 1, representative: result });
+      }
+    }
+
+    let bestKey = "";
+    let bestCount = 0;
+    for (const [key, val] of voteCounts) {
+      if (val.count > bestCount) {
+        bestKey = key;
+        bestCount = val.count;
+      }
+    }
+
+    const winner = voteCounts.get(bestKey);
+    // const confidence = Number((bestCount / results.length).toFixed(4));
+    // console.log(
+    //   `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
+    // );
+
+    return winner?.representative ?? null;
   }
 
-  const results = (await Promise.all(promises)).filter((r): r is string => r !== null);
-
-  if (results.length === 0) {
-    console.error("[callAI SC] All paths failed");
+  const config = MODEL_CONFIGS[provider];
+  if (!config) {
+    console.error(`Unknown provider: ${provider}`);
     return null;
   }
 
-  // 投票：按规范化文本计数
-  const voteCounts = new Map<string, { count: number; representative: string }>();
-  for (const result of results) {
-    const key = normalizeVoteKey(result);
-    const existing = voteCounts.get(key);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      voteCounts.set(key, { count: 1, representative: result });
-    }
+  const req = {
+    provider,
+    api_key: apiKey,
+    model_id: config.modelId,
+    base_url: config.baseUrl,
+    system_prompt: systemPrompt,
+    user_message: userMessage,
+    temperature,
+    max_tokens: 4000,
+    timeout_ms: AI_CALL_TIMEOUT_MS,
+  };
+  const result = await native.aiCallSelfConsistency(req, sampleCount);
+  if (result.error) {
+    console.error(`[callAI SC] ${provider} error: ${result.error}`);
+    return null;
   }
-
-  let bestKey = "";
-  let bestCount = 0;
-  for (const [key, val] of voteCounts) {
-    if (val.count > bestCount) {
-      bestKey = key;
-      bestCount = val.count;
-    }
-  }
-
-  const winner = voteCounts.get(bestKey);
-  // const confidence = Number((bestCount / results.length).toFixed(4));
-  // console.log(
-  //   `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
-  // );
-
-  return winner?.representative ?? null;
+  return result.content || null;
 }
 
 /**
@@ -123,58 +160,51 @@ async function callAISingle(
   }
 
   try {
-    if (provider === "claude") {
-      const response = await fetchWithTimeout(config.baseUrl, {
+    if (provider === "gemini") {
+      const response = await fetchWithTimeout(`${config.baseUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: config.modelId,
-          max_tokens: 4000,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
-          temperature,
+          contents: [
+            { role: "user", parts: [{ text: systemPrompt + "\n" + userMessage }] },
+          ],
+          generationConfig: {
+            temperature,
+            maxOutputTokens: 4000,
+          },
         }),
       }, AI_CALL_TIMEOUT_MS);
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
-        console.error(`Claude error ${response.status}: ${errText}`);
+        console.error(`Gemini error ${response.status}: ${errText}`);
         return null;
       }
       const data = (await response.json()) as Record<string, unknown>;
-      return (
-        ((data.content as Array<Record<string, unknown>> | undefined)?.[0]
-          ?.text as string) || null
-      );
+      const candidates = data.candidates as Array<Record<string, unknown>> | undefined;
+      const content = candidates?.[0]?.content as Record<string, unknown> | undefined;
+      const parts = content?.parts as Array<Record<string, unknown>> | undefined;
+      return (parts?.map((p) => p.text as string).filter(Boolean).join("") || null);
     }
 
-    const response = await fetchWithTimeout(config.baseUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature,
-        max_tokens: 4000,
-      }),
-    }, AI_CALL_TIMEOUT_MS);
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      console.error(`${provider} error ${response.status}: ${errText}`);
+    const req = {
+      provider,
+      api_key: apiKey,
+      model_id: config.modelId,
+      base_url: config.baseUrl,
+      system_prompt: systemPrompt,
+      user_message: userMessage,
+      temperature,
+      max_tokens: 4000,
+      timeout_ms: AI_CALL_TIMEOUT_MS,
+    };
+    const result = await native.aiCall(req);
+    if (result.error) {
+      console.error(`${provider} error: ${result.error}`);
       return null;
     }
-    const data = (await response.json()) as Record<string, unknown>;
-    const choices = data.choices as Array<Record<string, unknown>> | undefined;
-    return ((choices?.[0]?.message as Record<string, unknown>)?.content as string) || null;
+    return result.content || null;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     // Structured error logging for observability
