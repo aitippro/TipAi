@@ -118,7 +118,7 @@ async function runAgentWithAI(
   model: string,
   apiKey: string,
   timeoutMs: number = 25000,
-): Promise<{ output: string; timeMs: number; timedOut: boolean }> {
+): Promise<{ output: string; timeMs: number; timedOut: boolean; success: boolean }> {
   const start = Date.now();
 
   // Create a cancellable timeout promise
@@ -142,14 +142,27 @@ async function runAgentWithAI(
     ]);
     clearTimeout(timeoutHandle!);
     const timeMs = Date.now() - start;
-    return { output: response || "（AI 无返回）", timeMs, timedOut: false };
-  } catch (_e) {
+    return { output: response || "（AI 无返回）", timeMs, timedOut: false, success: true };
+  } catch (error) {
     clearTimeout(timeoutHandle!);
     const timeMs = Date.now() - start;
+    const isTimeout = error instanceof Error && error.message === "Agent timeout";
+    if (!isTimeout) {
+      // Propagate real errors (network, auth, etc.) instead of masking as timeout
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`Agent ${agent.name} failed with non-timeout error:`, errMsg);
+      return {
+        output: `【${agent.name} 执行失败】\n错误：${errMsg}\n请检查 API Key 配置或网络连接后重试。`,
+        timeMs,
+        timedOut: false,
+        success: false,
+      };
+    }
     return {
       output: `【${agent.name} 执行超时】\n该代理在 ${timeoutMs / 1000} 秒内未能完成，已跳过。可尝试减少角色数量或缩短任务描述后重试。`,
       timeMs,
       timedOut: true,
+      success: false,
     };
   }
 }
@@ -214,9 +227,9 @@ export async function runSwarm(
       await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
 
       task.output = result.output;
-      task.status = result.timedOut ? "failed" : "completed";
+      task.status = result.success ? "completed" : "failed";
       task.completedAt = Date.now();
-      logEntry(`${agent.name} ${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
+      logEntry(`${agent.name} ${result.success ? "完成" : result.timedOut ? "超时" : "失败"} (${result.timeMs}ms)`);
     }
   } else if (mode === "parallel") {
     const parallelTasks: SwarmTask[] = agents.map((agent) => ({

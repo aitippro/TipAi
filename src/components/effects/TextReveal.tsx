@@ -31,9 +31,10 @@ export function TextReveal({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    queueMicrotask(() => setVisible(false));
     const t = setTimeout(() => setVisible(true), delay);
     return () => clearTimeout(t);
-  }, [delay]);
+  }, [text, delay]);
 
   const items = mode === "char" ? text.split("") : text.split(" ");
 

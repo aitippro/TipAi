@@ -69,8 +69,20 @@ export async function generatePromptForgeResult(
       results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey);
     } catch (error) {
       console.error("AI generation failed, using fallback:", error);
-      const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
-      results = [prompt];
+      try {
+        const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
+        results = [prompt];
+      } catch (fallbackError) {
+        console.error("Fallback generation also failed:", fallbackError);
+        results = [{
+          title: "生成失败",
+          framework: selectedFramework,
+          prompt: `【生成失败】\n无法为您的请求生成提示词。请检查 API Key 是否有效，或稍后重试。\n\n原始需求：${finalIntent.slice(0, 200)}`,
+          explanation: "AI 服务调用失败，已返回降级提示。",
+          tips: ["检查 API Key 配置", "稍后重试", "尝试简化需求"],
+          usageExample: "",
+        }];
+      }
     }
   } else {
     // No API Key: use local fallback template generation

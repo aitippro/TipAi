@@ -26,16 +26,11 @@ async function getOrCreateLocalUser(): Promise<User> {
   return user;
 }
 
-let cachedUser: User | null = null;
-let cacheTs = 0;
-const CACHE_TTL_MS = 60_000; // Refresh user cache every 60s
-
 export async function createContext(
   opts: FetchCreateContextFnOptions,
 ): Promise<TrpcContext> {
-  if (!cachedUser || Date.now() - cacheTs > CACHE_TTL_MS) {
-    cachedUser = await getOrCreateLocalUser();
-    cacheTs = Date.now();
-  }
-  return { req: opts.req, resHeaders: opts.resHeaders, user: cachedUser };
+  // SECURITY: Always fetch fresh user — no global caching to prevent
+  // auth bypass / data leakage if multi-user support is added later.
+  const user = await getOrCreateLocalUser();
+  return { req: opts.req, resHeaders: opts.resHeaders, user };
 }

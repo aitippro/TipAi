@@ -17,6 +17,15 @@ try {
   throw new Error("Native addon is required. Browser mode fallback removed in P5.");
 }
 
+function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 function mapNativeStep(entry: any) {
   return {
     id: entry.id,
@@ -31,13 +40,17 @@ function mapNativeStep(entry: any) {
     parentStepId: entry.parent_step_id,
     model: entry.model,
     temperature: entry.temperature,
-    decodeStrategy: entry.decode_strategy ? JSON.parse(entry.decode_strategy) : undefined,
+    decodeStrategy: safeJsonParse<Record<string, unknown>>(entry.decode_strategy),
     createdAt: entry.created_at ? new Date(entry.created_at) : new Date(),
     updatedAt: entry.updated_at ? new Date(entry.updated_at) : new Date(),
   };
 }
 
-export async function getProjectPipeline(projectId: number): Promise<PipelineSummary> {
+export async function getProjectPipeline(userId: number, projectId: number): Promise<PipelineSummary> {
+  // Ownership validation
+  const project = native.projectGetById(projectId, userId);
+  if (!project) throw new Error("Project not found or access denied");
+
   const allSteps = (native.stepList(projectId) || []).map(mapNativeStep);
 
   const stages = {} as PipelineSummary["stages"];
@@ -59,9 +72,13 @@ export async function getProjectPipeline(projectId: number): Promise<PipelineSum
   return { projectId, stages };
 }
 
-export async function moveStepStage(stepId: number, toStage: LifecycleStage): Promise<void> {
+export async function moveStepStage(userId: number, stepId: number, toStage: LifecycleStage): Promise<void> {
   const step = native.stepGetById(stepId);
   if (!step) throw new Error("Step not found");
+
+  // Ownership validation
+  const project = native.projectGetById(step.project_id, userId);
+  if (!project) throw new Error("Project not found or access denied");
 
   const fromStage = step.stage as LifecycleStage;
   const allowed = STAGE_TRANSITIONS[fromStage];
@@ -72,11 +89,15 @@ export async function moveStepStage(stepId: number, toStage: LifecycleStage): Pr
   native.stepUpdate(stepId, { stage: toStage });
 }
 
-export async function linkParentStep(stepId: number, parentStepId: number): Promise<void> {
+export async function linkParentStep(userId: number, stepId: number, parentStepId: number): Promise<void> {
   const child = native.stepGetById(stepId);
   const parent = native.stepGetById(parentStepId);
 
   if (!child || !parent) throw new Error("Step not found");
+
+  // Ownership validation
+  const childProject = native.projectGetById(child.project_id, userId);
+  if (!childProject) throw new Error("Project not found or access denied");
 
   const stageOrder = ["clarify", "design", "implement", "test", "deploy", "maintain"];
   if (stageOrder.indexOf(parent.stage) >= stageOrder.indexOf(child.stage)) {
@@ -86,9 +107,13 @@ export async function linkParentStep(stepId: number, parentStepId: number): Prom
   native.stepUpdate(stepId, { parent_step_id: parentStepId });
 }
 
-export async function getChildSteps(stepId: number) {
+export async function getChildSteps(userId: number, stepId: number) {
   const parent = native.stepGetById(stepId);
   if (!parent) return [];
+
+  // Ownership validation
+  const project = native.projectGetById(parent.project_id, userId);
+  if (!project) return [];
   const children = (native.stepList(parent.project_id) || [])
     .filter((s: any) => s.parent_step_id === stepId)
     .sort((a: any, b: any) => (a.order_num || 0) - (b.order_num || 0))
@@ -96,17 +121,24 @@ export async function getChildSteps(stepId: number) {
   return children;
 }
 
-export async function createLifecycleStep(input: {
-  projectId: number;
-  title: string;
-  description?: string;
-  prompt: string;
-  stage: LifecycleStage;
-  parentStepId?: number;
-  model?: string;
-  temperature?: number;
-  decodeStrategy?: DecodeStrategy;
-}) {
+export async function createLifecycleStep(
+  userId: number,
+  input: {
+    projectId: number;
+    title: string;
+    description?: string;
+    prompt: string;
+    stage: LifecycleStage;
+    parentStepId?: number;
+    model?: string;
+    temperature?: number;
+    decodeStrategy?: DecodeStrategy;
+  }
+) {
+  // Ownership validation
+  const project = native.projectGetById(input.projectId, userId);
+  if (!project) throw new Error("Project not found or access denied");
+
   const allSteps = (native.stepList(input.projectId) || []);
   const stageSteps = allSteps.filter((s: any) => s.stage === input.stage);
   const nextOrder = (stageSteps.length > 0

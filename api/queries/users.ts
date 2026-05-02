@@ -24,7 +24,7 @@ export async function upsertUser(data: InsertUser) {
   if (!native) throw new Error("Native addon not available");
   const values = { ...data };
   if (values.role === undefined && values.unionId) {
-    values.role = "admin";
+    values.role = "user";
   }
   return native.userUpsert(values);
 }

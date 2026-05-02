@@ -134,7 +134,7 @@ export const projectRouter = createRouter({
   // F7: Prompt Lifecycle Management
   getPipeline: authedQuery
     .input(getProjectSchema)
-    .query(({ input }) => getProjectPipeline(input.id)),
+    .query(({ input, ctx }) => getProjectPipeline(ctx.user.id, input.id)),
 
   createStep: authedQuery
     .input(
@@ -156,7 +156,7 @@ export const projectRouter = createRouter({
         }).optional(),
       })
     )
-    .mutation(({ input }) => createLifecycleStep(input)),
+    .mutation(({ input, ctx }) => createLifecycleStep(ctx.user.id, input)),
 
   moveStep: authedQuery
     .input(
@@ -165,7 +165,7 @@ export const projectRouter = createRouter({
         toStage: z.enum(["clarify", "design", "implement", "test", "deploy", "maintain"]),
       })
     )
-    .mutation(({ input }) => moveStepStage(input.stepId, input.toStage)),
+    .mutation(({ input, ctx }) => moveStepStage(ctx.user.id, input.stepId, input.toStage)),
 
   linkStep: authedQuery
     .input(
@@ -174,9 +174,9 @@ export const projectRouter = createRouter({
         parentStepId: z.number(),
       })
     )
-    .mutation(({ input }) => linkParentStep(input.stepId, input.parentStepId)),
+    .mutation(({ input, ctx }) => linkParentStep(ctx.user.id, input.stepId, input.parentStepId)),
 
   getChildSteps: authedQuery
     .input(z.object({ stepId: z.number() }))
-    .query(({ input }) => getChildSteps(input.stepId)),
+    .query(({ input, ctx }) => getChildSteps(ctx.user.id, input.stepId)),
 });

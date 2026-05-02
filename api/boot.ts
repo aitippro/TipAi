@@ -70,6 +70,10 @@ function checkRateLimit(
   const entry = rateLimitMap.get(key);
 
   if (!entry || now > entry.resetAt) {
+    // Clean up expired entry to prevent unbounded Map growth
+    if (entry && now > entry.resetAt) {
+      rateLimitMap.delete(key);
+    }
     rateLimitMap.set(key, { count: 1, resetAt: now + opts.windowMs });
     return null;
   }

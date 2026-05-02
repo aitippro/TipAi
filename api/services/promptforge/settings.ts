@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
-import { decrypt } from "../../lib/crypto";
+import { decrypt, encrypt } from "../../lib/crypto";
 import type { UpdatePromptForgeSettingsInput } from "./schemas";
 
 // ── Native Addon ─────────────────────────────────────────
@@ -218,10 +218,10 @@ export async function updatePromptForgeSettings(
   if (updateData.defaultModel !== undefined) nativeUpdate.default_model = updateData.defaultModel;
   if (updateData.defaultFramework !== undefined) nativeUpdate.default_framework = updateData.defaultFramework;
   if (updateData.defaultLanguage !== undefined) nativeUpdate.default_language = updateData.defaultLanguage;
-  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = updateData.kimiApiKey;
-  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = updateData.openaiApiKey;
-  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = updateData.claudeApiKey;
-  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = updateData.deepseekApiKey;
+  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = encrypt(String(updateData.kimiApiKey));
+  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = encrypt(String(updateData.openaiApiKey));
+  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = encrypt(String(updateData.claudeApiKey));
+  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = encrypt(String(updateData.deepseekApiKey));
 
   native.settingsUpdate(userId, nativeUpdate);
   return { success: true };

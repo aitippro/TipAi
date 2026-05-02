@@ -177,10 +177,16 @@ async function callAISingle(
     return ((choices?.[0]?.message as Record<string, unknown>)?.content as string) || null;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`${provider} API call failed: ${msg}`);
+    // Structured error logging for observability
+    console.error(JSON.stringify({
+      level: "error",
+      component: "ai-service-v3",
+      operation: "callAISingle",
+      provider,
+      error: msg,
+      timestamp: new Date().toISOString(),
+    }));
     return null;
-  } finally {
-    // console.log("[AI] callAISingle done", { provider })
   }
 }
 
