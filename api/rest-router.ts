@@ -6,7 +6,7 @@
 import { Hono } from "hono";
 import { matchFrameworks } from "./services/framework";
 import { runQualityGate } from "./services/quality/gate";
-import { generateMultimodalPromptMock } from "./services/multimodal/multimodal-engine";
+import { generateMultimodalPromptWithAI } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";
 import { generateCitations } from "./services/academic/academic";
 
@@ -86,10 +86,27 @@ rest.post("/multimodal/generate", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const request = body.request || "";
   const mode = body.mode || "text-to-image";
+  const apiKey = body.apiKey || "";
+  const model = body.model || "";
+  const imageData = body.imageData || undefined;
   if (!request) return c.json({ error: "Missing 'request' field" }, 400);
+  if (!apiKey || !model) {
+    return c.json({ error: "Missing 'apiKey' and 'model' fields. Provide them to use real AI generation." }, 400);
+  }
 
-  const result = generateMultimodalPromptMock(request, mode as "text-to-image" | "image-to-text" | "video-storyboard");
-  return c.json(result);
+  try {
+    const result = await generateMultimodalPromptWithAI(
+      request,
+      mode as "text-to-image" | "image-to-text" | "video-storyboard",
+      model,
+      apiKey,
+      imageData,
+    );
+    return c.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json({ error: message }, 500);
+  }
 });
 
 rest.post("/tot/solve", async (c) => {

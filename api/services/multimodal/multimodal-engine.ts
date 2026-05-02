@@ -9,7 +9,7 @@
  * AI 驱动：使用 LLM 根据用户请求生成专业的多模态提示词。
  */
 
-import { callAI } from "../../lib/ai-service-v3/client";
+import { callAI, callAIVision } from "../../lib/ai-service-v3/client";
 
 export type MultimodalMode = "text-to-image" | "image-to-text" | "video-storyboard";
 
@@ -84,6 +84,31 @@ function buildImageToTextPrompt(request: string): string {
   {
     "title": "创意解读",
     "prompt": "请以创意写作的角度解读这张图片：\n1. 写一个短故事开头（100字以内）\n2. 提出3个可能的标题\n3. 分析图片的象征意义\n\n用户意图：${request}",
+    "purpose": "激发创意灵感"
+  }
+]`;
+}
+
+function buildImageToTextVisionPrompt(request: string): string {
+  return `请根据用户的分析需求，直接对上传的图片进行分析，生成 3 个不同角度的分析结果。
+
+用户请求：${request}
+
+请按以下 JSON 数组格式严格输出（不要有任何其他内容）：
+[
+  {
+    "title": "详细描述",
+    "prompt": "（这里填写你对图片的详细描述，包括主体内容、场景、色彩、光线、构图、情感氛围、文字标志等）",
+    "purpose": "生成全面的图像描述"
+  },
+  {
+    "title": "结构化分析",
+    "prompt": "（这里填写对图片的结构化分析结果，可以是 JSON 或结构化文本）",
+    "purpose": "便于程序化处理的结构化输出"
+  },
+  {
+    "title": "创意解读",
+    "prompt": "（这里填写你对图片的创意解读，包括短故事、标题建议、象征意义等）",
     "purpose": "激发创意灵感"
   }
 ]`;
@@ -249,6 +274,7 @@ export async function generateMultimodalPromptWithAI(
   mode: MultimodalMode,
   model: string,
   apiKey: string,
+  imageData?: string,
 ): Promise<MultimodalPromptResult> {
   let systemPrompt = "你是一位专业的多模态提示词工程师。";
   let userPrompt = "";
@@ -261,9 +287,15 @@ export async function generateMultimodalPromptWithAI(
       systemPrompt += "你擅长为图像生成模型（DALL-E、Midjourney、Stable Diffusion）撰写高质量的英文提示词。";
       break;
     case "image-to-text":
-      userPrompt = buildImageToTextPrompt(request);
-      recommendedModel = "GPT-4V / Claude 3 Vision / Gemini Pro Vision";
-      systemPrompt += "你擅长为视觉语言模型撰写结构化、精确的图像分析提示词。";
+      if (imageData) {
+        userPrompt = buildImageToTextVisionPrompt(request);
+        recommendedModel = "GPT-4V / Claude 3 Vision / Gemini Pro Vision";
+        systemPrompt += "你擅长分析图像内容并撰写结构化、精确的图像分析结果。请直接分析用户上传的图片，根据用户的分析需求生成分析结果。";
+      } else {
+        userPrompt = buildImageToTextPrompt(request);
+        recommendedModel = "GPT-4V / Claude 3 Vision / Gemini Pro Vision";
+        systemPrompt += "你擅长为视觉语言模型撰写结构化、精确的图像分析提示词。";
+      }
       break;
     case "video-storyboard":
       userPrompt = buildVideoStoryboardPrompt(request);
@@ -272,7 +304,17 @@ export async function generateMultimodalPromptWithAI(
       break;
   }
 
-  const response = await callAI(model, apiKey, systemPrompt, userPrompt, 0.7);
+  let response: string | null;
+  if (mode === "image-to-text" && imageData) {
+    response = await callAIVision(model, apiKey, systemPrompt, userPrompt, imageData, 0.7);
+  } else {
+    response = await callAI(model, apiKey, systemPrompt, userPrompt, 0.7);
+  }
+
+  if (response === null) {
+    throw new Error("AI 调用失败：模型未返回有效结果，请检查 API Key 和网络连接。");
+  }
+
   const prompts = parseGeneratedPrompts(response);
 
   if (prompts && prompts.length > 0) {
@@ -286,8 +328,7 @@ export async function generateMultimodalPromptWithAI(
     };
   }
 
-  // Fallback to mock
-  return generateMultimodalPromptMock(request, mode);
+  throw new Error("AI 返回结果解析失败：无法提取有效的 JSON 数组。请稍后重试。");
 }
 
 export { generateMultimodalPromptMock as generateMultimodalPrompt };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,8 @@ import {
   Check,
   Lightbulb,
   Sparkles,
+  Upload,
+  X,
 } from "lucide-react";
 
 const MODE_ICONS = {
@@ -39,16 +41,34 @@ export default function MultimodalPage() {
   const [request, setRequest] = useState("");
   const [mode, setMode] = useState<"text-to-image" | "image-to-text" | "video-storyboard">("text-to-image");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [imageData, setImageData] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const modesQuery = trpc.multimodal.modes.useQuery();
-  const generateQuery = trpc.multimodal.generate.useQuery(
-    { request: request.trim(), mode },
-    { enabled: !!request.trim() }
-  );
+  const generateMutation = trpc.multimodal.generate.useMutation();
 
   const handleGenerate = () => {
     if (!request.trim()) return;
-    generateQuery.refetch();
+    generateMutation.mutate({ request: request.trim(), mode, imageData: imageData || undefined });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("请上传图片文件");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageData(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImageData(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleCopy = (text: string, index: number) => {
@@ -57,7 +77,7 @@ export default function MultimodalPage() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const result = generateQuery.data;
+  const result = generateMutation.data;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -104,12 +124,50 @@ export default function MultimodalPage() {
       {/* Input */}
       <Card className="mb-8 border-0 shadow-sm rounded-2xl bg-white/80">
         <CardContent className="p-5">
+          {mode === "image-to-text" && (
+            <div className="mb-4">
+              {!imageData ? (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-slate-200 hover:border-pink-300 hover:bg-pink-50/30 transition-colors"
+                >
+                  <Upload className="w-6 h-6 text-slate-400" />
+                  <span className="text-sm text-slate-500">点击上传图片，AI 将直接分析图片内容</span>
+                  <span className="text-xs text-slate-400">支持 JPG、PNG、GIF、WebP</span>
+                </button>
+              ) : (
+                <div className="relative inline-block">
+                  <img
+                    src={imageData}
+                    alt="Preview"
+                    className="max-h-48 rounded-xl border border-slate-200 object-contain"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+          )}
+
           <Textarea
             placeholder={
               mode === "text-to-image"
                 ? "描述你想要生成的图像，例如：一只穿着宇航服的猫在月球上漫步"
                 : mode === "image-to-text"
-                  ? "描述你想要分析的图像内容和目的，例如：分析这张产品图的设计亮点"
+                  ? imageData
+                    ? "补充你的分析需求（可选），例如：重点分析色彩搭配"
+                    : "描述你想要分析的图像内容和目的，例如：分析这张产品图的设计亮点"
                   : "描述你的视频场景，例如：一个程序员在咖啡馆写代码，突然被窗外的流星吸引"
             }
             value={request}
@@ -117,15 +175,23 @@ export default function MultimodalPage() {
             className="min-h-[100px] resize-none rounded-xl border-slate-200 focus:border-pink-300 focus:ring-pink-200"
           />
           <div className="flex items-center justify-between mt-4">
-            <span className="text-xs text-slate-400">
-              {request.length}/2000 字符
-            </span>
+            <div className="flex items-center gap-3">
+              {mode === "image-to-text" && imageData && (
+                <Badge variant="outline" className="text-[10px] border-pink-200 text-pink-600">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI 视觉分析已启用
+                </Badge>
+              )}
+              <span className="text-xs text-slate-400">
+                {request.length}/2000 字符
+              </span>
+            </div>
             <Button
               onClick={handleGenerate}
-              disabled={!request.trim() || generateQuery.isFetching}
+              disabled={!request.trim() || generateMutation.isPending}
               className="rounded-xl bg-pink-600 hover:bg-pink-700 text-white"
             >
-              {generateQuery.isFetching ? (
+              {generateMutation.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Wand2 className="w-4 h-4 mr-2" />

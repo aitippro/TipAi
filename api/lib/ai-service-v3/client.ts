@@ -92,7 +92,7 @@ async function runSelfConsistencyCallAI(
   }
 
   const winner = voteCounts.get(bestKey);
-  const confidence = Number((bestCount / results.length).toFixed(4));
+  // const confidence = Number((bestCount / results.length).toFixed(4));
   // console.log(
   //   `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
   // );
@@ -192,6 +192,124 @@ async function callAISingle(
  *  - sampling:   使用策略 temperature，单次调用
  *  - self-consistency: 多路径采样 + 投票
  */
+// ============================================================================
+// Vision 支持（多模态图片分析）
+// ============================================================================
+
+function extractBase64Parts(dataUri: string): { mediaType: string; base64: string } {
+  const match = dataUri.match(/^data:([\w/]+);base64,(.+)$/);
+  if (match) {
+    return { mediaType: match[1], base64: match[2] };
+  }
+  return { mediaType: "image/jpeg", base64: dataUri };
+}
+
+async function callVisionSingle(
+  provider: string,
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string,
+  imageData: string,
+  temperature = 0.5,
+): Promise<string | null> {
+  if (!apiKey) {
+    console.warn(`No API key for ${provider}`);
+    return null;
+  }
+
+  const config = MODEL_CONFIGS[provider];
+  if (!config) {
+    console.error(`Unknown provider: ${provider}`);
+    return null;
+  }
+
+  try {
+    if (provider === "claude") {
+      const { mediaType, base64 } = extractBase64Parts(imageData);
+      const response = await fetchWithTimeout(config.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: config.modelId,
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+                { type: "text", text: userMessage },
+              ],
+            },
+          ],
+          temperature,
+        }),
+      }, AI_CALL_TIMEOUT_MS);
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        console.error(`Claude vision error ${response.status}: ${errText}`);
+        return null;
+      }
+      const data = (await response.json()) as Record<string, unknown>;
+      return (
+        ((data.content as Array<Record<string, unknown>> | undefined)?.[0]
+          ?.text as string) || null
+      );
+    }
+
+    // OpenAI-compatible: openai, kimi, deepseek
+    const response = await fetchWithTimeout(config.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.modelId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userMessage },
+              { type: "image_url", image_url: { url: imageData } },
+            ],
+          },
+        ],
+        temperature,
+        max_tokens: 4000,
+      }),
+    }, AI_CALL_TIMEOUT_MS);
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      console.error(`${provider} vision error ${response.status}: ${errText}`);
+      return null;
+    }
+    const data = (await response.json()) as Record<string, unknown>;
+    const choices = data.choices as Array<Record<string, unknown>> | undefined;
+    return ((choices?.[0]?.message as Record<string, unknown>)?.content as string) || null;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`${provider} vision API call failed: ${msg}`);
+    return null;
+  }
+}
+
+export async function callAIVision(
+  provider: string,
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string,
+  imageData: string,
+  temperature = 0.5,
+): Promise<string | null> {
+  return callVisionSingle(provider, apiKey, systemPrompt, userMessage, imageData, temperature);
+}
+
 export async function callAI(
   provider: string,
   apiKey: string,
