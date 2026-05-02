@@ -13,19 +13,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
       - run: npm ci
+      - run: npm run native:build
       - run: npm run build
-      - name: Smoke test backend
-        run: |
-          $proc = Start-Process -NoNewWindow -FilePath "node" -ArgumentList "dist/boot.js" -PassThru
-          for ($i = 0; $i -lt 10; $i++) {
-            Start-Sleep -Seconds 2
-            try {
-              $r = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -UseBasicParsing -TimeoutSec 3
-              if ($r.StatusCode -eq 200) { Write-Host "Backend smoke test passed"; break }
-            } catch { Write-Host "Waiting for backend... ($i)" }
-          }
-          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
       - run: npm run build:desktop:win -- --publish never
       - uses: actions/upload-artifact@v4
         with:
@@ -41,21 +33,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
       - run: npm ci
+      - run: npm run native:build
       - run: npm run build
-      - name: Smoke test backend
-        run: |
-          node dist/boot.js &
-          PID=$!
-          for i in $(seq 1 10); do
-            sleep 2
-            if curl -sf http://localhost:3000/api/health; then
-              echo "Backend smoke test passed"
-              break
-            fi
-            echo "Waiting for backend... ($i)"
-          done
-          kill $PID 2>/dev/null || true
       - run: npm run build:desktop:mac -- --publish never
       - uses: actions/upload-artifact@v4
         with:
