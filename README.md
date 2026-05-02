@@ -4,16 +4,16 @@
 
 # ✨ TipAi
 
-**智能提示词工程平台**
+**智能提示词工程平台 v2.0**
 
-> 从模糊需求到精准提示词，全链路 AI 驱动
+> 从模糊需求到精准提示词，全链路 AI 驱动 · Rust Native Addon 高性能架构
 
 <a href="https://github.com/aitippro/TipAi/releases"><img src="https://img.shields.io/github/v/release/aitippro/TipAi?style=flat-square" alt="Release"></a>
 <img src="https://img.shields.io/badge/License-Non--Commercial-red?style=flat-square" alt="License">
 <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React">
 <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript" alt="TS">
-<img src="https://img.shields.io/badge/Tests-221%2F221-green?style=flat-square&logo=vitest" alt="Tests">
-<img src="https://img.shields.io/badge/Lint-0%20errors-brightgreen?style=flat-square&logo=eslint" alt="Lint">
+<img src="https://img.shields.io/badge/Rust-1.85-orange?style=flat-square&logo=rust" alt="Rust">
+<img src="https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron" alt="Electron">
 <img src="https://img.shields.io/badge/Frameworks-30-blue?style=flat-square" alt="Frameworks">
 
 </div>
@@ -22,13 +22,19 @@
 
 ## 简介
 
-**TipAi** 是一款本地优先的提示词工程工具。输入模糊需求，AI 自动分析意图、多轮澄清、匹配最优框架、输出精准可用的提示词。所有数据存储在本地 SQLite，无需注册账号。
+**TipAi** 是一款本地优先、高性能的提示词工程工具。输入模糊需求，AI 自动分析意图、多轮澄清、匹配最优框架、输出精准可用的提示词。
+
+### 架构升级 v2.0
+
+| 🔥 Rust Native Addon | 🚀 零端口架构 | 🛡️ AES-256-GCM | 🌐 多模型 |
+|:---|:---|:---|:---|
+| 数据库操作 + AI HTTP + 加密全部下沉到 Rust | 无后端服务端口，Electron 直接加载 .node | 本地 AES-256-GCM 加密，密钥隔离存储 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
 
 ### 核心亮点
 
-| 🤖 AI 驱动 | 🎨 30+ 框架 | 🔒 本地优先 | 🌐 多模型 |
+| 🤖 AI 驱动 | 🎨 30+ 框架 | 🔒 本地优先 | ⚡ 高性能 |
 |:---|:---|:---|:---|
-| 意图分析 → 策略路由 → 自动优化 | 从 RTF 到 ReAct，覆盖简单/中等/复杂全场景 | SQLite 存储，AES-256-GCM 加密 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
+| 意图分析 → 策略路由 → 自动优化 | 从 RTF 到 ReAct，覆盖简单/中等/复杂全场景 | SQLite 存储，Rust 层 AES-256-GCM 加密 | Rust Native Addon，零序列化，AI 不阻塞 UI |
 
 ---
 
@@ -36,7 +42,7 @@
 
 ### 一期：学术 Debt 清零
 - **OPRO 自动优化引擎** — 多轮迭代优化提示词，LLM-as-Judge 六维评分，自动 early stopping
-- **Clarify 策略路由** — 11 领域 × 30+ 子领域分类（81.8% 准确率），AI 引导式多轮澄清
+- **Clarify 策略路由** — 11 领域 × 30+ 子领域分类，AI 引导式多轮澄清
 - **Decode 策略层** — greedy / sampling / self-consistency 三种解码策略，任务类型自动推荐
 
 ### 二期：前沿追赶
@@ -73,11 +79,24 @@
 | 层级 | 技术 |
 |------|------|
 | 前端 | React 19 · TypeScript 5.9 · Vite 7 · Tailwind CSS 3 · shadcn/ui · Framer Motion |
-| API | Hono 4 · tRPC 11 |
-| 数据库 | SQLite (better-sqlite3) · Drizzle ORM |
+| API | tRPC 11 · Hono 4 |
+| 数据库 | **Rust Native Addon** (SQLite 内核) · 纯 TypeScript 类型定义 |
+| 原生层 | **Rust 1.85** · NAPI-RS · AES-256-GCM · 异步 AI HTTP |
 | 加密 | AES-256-GCM · jose JWT · bcryptjs |
-| 测试 | Vitest 4 (221/221 通过) |
+| 测试 | Vitest 4 · Playwright E2E |
+| 构建 | Vite · esbuild · electron-builder · napi-rs |
 | CI/CD | GitHub Actions |
+
+### 架构重建里程碑
+
+```
+v1.2.2 (原架构)          v2.0.0 (新架构)
+├─ JS 后端 (Hono)         ├─ Rust Native Addon
+├─ better-sqlite3           ├─ SQLite (Rust 层)
+├─ Drizzle ORM              ├─ 纯 TS 类型定义
+├─ 后端服务端口             ├─ 零端口 (Electron IPC)
+└─ 序列化开销               └─ 零序列化 (内存直传)
+```
 
 ---
 
@@ -85,7 +104,8 @@
 
 ### 环境要求
 - Node.js ≥ 22，npm ≥ 10
-- Windows 10+ / macOS 13+
+- **Rust 1.85+** (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+- Windows 10+ / macOS 13+ / Linux
 
 ### 安装
 
@@ -93,17 +113,21 @@
 git clone https://github.com/aitippro/TipAi.git
 cd TipAi
 npm install
-npm run db:push
-npm run dev              # 开发模式
+npm run native:build    # 构建 Rust Native Addon（首次必需）
+npm run dev             # 开发模式
 ```
 
 ### 常用命令
 
 ```bash
-npm run check     # TypeScript 类型检查
-npm run lint      # ESLint（当前 0 errors / 0 warnings）
-npm run test      # Vitest 测试（221/221 通过）
-npm run build     # 生产构建
+npm run check              # TypeScript 类型检查
+npm run lint               # ESLint
+npm run test               # Vitest 单元测试
+npm run test:e2e           # Playwright E2E 测试
+npm run build              # 生产构建（前端 + 后端）
+npm run build:desktop      # 构建桌面应用（当前平台）
+npm run build:desktop:win  # 构建 Windows 安装包
+npm run build:desktop:mac  # 构建 macOS 安装包
 ```
 
 ---
@@ -116,8 +140,9 @@ src/                      React 前端
   pages/                  页面路由（11 个功能页面）
   hooks/                  自定义 Hooks（动画/交互）
   lib/animation/          弹簧动画系统
+
 api/                      tRPC 路由 + 服务层
-  lib/ai-service-v3/      30 框架目录中心
+  lib/ai-service-v3/      30 框架目录中心 + AI Provider
   services/ai/            6 个 AI Provider + 解码策略 + ToT
   services/clarify/       任务分类器 + 领域知识 + 策略路由
   services/promptforge/   OPRO 引擎 + LLM-as-Judge + 生成服务
@@ -126,8 +151,21 @@ api/                      tRPC 路由 + 服务层
   services/multimodal/    多模态提示词引擎
   services/quality/       质量门禁 + Drift Detection
   services/academic/      学术引用 + 实验复现报告
+  services/projects/      项目 CRUD + 生命周期
   rest-router.ts          REST API 开放端点
-db/                       Drizzle schema + 迁移
+
+native/                   Rust Native Addon
+  src/                    Rust 源码
+    db/                   SQLite 数据库 + CRUD
+    crypto/               AES-256-GCM 加密
+    ai/                   AI HTTP 客户端
+    lib.rs                NAPI-RS 导出
+  index.d.ts              TypeScript 类型定义
+  Cargo.toml              Rust 配置
+
+db/                       纯 TypeScript 类型定义（原 Drizzle Schema）
+  schema.ts               所有表结构的 TS 接口
+electron/                 Electron 主进程 + preload + IPC
 ```
 
 ---
@@ -136,10 +174,10 @@ db/                       Drizzle schema + 迁移
 
 | 指标 | 状态 |
 |------|------|
-| 测试覆盖 | **221 / 221** 通过，19 个测试文件 |
-| Lint | **0 errors / 0 warnings** |
-| 类型检查 | 通过 |
-| 构建 | 通过 |
+| 单元测试 | **237+** 项通过 |
+| E2E 测试 | **25** 项通过（Playwright Electron）
+| 类型检查 | ✅ 通过 |
+| 生产构建 | ✅ 通过 |
 | 框架分类准确率 | **81.8%** (9/11) |
 
 ---
@@ -153,6 +191,7 @@ db/                       Drizzle schema + 迁移
 | [CONTRIBUTING](docs/CONTRIBUTING.md) | 贡献指南 |
 | [ATTRIBUTION](docs/ATTRIBUTION.md) | 论文与框架来源 |
 | [SECURITY](docs/SECURITY_CHECKLIST.md) | 安全检查清单 |
+| [docs/TASKS_ATOMIC.md](docs/TASKS_ATOMIC.md) | 原子任务清单与迭代路线图 |
 
 ---
 
