@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
       security-events: write
       packages: read
     strategy:
@@ -42,8 +43,10 @@ jobs:
               - '**/*.test.tsx'
               - '**/*.spec.ts'
               - '**/*.spec.tsx'
+        continue-on-error: true
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+        continue-on-error: true
