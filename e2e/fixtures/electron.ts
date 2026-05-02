@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, react-hooks/rules-of-hooks */
+
 /**
  * Electron Test Fixture for Playwright
  *
@@ -67,7 +69,7 @@ function getMainEntryPath(): string {
 export const test = base.extend<ElectronFixtures>({
   // Launch Electron app before each test file
   electronApp: [
-    async ({}, use, testInfo) => {
+    async (_, use, testInfo) => {
       const isDev = process.env.TEST_MODE === 'dev';
       const dataDir = path.join(process.cwd(), 'e2e-results', 'test-data', `session-${testInfo.workerIndex}`);
 

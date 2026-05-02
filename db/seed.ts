@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+
 /**
  * Database Seed Script
  * Uses Native Addon for seeding (P5 migrated)

@@ -84,13 +84,13 @@ export default function App() {
 
     if (!configured || firstLaunch) {
       // 没配置 API Key 或首次启动 → 强制引导
-      setShowOnboarding(true)
+      queueMicrotask(() => setShowOnboarding(true))
     } else if (shouldSkipSplash()) {
       // 已配置且选择跳过 Splash
-      setAppReady(true)
+      queueMicrotask(() => setAppReady(true))
     } else {
       // 已配置 → 显示短暂欢迎界面
-      setShowSplash(true)
+      queueMicrotask(() => setShowSplash(true))
     }
   }, [keyStatus, keyStatusLoading, settings, settingsLoading])
 

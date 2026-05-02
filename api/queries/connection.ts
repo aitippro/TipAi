@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 // Native Addon 连接 stub（原 Drizzle connection 已迁移）
-let native: any = null;
+let _native: any = null;
 try {
-  native = require("../../native");
+  _native = require("../../native");
 } catch {
   // fallback
 }

@@ -200,7 +200,7 @@ complexity判断：simple=单一明确任务(3-4步), medium=多维度任务(5-6
       complexity: ["simple", "medium", "complex"].includes(parsed.complexity) ? parsed.complexity : "medium",
       estimatedSteps: Math.min(Math.max(parseInt(parsed.estimatedSteps) || 5, 3), 8),
     };
-  } catch (e) {
+  } catch (_e) {
     throw new Error("意图分析解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
 }
@@ -240,7 +240,7 @@ export async function decomposeTask(intent: string, domain: string, analysis: In
     const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
     const steps: Array<{ title: string; description: string; prompt: string }> = JSON.parse(cleaned);
     return steps.map((s, i) => ({ title: s.title, description: s.description, prompt: s.prompt, order: i }));
-  } catch (e) {
+  } catch (_e) {
     throw new Error("任务拆解解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
 }

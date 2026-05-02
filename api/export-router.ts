@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 import { createRouter, authedQuery } from "./middleware";
 import { exportProjectsSchema, exportPromptsSchema } from "./services/export/schemas";
 

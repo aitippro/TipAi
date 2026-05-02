@@ -17,5 +17,8 @@ export default defineConfig({
     environment: "jsdom",
     include: ["api/**/*.test.ts", "api/**/*.spec.ts", "src/**/*.test.tsx"],
     globals: true,
+    deps: {
+      interopDefault: true,
+    },
   },
 });

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { DiffViewer } from "@/components/optimizer/DiffViewer";
 import { HistoryPanel } from "@/components/optimizer/HistoryPanel";
+import type { PromptOptimization } from "../../db/schema";
 import { IterationTrajectory } from "@/components/optimizer/IterationTrajectory";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer";
@@ -154,8 +155,8 @@ export default function Optimizer() {
     toast.success("已复制到剪贴板");
   };
 
-  const loadFromHistory = (item: { originalPrompt: string; optimizedPrompt?: string; strategy?: string; domain?: string }) => {
-    setOriginalPrompt(item.originalPrompt);
+  const loadFromHistory = (item: PromptOptimization) => {
+    setOriginalPrompt(item.originalPrompt || "");
     if (item.strategy && ["general", "structured", "concise"].includes(item.strategy)) {
       setSelectedStrategy(item.strategy as StaticStrategy);
     }

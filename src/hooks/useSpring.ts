@@ -20,7 +20,9 @@ export function useSpringValue({ from = 0, to, config = "smooth", onRest }: UseS
   // Use a ref to track the current animated value so we don't restart the
   // effect on every frame (value changes each frame → infinite restart loop).
   const valueRef = useRef(from);
-  valueRef.current = value;
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     const tick = () => {

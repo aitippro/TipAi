@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 import { decrypt } from "../../lib/crypto";
 import type { UpdatePromptForgeSettingsInput } from "./schemas";
 

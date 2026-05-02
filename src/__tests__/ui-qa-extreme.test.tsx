@@ -31,10 +31,12 @@ vi.mock("@/providers/trpc", () => ({
     project: {
       create: { useMutation: () => ({ mutateAsync: vi.fn() }) },
       update: { useMutation: () => ({ mutateAsync: vi.fn() }) },
+      get: { useQuery: () => ({ data: null }) },
     },
     promptForge: {
       generate: { useMutation: () => ({ mutateAsync: vi.fn() }) },
       clarify: { useMutation: () => ({ mutateAsync: vi.fn() }) },
+      analyze: { useQuery: () => ({ data: null, isFetching: false }) },
     },
     useUtils: () => ({
       template: { list: { invalidate: vi.fn() } },
@@ -57,6 +59,7 @@ vi.mock("sonner", () => ({
 vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: "/" }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
   Routes: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Route: () => null,
   Link: ({ children, to }: { children?: ReactNode; to?: string }) => (
@@ -133,7 +136,7 @@ describe("EXTREME QA: TextReveal Component", () => {
   it("should handle empty text gracefully", () => {
     const { container } = render(<TextReveal text="" />);
     // Should render at minimum the root span without errors
-    expect(container.querySelector("span.inline")).toBeTruthy();
+    expect(container.querySelector("span.inline-block")).toBeTruthy();
   });
 
   it("should handle very long text (1000 chars)", () => {

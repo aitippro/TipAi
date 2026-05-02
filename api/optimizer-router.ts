@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 import { z } from "zod";
 import { createRouter, authedQuery } from "./middleware";
 

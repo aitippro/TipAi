@@ -17,6 +17,7 @@ import {
   DOMAIN_LABELS,
 } from "@/components/template-market/config"
 import { TemplateMarketCard } from "@/components/template-market/TemplateMarketCard"
+import type { TemplateItem } from "../components/template-market/types";
 import {
   createEmptyTemplateDraft,
   type TemplateDraft,
@@ -264,7 +265,7 @@ export default function TemplateMarket() {
             />
           ) : (
             <StaggerContainer className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-              {filteredTemplates.map((template: { id: number; title: string; description?: string; domain?: string; rating?: number; useCount?: number; isFeatured?: number; isPublic?: number; userId?: number; content?: string; tags?: string; framework?: string }) => (
+              {filteredTemplates.map((template: TemplateItem) => (
                 <StaggerItem key={template.id}>
                   <TiltCard maxTilt={4} scale={1.01}>
                     <TemplateMarketCard
@@ -283,7 +284,7 @@ export default function TemplateMarket() {
           <TabsContent value="my">
             {myTemplates && myTemplates.length > 0 ? (
               <StaggerContainer className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-                {myTemplates.map((template: { id: number; title: string; description?: string; domain?: string; rating?: number; useCount?: number; isFeatured?: number }) => (
+                {myTemplates.map((template: TemplateItem) => (
                   <StaggerItem key={template.id}>
                     <TiltCard maxTilt={4} scale={1.01}>
                       <TemplateMarketCard

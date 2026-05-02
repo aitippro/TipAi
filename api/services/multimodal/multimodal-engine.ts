@@ -78,7 +78,7 @@ function buildImageToTextPrompt(request: string): string {
   },
   {
     "title": "结构化分析",
-    "prompt": "请对这张图片进行结构化分析，以 JSON 格式输出：\n{\n  \"subject\": \"主体\",\n  \"setting\": \"场景环境\",\n  \"colors\": [\"主要颜色\"],\n  \"mood\": \"情感氛围\",\n  \"composition\": \"构图特点\",\n  \"text_elements\": [\"图中文字\"],\n  \"action\": \"动作或事件\"\n}\n\n用户意图：${request}",
+    "prompt": "请对这张图片进行结构化分析，以 JSON 格式输出：\n{\n  "subject": "主体",\n  "setting": "场景环境",\n  "colors": ["主要颜色"],\n  "mood": "情感氛围",\n  "composition": "构图特点",\n  "text_elements": ["图中文字"],\n  "action": "动作或事件"\n}\n\n用户意图：${request}",
     "purpose": "便于程序化处理的结构化输出"
   },
   {

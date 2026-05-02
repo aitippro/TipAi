@@ -114,17 +114,19 @@ export default function Home() {
   // Does NOT override if user has manually toggled stepMode
   useEffect(() => {
     if (!analyzeData) return
-    setDetectedComplexity(analyzeData.complexity)
-    if (!userToggledRef.current) {
-      setStepMode(analyzeData.complexity === "complex")
-    }
+    queueMicrotask(() => {
+      setDetectedComplexity(analyzeData.complexity)
+      if (!userToggledRef.current) {
+        setStepMode(analyzeData.complexity === "complex")
+      }
+    })
   }, [analyzeData])
 
   // Fallback heuristic when query errors (caught by onError not available in useQuery v5)
   useEffect(() => {
     const trimmed = intent.trim()
     if (!trimmed || trimmed.length < 10) {
-      setDetectedComplexity(null)
+      queueMicrotask(() => setDetectedComplexity(null))
       return
     }
     // Local fallback: length-based heuristic after brief delay
@@ -156,11 +158,13 @@ export default function Home() {
     if (!shouldLoadProject) return
     if (!projectFromUrl.data) return
     const project = projectFromUrl.data
-    setIntent(project.intent || "")
-    setClarifyProjectId(project.id)
-    setPendingAnswers({})
-    setStage("results")
-    setSearchParams({}, { replace: true })
+    queueMicrotask(() => {
+      setIntent(project.intent || "")
+      setClarifyProjectId(project.id)
+      setPendingAnswers({})
+      setStage("results")
+      setSearchParams({}, { replace: true })
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldLoadProject, projectFromUrl.data])
   const { isAuthenticated } = useAuth()

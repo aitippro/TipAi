@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /**
  * Core Workflow Tests — Prompt Generation End-to-End
  *

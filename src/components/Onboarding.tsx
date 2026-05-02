@@ -33,7 +33,7 @@ export function Onboarding({ onComplete }: Props) {
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
   useEffect(() => {
-    setVisible(false);
+    queueMicrotask(() => setVisible(false));
     const t = setTimeout(() => setVisible(true), 250);
     return () => clearTimeout(t);
   }, [step]);

@@ -99,3 +99,9 @@ electron/data/
 
 
 native/target/
+# Local agent configs (do not commit)
+.kimi/
+.agents/
+
+# Local QA test scripts (contain API keys)
+scripts/qa-ai-integration.ts

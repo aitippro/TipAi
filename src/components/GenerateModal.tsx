@@ -34,9 +34,9 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
 
   // Stable refs for values that mutate too often to be effect dependencies
   const answersRef = useRef(answers)
-  answersRef.current = answers
+  useEffect(() => { answersRef.current = answers }, [answers])
   const stepModeRef = useRef(stepMode)
-  stepModeRef.current = stepMode
+  useEffect(() => { stepModeRef.current = stepMode }, [stepMode])
 
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
@@ -79,14 +79,16 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   })
 
   const mutateRef = useRef(generateMutation.mutate)
-  mutateRef.current = generateMutation.mutate
+  useEffect(() => { mutateRef.current = generateMutation.mutate }, [generateMutation.mutate])
 
   useEffect(() => {
     if (hasStartedRef.current) return
     if (!intent.trim()) { onClose(); return }
     hasStartedRef.current = true
-    setIsGenerating(true)
-    mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
+    queueMicrotask(() => {
+      setIsGenerating(true)
+      mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
+    })
      
   }, [intent, onClose])
 

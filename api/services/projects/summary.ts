@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 /**
  * B4: Project Summary Service (Native-only, no Drizzle fallback)
  */

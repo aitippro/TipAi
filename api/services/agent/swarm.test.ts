@@ -1,10 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   runSwarm,
   createAgent,
   getAvailableRoles,
   getCollaborationModes,
 } from "./swarm";
+
+// Mock AI client to avoid real API calls in tests
+vi.mock("../../lib/ai-service-v3/client", () => ({
+  callAI: vi.fn(async (_model: string, _apiKey: string, _systemPrompt: string, userMessage: string) => {
+    return `Mock AI response for: ${userMessage}`;
+  }),
+}));
+
+const MOCK_MODEL = "deepseek-chat";
+const MOCK_API_KEY = "sk-test-key";
 
 describe("Agent Swarm", () => {
   it("should create agent with correct role", () => {
@@ -15,7 +25,7 @@ describe("Agent Swarm", () => {
   });
 
   it("should run sequential mode", async () => {
-    const result = await runSwarm("测试任务", "sequential", ["planner", "executor"]);
+    const result = await runSwarm("测试任务", "sequential", ["planner", "executor"], MOCK_MODEL, MOCK_API_KEY);
 
     expect(result.mode).toBe("sequential");
     expect(result.tasks.length).toBe(2);
@@ -24,7 +34,7 @@ describe("Agent Swarm", () => {
   });
 
   it("should run parallel mode", async () => {
-    const result = await runSwarm("测试任务", "parallel", ["executor", "reviewer"]);
+    const result = await runSwarm("测试任务", "parallel", ["executor", "reviewer"], MOCK_MODEL, MOCK_API_KEY);
 
     expect(result.mode).toBe("parallel");
     expect(result.tasks.length).toBe(2);
@@ -36,6 +46,8 @@ describe("Agent Swarm", () => {
       "复杂分析任务",
       "hierarchical",
       ["planner", "executor", "reviewer", "optimizer", "coordinator"],
+      MOCK_MODEL,
+      MOCK_API_KEY,
     );
 
     expect(result.mode).toBe("hierarchical");
@@ -46,7 +58,7 @@ describe("Agent Swarm", () => {
   });
 
   it("should include execution log", async () => {
-    const result = await runSwarm("测试", "sequential", ["executor"]);
+    const result = await runSwarm("测试", "sequential", ["executor"], MOCK_MODEL, MOCK_API_KEY);
     expect(result.executionLog.length).toBeGreaterThanOrEqual(1);
     expect(result.executionLog[0]).toContain("[");
   });
@@ -67,19 +79,19 @@ describe("Agent Swarm", () => {
   });
 
   it("should handle single agent", async () => {
-    const result = await runSwarm("简单任务", "sequential", ["executor"]);
+    const result = await runSwarm("简单任务", "sequential", ["executor"], MOCK_MODEL, MOCK_API_KEY);
     expect(result.tasks.length).toBe(1);
     expect(result.stats.completedTasks).toBe(1);
   });
 
   it("should have unique agent IDs", async () => {
-    const result = await runSwarm("测试", "parallel", ["executor", "executor"]);
+    const result = await runSwarm("测试", "parallel", ["executor", "executor"], MOCK_MODEL, MOCK_API_KEY);
     const ids = result.agents.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("should include task timestamps", async () => {
-    const result = await runSwarm("测试", "sequential", ["planner"]);
+    const result = await runSwarm("测试", "sequential", ["planner"], MOCK_MODEL, MOCK_API_KEY);
     const task = result.tasks[0];
     expect(task.startedAt).toBeDefined();
     expect(task.completedAt).toBeDefined();

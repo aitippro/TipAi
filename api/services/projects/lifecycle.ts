@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
 /**
  * F7: Prompt Lifecycle Service
  * Manages steps across the full prompt development lifecycle.

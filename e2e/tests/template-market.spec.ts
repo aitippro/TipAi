@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /**
  * Template Market Tests — Verify grid layout and template browsing
  */
