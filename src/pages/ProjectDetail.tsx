@@ -136,7 +136,7 @@ export default function ProjectDetail() {
     )
   }
 
-  const turns: ConversationTurn[] = (conversation || []).map((t: any) => ({
+  const turns: ConversationTurn[] = (conversation || []).map((t: { id: number; role: "user" | "assistant" | "system"; content: string; turnNumber?: number; createdAt?: string | Date }) => ({
     id: t.id,
     role: t.role,
     content: t.content,

@@ -87,7 +87,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     hasStartedRef.current = true
     setIsGenerating(true)
     mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [intent, onClose])
 
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     generateMutation.reset()
     setIsGenerating(true)
     mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [generateMutation, intent])
 
   if (isGenerating) {
