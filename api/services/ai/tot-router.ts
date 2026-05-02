@@ -5,7 +5,8 @@
  * 若用户未配置 API Key，则 fallback 到本地 Mock 引擎。
  */
 import { z } from "zod";
-import { createRouter, authedQuery, publicQuery } from "../../middleware";
+import { TRPCError } from "@trpc/server";
+import { createRouter, authedQuery } from "../../middleware";
 import {
   runTreeOfThoughts,
   setTotGenerator,
@@ -62,7 +63,7 @@ function detectDomain(problem: string): string {
   return "general";
 }
 
-function initMockEngine() {
+export function initMockEngine() {
   setTotGenerator(async (problem, currentThought, breadth) => {
     const domain = detectDomain(problem);
     const strategies = SIMULATED_STRATEGIES[domain] ?? SIMULATED_STRATEGIES.general;
@@ -183,9 +184,10 @@ function parseGeneratorResponse(text: string | null, breadth: number): string[] 
 async function initAIEngine(userId: number) {
   const models = await getAvailableModelsForUser(userId);
   if (models.length === 0) {
-    // 没有 API Key，使用 Mock
-    initMockEngine();
-    return false;
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "未配置 AI 模型，请先在「设置 > 提示词工坊」中配置 API Key。",
+    });
   }
 
   const { model, apiKey } = models[0];
@@ -194,6 +196,9 @@ async function initAIEngine(userId: number) {
     const path: string[] = currentThought ? [currentThought] : [];
     const prompt = buildGeneratorPrompt(problem, currentThought, path);
     const response = await callAI(model, apiKey, "你是 Tree of Thoughts 候选生成器", prompt, 0.7);
+    if (!response) {
+      throw new Error("ToT 候选生成失败：AI 未返回有效结果。");
+    }
     return parseGeneratorResponse(response, breadth);
   });
 
@@ -203,10 +208,7 @@ async function initAIEngine(userId: number) {
     const parsed = await parseAIResponse(response);
     if (parsed) return parsed;
 
-    // Fallback heuristic if AI parse fails
-    const len = thought.length;
-    const value = Math.min(10, Math.max(1, Math.floor(len / 5) + 3));
-    return { value, isTerminal: value >= 9, reason: `fallback heuristic ${value}` };
+    throw new Error("ToT 评估解析失败：无法从 AI 响应中提取有效评分。");
   });
 
   return true;
@@ -236,11 +238,7 @@ export const totRouter = createRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const hasAI = await initAIEngine(ctx.user.id);
-      if (!hasAI) {
-        // 未配置 API Key，使用 Mock 并给出提示
-        console.warn("[ToT] No API Key configured, falling back to mock engine");
-      }
+      await initAIEngine(ctx.user.id);
 
       const result = await runTreeOfThoughts(input.problem, {
         strategy: input.strategy,
@@ -254,13 +252,13 @@ export const totRouter = createRouter({
       return {
         ...result,
         meta: {
-          usingAI: hasAI,
+          usingAI: true,
         },
       };
     }),
 
-  /** 获取树的层级结构（无需登录，使用 Mock 引擎） */
-  levels: publicQuery
+  /** 获取树的层级结构（需要登录，使用真实 AI 引擎） */
+  levels: authedQuery
     .input(
       z.object({
         problem: z.string().min(1).max(2000),
@@ -269,8 +267,8 @@ export const totRouter = createRouter({
         maxDepth: z.number().min(2).max(6).default(4),
       }),
     )
-    .query(async ({ input }) => {
-      initMockEngine();
+    .query(async ({ input, ctx }) => {
+      await initAIEngine(ctx.user.id);
 
       const result = await runTreeOfThoughts(input.problem, {
         strategy: input.strategy,

@@ -95,7 +95,7 @@ export function createAgent(role: AgentRole, id?: string): Agent {
 // Mock 执行引擎（Fallback）
 // ============================================================================
 
-function simulateAgentWork(agent: Agent, input: string): { output: string; timeMs: number } {
+export function simulateAgentWork(agent: Agent, input: string): { output: string; timeMs: number } {
   const outputs: Record<AgentRole, string> = {
     planner: `📋 规划结果：\n1. 分析需求: "${input.substring(0, 30)}..."\n2. 分解为 3 个子任务\n3. 确定执行顺序和依赖\n4. 识别潜在风险点`,
     executor: `✅ 执行结果：\n基于输入 "${input.substring(0, 30)}..."\n已完成核心任务，生成详细输出。包含所有必要步骤和细节。`,
@@ -172,6 +172,10 @@ export async function runSwarm(
   const usingAI = !!(model && apiKey);
   const globalDeadline = start + 40000; // 40s global timeout
 
+  if (!usingAI) {
+    throw new Error("未配置 AI 模型，无法运行 Agent Swarm。请先在设置中配置 API Key。");
+  }
+
   function isTimedOut(): boolean {
     return Date.now() > globalDeadline;
   }
@@ -184,12 +188,9 @@ export async function runSwarm(
   const tasks: SwarmTask[] = [];
 
   const runAgent = async (agent: Agent, input: string) => {
-    if (usingAI) {
-      const remaining = globalDeadline - Date.now();
-      const agentTimeout = Math.max(5000, Math.min(25000, remaining - 2000));
-      return runAgentWithAI(agent, input, model!, apiKey!, agentTimeout);
-    }
-    return { ...simulateAgentWork(agent, input), timedOut: false };
+    const remaining = globalDeadline - Date.now();
+    const agentTimeout = Math.max(5000, Math.min(25000, remaining - 2000));
+    return runAgentWithAI(agent, input, model!, apiKey!, agentTimeout);
   };
 
   if (mode === "sequential") {

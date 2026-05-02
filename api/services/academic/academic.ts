@@ -197,8 +197,7 @@ export async function generateCitationsWithAI(
     }
   }
 
-  // Fallback to mock
-  return generateMockCitations(text, format);
+  throw new Error("AI 引用生成失败：模型未返回有效结果或解析失败。请检查 API Key 和网络连接。");
 }
 
 export function generateCitations(text: string, format: CitationFormat): CitationResult {

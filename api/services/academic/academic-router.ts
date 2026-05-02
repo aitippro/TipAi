@@ -2,9 +2,9 @@
  * P3-3: 学术合作工具 tRPC 路由
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, authedQuery } from "../../middleware";
 import {
-  generateCitations,
   generateCitationsWithAI,
   generateReproducibilityReport,
   reportToMarkdown,
@@ -26,12 +26,15 @@ export const academicRouter = createRouter({
       const settings = await getPromptForgeSettingsRecord(ctx.user.id);
       const models = getAvailableModels(settings);
 
-      if (models.length > 0) {
-        const { model, apiKey } = models[0];
-        return generateCitationsWithAI(input.text, input.format, model, apiKey);
+      if (models.length === 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "未配置 AI 模型，请先在「设置 > 提示词工坊」中配置 API Key。",
+        });
       }
 
-      return generateCitations(input.text, input.format);
+      const { model, apiKey } = models[0];
+      return generateCitationsWithAI(input.text, input.format, model, apiKey);
     }),
 
   /** 生成实验复现报告 */

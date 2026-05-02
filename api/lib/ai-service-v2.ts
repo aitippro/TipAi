@@ -159,31 +159,21 @@ export function getAllDomainPackages() {
   }));
 }
 
-// ---- Kimi API Client ----
+// ---- Unified AI Client (v2 wrapper around v3) ----
 
-async function callKimiAPI(systemPrompt: string, userMessage: string, temperature = 0.7): Promise<string | null> {
-  const apiKey = process.env.KIMI_API_KEY || "";
-  if (!apiKey) { console.warn("KIMI_API_KEY not set"); return null; }
-  try {
-    const response = await fetch(`https://api.moonshot.cn/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "moonshot-v1-8k",
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }],
-        temperature,
-      }),
-    });
-    if (!response.ok) { console.error(`API error: ${response.status}`); return null; }
-    const data = await response.json() as Record<string, unknown>;
-    const choices = data.choices as Array<Record<string, unknown>> | undefined;
-    return (choices?.[0]?.message as Record<string, unknown>)?.content as string || null;
-  } catch (e) { console.error("API call failed:", e); return null; }
+import { callAI } from "./ai-service-v3/client";
+
+async function callAIOrThrow(provider: string, apiKey: string, systemPrompt: string, userMessage: string, temperature = 0.7): Promise<string> {
+  const result = await callAI(provider, apiKey, systemPrompt, userMessage, temperature);
+  if (!result) {
+    throw new Error("AI 调用失败：模型未返回有效结果。请检查 API Key 和网络连接。");
+  }
+  return result;
 }
 
 // ---- Intent Analysis (v2 with complexity detection) ----
 
-export async function analyzeIntent(intent: string): Promise<IntentAnalysis> {
+export async function analyzeIntent(intent: string, provider: string, apiKey: string): Promise<IntentAnalysis> {
   const systemPrompt = `你是意图分析专家。分析用户目标描述，提取信息并以JSON返回：
 {
   "goal": "核心目标（一句话）",
@@ -197,35 +187,27 @@ export async function analyzeIntent(intent: string): Promise<IntentAnalysis> {
 complexity判断：simple=单一明确任务(3-4步), medium=多维度任务(5-6步), complex=系统性工程(7-8步)
 只返回JSON。`;
 
-  const result = await callKimiAPI(systemPrompt, intent, 0.3);
-  if (result) {
-    try {
-      const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      return {
-        goal: parsed.goal || intent,
-        domain: parsed.domain || detectDomain(intent),
-        constraints: Array.isArray(parsed.constraints) ? parsed.constraints : [],
-        audience: parsed.audience || "",
-        tone: parsed.tone || "专业",
-        complexity: ["simple", "medium", "complex"].includes(parsed.complexity) ? parsed.complexity : "medium",
-        estimatedSteps: Math.min(Math.max(parseInt(parsed.estimatedSteps) || 5, 3), 8),
-      };
-    } catch (e) { console.error("Parse failed:", e); }
+  const result = await callAIOrThrow(provider, apiKey, systemPrompt, intent, 0.3);
+  try {
+    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      goal: parsed.goal || intent,
+      domain: parsed.domain || detectDomain(intent),
+      constraints: Array.isArray(parsed.constraints) ? parsed.constraints : [],
+      audience: parsed.audience || "",
+      tone: parsed.tone || "专业",
+      complexity: ["simple", "medium", "complex"].includes(parsed.complexity) ? parsed.complexity : "medium",
+      estimatedSteps: Math.min(Math.max(parseInt(parsed.estimatedSteps) || 5, 3), 8),
+    };
+  } catch (e) {
+    throw new Error("意图分析解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
-  return {
-    goal: intent.length > 50 ? intent.substring(0, 50) + "..." : intent,
-    domain: detectDomain(intent),
-    constraints: [],
-    audience: "", tone: "专业",
-    complexity: intent.length > 200 ? "complex" : intent.length > 100 ? "medium" : "simple",
-    estimatedSteps: intent.length > 200 ? 7 : intent.length > 100 ? 5 : 4,
-  };
 }
 
 // ---- Task Decomposition (v2 with strategy selection) ----
 
-export async function decomposeTask(intent: string, domain: string, analysis: IntentAnalysis): Promise<DecomposedStep[]> {
+export async function decomposeTask(intent: string, domain: string, analysis: IntentAnalysis, provider: string, apiKey: string): Promise<DecomposedStep[]> {
   const domainPkg = getDomainPackage(domain);
 
   const systemPrompt = `${domainPkg.systemPrompt}
@@ -253,20 +235,23 @@ export async function decomposeTask(intent: string, domain: string, analysis: In
 3. 前面步骤结果可在后续引用
 4. 融入${domainPkg.name}最佳实践`;
 
-  const result = await callKimiAPI(systemPrompt, userMessage, 0.5);
-  if (result) {
-    try {
-      const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-      const steps: Array<{ title: string; description: string; prompt: string }> = JSON.parse(cleaned);
-      return steps.map((s, i) => ({ title: s.title, description: s.description, prompt: s.prompt, order: i }));
-    } catch (e) { console.error("Parse failed:", e); }
+  const result = await callAIOrThrow(provider, apiKey, systemPrompt, userMessage, 0.5);
+  try {
+    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
+    const steps: Array<{ title: string; description: string; prompt: string }> = JSON.parse(cleaned);
+    return steps.map((s, i) => ({ title: s.title, description: s.description, prompt: s.prompt, order: i }));
+  } catch (e) {
+    throw new Error("任务拆解解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
-  return generateDomainFallbackSteps(intent, domain, analysis);
 }
 
 // ---- Single Prompt Optimization ----
 
-export async function optimizePrompt(prompt: string, domain: string, strategy: "general" | "structured" | "concise" = "general"): Promise<OptimizationResult> {
+export async function optimizePrompt(prompt: string, domain: string, strategy: "general" | "structured" | "concise" = "general", provider: string = "kimi", apiKey: string = ""): Promise<OptimizationResult> {
+  if (!apiKey) {
+    throw new Error("未配置 AI 模型 API Key，无法执行提示词优化。");
+  }
+
   const strategyPrompts: Record<string, string> = {
     general: `你是一位顶级提示词工程师（Prompt Engineer）。你的任务是优化用户提供的提示词，使其更加清晰、具体、有效。
 
@@ -320,44 +305,29 @@ export async function optimizePrompt(prompt: string, domain: string, strategy: "
 
   const systemPrompt = strategyPrompts[strategy] || strategyPrompts.general;
 
-  const result = await callKimiAPI(systemPrompt, `请优化以下提示词：\n\n${prompt}\n\n领域：${getDomainPackage(domain).name}\n\n优化策略：${strategy === "general" ? "通用优化" : strategy === "structured" ? "结构化优化" : "精简优化"}`, 0.4);
+  const result = await callAIOrThrow(provider, apiKey, systemPrompt, `请优化以下提示词：\n\n${prompt}\n\n领域：${getDomainPackage(domain).name}\n\n优化策略：${strategy === "general" ? "通用优化" : strategy === "structured" ? "结构化优化" : "精简优化"}`, 0.4);
 
-  if (result) {
-    try {
-      const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      return {
-        optimizedPrompt: parsed.optimizedPrompt || result,
-        improvements: Array.isArray(parsed.improvements) ? parsed.improvements : ["优化了提示词结构"],
-        technique: parsed.technique || "综合优化",
-        strategy,
-      };
-    } catch {
-      // Fall back to the heuristic output below when JSON parsing fails.
-    }
+  try {
+    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      optimizedPrompt: parsed.optimizedPrompt || result,
+      improvements: Array.isArray(parsed.improvements) ? parsed.improvements : ["优化了提示词结构"],
+      technique: parsed.technique || "综合优化",
+      strategy,
+    };
+  } catch {
+    throw new Error("提示词优化解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
-
-  const fallbackPrompts: Record<string, string> = {
-    general: `# 角色\n你是一位${getDomainPackage(domain).name}专家。\n\n# 任务\n${prompt}\n\n# 要求\n1. 提供详细、专业的回答\n2. 使用清晰的结构（标题、列表、表格）\n3. 包含具体的案例和数据支撑\n4. 确保内容可直接使用或稍作修改即可使用\n\n# 输出格式\n请按照以下格式输出：\n1. 核心要点\n2. 详细说明\n3. 行动建议`,
-    structured: `# 角色\n你是一位${getDomainPackage(domain).name}专家。\n\n# 任务\n${prompt}\n\n# 执行步骤\n1. 分析问题背景与约束条件\n2. 制定详细的执行计划\n3. 按步骤逐一完成子任务\n4. 整合结果并输出最终答案\n\n# 输出格式\n- 第一步分析：[分析结果]\n- 第二步计划：[执行计划]\n- 第三步执行：[详细过程]\n- 第四步结论：[最终答案]`,
-    concise: `作为${getDomainPackage(domain).name}专家，${prompt}。直接输出要点，无需解释。`,
-  };
-
-  return {
-    optimizedPrompt: fallbackPrompts[strategy] || fallbackPrompts.general,
-    improvements: strategy === "structured"
-      ? ["添加了步骤分解", "明确了执行流程", "增加了质量控制机制"]
-      : strategy === "concise"
-        ? ["删除了冗余描述", "保留了核心意图", "压缩了表达长度"]
-        : ["添加了角色设定", "明确了输出格式", "增加了质量要求", "优化了结构"],
-    technique: strategy === "structured" ? "Chain-of-Thought + 模块化" : strategy === "concise" ? "Minimal Prompt" : "CRISPE框架",
-    strategy,
-  };
 }
 
 // ---- Prompt Evaluation (multi-dimension) ----
 
-export async function evaluatePrompt(prompt: string, output: string, domain: string): Promise<EvaluationResult> {
+export async function evaluatePrompt(prompt: string, output: string, domain: string, provider: string = "kimi", apiKey: string = ""): Promise<EvaluationResult> {
+  if (!apiKey) {
+    throw new Error("未配置 AI 模型 API Key，无法执行提示词评估。");
+  }
+
   const systemPrompt = `你是一位提示词质量评估专家。请从以下维度评估提示词及其输出质量：
 1. 清晰度(1-10)：提示词是否清晰明确
 2. 相关性(1-10)：输出是否与目标高度相关
@@ -367,34 +337,31 @@ export async function evaluatePrompt(prompt: string, output: string, domain: str
 
 返回JSON：{"clarity":N,"relevance":N,"completeness":N,"actionability":N,"overall":N,"suggestions":["建议1","建议2"]}`;
 
-  const result = await callKimiAPI(systemPrompt, `提示词：\n${prompt.substring(0, 1000)}\n\n输出：\n${output.substring(0, 2000)}\n\n领域：${domain}`, 0.3);
+  const result = await callAIOrThrow(provider, apiKey, systemPrompt, `提示词：\n${prompt.substring(0, 1000)}\n\n输出：\n${output.substring(0, 2000)}\n\n领域：${domain}`, 0.3);
 
-  if (result) {
-    try {
-      const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      return {
-        clarity: Math.min(Math.max(parseInt(parsed.clarity) || 7, 1), 10),
-        relevance: Math.min(Math.max(parseInt(parsed.relevance) || 7, 1), 10),
-        completeness: Math.min(Math.max(parseInt(parsed.completeness) || 7, 1), 10),
-        actionability: Math.min(Math.max(parseInt(parsed.actionability) || 7, 1), 10),
-        overall: Math.min(Math.max(parseInt(parsed.overall) || 7, 1), 10),
-        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-      };
-    } catch {
-      // Fall back to the default evaluation when JSON parsing fails.
-    }
+  try {
+    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      clarity: Math.min(Math.max(parseInt(parsed.clarity) || 7, 1), 10),
+      relevance: Math.min(Math.max(parseInt(parsed.relevance) || 7, 1), 10),
+      completeness: Math.min(Math.max(parseInt(parsed.completeness) || 7, 1), 10),
+      actionability: Math.min(Math.max(parseInt(parsed.actionability) || 7, 1), 10),
+      overall: Math.min(Math.max(parseInt(parsed.overall) || 7, 1), 10),
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+    };
+  } catch {
+    throw new Error("提示词评估解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
-
-  return {
-    clarity: 7, relevance: 7, completeness: 7, actionability: 7, overall: 7,
-    suggestions: ["建议添加更多具体示例", "可以考虑增加输出格式要求"],
-  };
 }
 
 // ---- Step Execution ----
 
-export async function executeStep(prompt: string, previousOutputs: string[] = []): Promise<string> {
+export async function executeStep(prompt: string, previousOutputs: string[] = [], provider: string = "kimi", apiKey: string = ""): Promise<string> {
+  if (!apiKey) {
+    throw new Error("未配置 AI 模型 API Key，无法执行步骤。");
+  }
+
   const context = previousOutputs.length > 0
     ? `之前步骤的输出（参考用）：\n${previousOutputs.map((o, i) => `---步骤${i + 1}---\n${o.substring(0, 1500)}`).join("\n\n")}\n\n---\n\n`
     : "";
@@ -405,15 +372,12 @@ export async function executeStep(prompt: string, previousOutputs: string[] = []
 3. 专业准确，基于最佳实践
 4. 输出格式符合用户要求`;
 
-  const result = await callKimiAPI(systemPrompt, context + prompt, 0.7);
-  if (result) return result;
-
-  return `[执行结果预览]\n\n提示词内容：\n---\n${prompt.substring(0, 600)}...\n---\n\n此步骤将调用AI模型执行上述提示词。前置上下文：${previousOutputs.length > 0 ? "已提供" : "无"}`;
+  return callAIOrThrow(provider, apiKey, systemPrompt, context + prompt, 0.7);
 }
 
 // ---- Domain-specific Fallback Steps ----
 
-function generateDomainFallbackSteps(intent: string, domain: string, analysis: IntentAnalysis): DecomposedStep[] {
+export function generateDomainFallbackSteps(intent: string, domain: string, analysis: IntentAnalysis): DecomposedStep[] {
   const pkg = getDomainPackage(domain);
   const c = analysis.complexity;
   const g = analysis.goal;

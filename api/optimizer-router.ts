@@ -19,7 +19,15 @@ export const optimizerRouter = createRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const result = await optimizePrompt(input.prompt, input.domain, input.strategy);
+      const settings = await getPromptForgeSettingsRecord(ctx.user.id);
+      const models = getAvailableModels(settings);
+
+      if (models.length === 0) {
+        throw new Error("未配置任何 AI 模型 API Key，请先在设置中配置");
+      }
+
+      const { model, apiKey } = models[0];
+      const result = await optimizePrompt(input.prompt, input.domain, input.strategy, model, apiKey);
 
       const db = getDb();
       await db.insert(promptOptimizations).values({
@@ -28,7 +36,7 @@ export const optimizerRouter = createRouter({
         optimizedPrompt: result.optimizedPrompt,
         improvements: JSON.stringify(result.improvements),
         domain: input.domain,
-        model: "kimi",
+        model,
       });
 
       return result;
@@ -43,8 +51,16 @@ export const optimizerRouter = createRouter({
         domain: z.string().default("general"),
       }),
     )
-    .mutation(async ({ input }) => {
-      return evaluatePrompt(input.prompt, input.output, input.domain);
+    .mutation(async ({ input, ctx }) => {
+      const settings = await getPromptForgeSettingsRecord(ctx.user.id);
+      const models = getAvailableModels(settings);
+
+      if (models.length === 0) {
+        throw new Error("未配置任何 AI 模型 API Key，请先在设置中配置");
+      }
+
+      const { model, apiKey } = models[0];
+      return evaluatePrompt(input.prompt, input.output, input.domain, model, apiKey);
     }),
 
   // ---- OPRO 自动优化引擎：多轮迭代 ----

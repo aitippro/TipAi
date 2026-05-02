@@ -3,7 +3,7 @@ import {
   getFrameworkByKey,
 } from "./ai-service-v3/catalog";
 import { callAI } from "./ai-service-v3/client";
-import { detectDomain } from "./ai-service-v3/domain";
+// import { detectDomain } from "./ai-service-v3/domain";
 import {
   parseAIJsonResponse,
   toComplexity,
@@ -125,23 +125,10 @@ complexity判断标准：
       };
     }
 
-    console.error("Intent parse failed");
+    throw new Error("意图分析解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
 
-  const detected = detectDomain(intent);
-  return {
-    goal: intent.length > 60 ? intent.substring(0, 60) + "..." : intent,
-    domain: detected.domain,
-    subDomain: detected.subDomain,
-    audience: "",
-    tone: "专业",
-    style: "简洁",
-    constraints: [],
-    outputFormat: "详细文字说明",
-    complexity:
-      intent.length > 300 ? "complex" : intent.length > 100 ? "medium" : "simple",
-    language: "zh",
-  };
+  throw new Error("意图分析失败：AI 模型未返回有效结果。请检查 API Key 和网络连接。");
 }
 
 export async function generateClarification(
@@ -335,13 +322,13 @@ ${frameworkConfig.example}
       };
     }
 
-    console.error("Generate parse failed");
+    throw new Error("提示词生成解析失败：AI 返回的结果无法解析为有效 JSON。");
   }
 
-  return constructFallbackPrompt(intent, analysis, frameworkConfig);
+  throw new Error("提示词生成失败：AI 模型未返回有效结果。请检查 API Key 和网络连接。");
 }
 
-function constructFallbackPrompt(
+export function constructFallbackPrompt(
   intent: string,
   analysis: IntentAnalysis,
   framework: Framework,
@@ -424,7 +411,9 @@ export async function generateMultipleVersions(
 
   const results = (await Promise.all(promises)).filter((r): r is GeneratedPrompt => r !== null);
 
-  return results.length > 0
-    ? results
-    : [constructFallbackPrompt(intent, analysis, getDefaultFramework())];
+  if (results.length === 0) {
+    throw new Error("多版本提示词生成失败：所有框架均生成失败。请检查 API Key 和网络连接。");
+  }
+
+  return results;
 }
