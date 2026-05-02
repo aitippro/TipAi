@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from "react"
+import { useTranslation } from "react-i18next"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
+import { getDbLanguage, getI18nLanguage } from "@/i18n/utils"
 import { motion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
@@ -25,14 +28,15 @@ const MODELS = [
 ]
 
 const TABS = [
-  { id: "general", label: "通用", icon: Settings2 },
-  { id: "models", label: "模型与Key", icon: Key },
-  { id: "interface", label: "界面", icon: Palette },
-  { id: "data", label: "数据", icon: Database },
-  { id: "advanced", label: "高级", icon: Gauge },
+  { id: "general", labelKey: "settings.tabs.general", icon: Settings2 },
+  { id: "models", labelKey: "settings.tabs.models", icon: Key },
+  { id: "interface", labelKey: "settings.tabs.interface", icon: Palette },
+  { id: "data", labelKey: "settings.tabs.data", icon: Database },
+  { id: "advanced", labelKey: "settings.tabs.advanced", icon: Gauge },
 ]
 
 export default function SettingsPage() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState("general")
   const [keys, setKeys] = useState<Record<string, string>>({})
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
@@ -42,12 +46,19 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(() => localStorage.getItem("tipai_theme") || "light")
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("tipai_reduced_motion") === "true")
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("tipai_font_size") || "14"))
+  const [uiLanguage, setUiLanguage] = useState(() => localStorage.getItem("tipai-language") || "zh-CN")
 
   const { data: settings, isLoading } = trpc.promptForge.getSettings.useQuery(undefined)
   const settingsSyncedRef = useRef(false)
   useEffect(() => {
-    if (settings?.defaultModel && !settingsSyncedRef.current) {
-      setDefaultModel(settings.defaultModel)
+    if (settings && !settingsSyncedRef.current) {
+      queueMicrotask(() => {
+        if (settings.defaultModel) setDefaultModel(settings.defaultModel)
+        if (settings.defaultLanguage) {
+          const i18nLang = getI18nLanguage(settings.defaultLanguage)
+          setUiLanguage(i18nLang)
+        }
+      })
       settingsSyncedRef.current = true
     }
   }, [settings])
@@ -55,10 +66,10 @@ export default function SettingsPage() {
   const updateMutation = trpc.promptForge.updateSettings.useMutation({
     onSuccess: () => {
       utils.promptForge.getSettings.invalidate()
-      toast.success("设置已保存", { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> })
+      toast.success(t("settings.saveSuccess"), { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> })
     },
     onError: (e: { message?: string }) => {
-      toast.error(e.message || "保存失败", { icon: <XCircle className="w-4 h-4 text-red-500" />, duration: 4000 })
+      toast.error(e.message || t("settings.saveError"), { icon: <XCircle className="w-4 h-4 text-red-500" />, duration: 4000 })
     },
   })
 
@@ -67,7 +78,7 @@ export default function SettingsPage() {
     if (savingRef.current) return
     savingRef.current = true
 
-    const payload: Record<string, string> = { defaultModel }
+    const payload: Record<string, string> = { defaultModel, defaultLanguage: getDbLanguage(uiLanguage) }
     MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
 
     localStorage.setItem("tipai_global_prompt", globalPrompt)
@@ -98,7 +109,7 @@ export default function SettingsPage() {
     a.download = `tipai-settings-${new Date().toISOString().split("T")[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success("设置已导出")
+    toast.success(t("settings.exportSuccess"))
   }
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,9 +124,9 @@ export default function SettingsPage() {
         if (data.theme) setTheme(data.theme)
         if (data.cloudSync !== undefined) setCloudSync(data.cloudSync)
         if (data.keys) setKeys(data.keys)
-        toast.success("设置已导入，请保存")
+        toast.success(t("settings.importSuccess"))
       } catch {
-        toast.error("导入失败，文件格式错误")
+        toast.error(t("settings.importError"))
       }
     }
     reader.readAsText(file)
@@ -135,8 +146,8 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto px-6 py-14">
       <ScrollReveal>
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold text-slate-900 mb-1">设置</h1>
-          <p className="text-sm text-slate-400">管理偏好、模型密钥和数据</p>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-1">{t("settings.title")}</h1>
+          <p className="text-sm text-slate-400">{t("settings.subtitle")}</p>
         </div>
       </ScrollReveal>
 
@@ -154,7 +165,7 @@ export default function SettingsPage() {
               }`}
             >
               <tab.icon className="w-4 h-4" />
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -169,12 +180,21 @@ export default function SettingsPage() {
               <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-6 space-y-6">
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">主题</Label>
+                    <Label className="text-sm font-medium">{t("settings.language")}</Label>
+                    <p className="text-xs text-slate-400">{t("settings.languageDesc")}</p>
+                    <LanguageSwitcher
+                      value={uiLanguage}
+                      onChange={(code) => setUiLanguage(code)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">{t("settings.theme")}</Label>
                     <div className="flex items-center gap-3">
                       {[
-                        { value: "light", icon: Sun, label: "浅色" },
-                        { value: "dark", icon: Moon, label: "深色" },
-                        { value: "system", icon: Monitor, label: "跟随系统" },
+                        { value: "light", icon: Sun, label: t("settings.themeLight") },
+                        { value: "dark", icon: Moon, label: t("settings.themeDark") },
+                        { value: "system", icon: Monitor, label: t("settings.themeSystem") },
                       ].map((t) => (
                         <button
                           key={t.value}
@@ -193,17 +213,17 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">全局提示词前缀</Label>
+                    <Label className="text-sm font-medium">{t("settings.globalPrompt")}</Label>
                     <textarea
                       value={globalPrompt}
                       onChange={(e) => setGlobalPrompt(e.target.value)}
-                      placeholder="例如：始终使用中文、结构化输出..."
+                      placeholder={t("settings.globalPromptDesc")}
                       className="w-full min-h-[100px] p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">默认生成框架</Label>
+                    <Label className="text-sm font-medium">{t("settings.advancedDesc")}</Label>
                     <div className="flex items-center gap-2 flex-wrap">
                       {["CO-STAR", "CRISPE", "BROKE", "自定义"].map((f) => (
                         <button
@@ -246,7 +266,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-2">
                           {model.key !== "ollama" && (
                             <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${hasKeyConfigured ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-slate-50 text-slate-400 border border-slate-200"}`}>
-                              {hasKeyConfigured ? <><Lock className="w-3 h-3" />已配置</> : <><Unlock className="w-3 h-3" />未配置</>}
+                              {hasKeyConfigured ? <><Lock className="w-3 h-3" />{t("settings.configured")}</> : <><Unlock className="w-3 h-3" />{t("settings.notConfigured")}</>}
                             </span>
                           )}
                           <Switch
@@ -258,7 +278,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Input
                           type={showKeys[model.key] ? "text" : "password"}
-                          placeholder={model.key === "ollama" ? model.placeholder : hasKeyConfigured ? "••• 已保存，留空则保持原值，填写则覆盖" : model.placeholder}
+                          placeholder={model.key === "ollama" ? model.placeholder : hasKeyConfigured ? t("settings.keyPlaceholderSaved") : model.placeholder}
                           value={keys[model.key] || ""}
                           onChange={(e) => setKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
                           className="pr-10 bg-white/80 rounded-xl"
@@ -293,7 +313,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">字体大小</Label>
+                    <Label className="text-sm font-medium">{t("settings.fontSize")}</Label>
                     <div className="flex items-center gap-4">
                       <Type className="w-4 h-4 text-slate-400" />
                       <input
@@ -321,20 +341,20 @@ export default function SettingsPage() {
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium">云端同步</Label>
-                      <p className="text-xs text-slate-400">跨设备同步设置和项目数据（预留功能，尚未实现）</p>
+                      <Label className="text-sm font-medium">{t("settings.cloudSync")}</Label>
+                      <p className="text-xs text-slate-400">{t("settings.cloudSyncDesc")}</p>
                     </div>
                     <Switch checked={cloudSync} onCheckedChange={setCloudSync} disabled />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="rounded-xl" onClick={handleExport}>
-                      <Download className="w-4 h-4 mr-2" />导出设置
+                      <Download className="w-4 h-4 mr-2" />{t("settings.exportData")}
                     </Button>
                     <Label className="cursor-pointer">
                       <input type="file" accept=".json" className="hidden" onChange={handleImport} />
                       <div className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-colors">
-                        <Upload className="w-4 h-4 mr-2" />导入设置
+                        <Upload className="w-4 h-4 mr-2" />{t("settings.importData")}
                       </div>
                     </Label>
                   </div>
@@ -352,25 +372,25 @@ export default function SettingsPage() {
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium">开发者模式</Label>
-                      <p className="text-xs text-slate-400">显示调试信息和额外选项</p>
+                      <Label className="text-sm font-medium">{t("settings.devMode")}</Label>
+                      <p className="text-xs text-slate-400">{t("settings.devModeDesc")}</p>
                     </div>
                     <Switch />
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">快捷键</Label>
+                    <Label className="text-sm font-medium">{t("settings.shortcuts")}</Label>
                     <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span>打开搜索</span>
+                        <span>{t("settings.shortcutSearch")}</span>
                         <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ K</kbd>
                       </div>
                       <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span>新建项目</span>
+                        <span>{t("settings.shortcutNewProject")}</span>
                         <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ N</kbd>
                       </div>
                       <div className="flex items-center justify-between py-2">
-                        <span>打开优化器</span>
+                        <span>{t("settings.shortcutOptimizer")}</span>
                         <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ O</kbd>
                       </div>
                     </div>
@@ -394,9 +414,9 @@ export default function SettingsPage() {
             className="bg-gradient-to-r from-apple-blue to-apple-purple text-white rounded-xl shadow-lg hover:shadow-xl transition-shadow"
           >
             {updateMutation.isPending ? (
-              <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />保存中...</>
+              <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />{t("settings.saving")}</>
             ) : (
-              <><CheckCircle2 className="w-4 h-4 mr-2" />保存设置</>
+              <><CheckCircle2 className="w-4 h-4 mr-2" />{t("settings.save")}</>
             )}
           </Button>
         </motion.div>

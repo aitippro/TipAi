@@ -37,12 +37,34 @@ export function validateGenResult(raw: unknown): GenResult | null {
           tips.push(String(tip))
         }
       }
+      const breakdownRaw = itemRecord.breakdown as Record<string, unknown> | undefined
+      const qualityRaw = itemRecord.qualityCheck as Record<string, unknown> | undefined
       parsedResults.push({
         title: String(itemRecord.title ?? "生成结果"),
         framework: String(itemRecord.framework ?? ""),
         prompt: String(itemRecord.prompt ?? ""),
         explanation: String(itemRecord.explanation ?? ""),
         tips,
+        promptTranslation: itemRecord.promptTranslation ? String(itemRecord.promptTranslation) : undefined,
+        breakdown: breakdownRaw
+          ? {
+              role: String(breakdownRaw.role ?? ""),
+              task: String(breakdownRaw.task ?? ""),
+              format: String(breakdownRaw.format ?? ""),
+              constraints: Array.isArray(breakdownRaw.constraints)
+                ? breakdownRaw.constraints.map((c) => String(c))
+                : [],
+              examples: String(breakdownRaw.examples ?? ""),
+            }
+          : undefined,
+        qualityCheck: qualityRaw
+          ? {
+              coversAllRequirements: Boolean(qualityRaw.coversAllRequirements),
+              clarityScore: typeof qualityRaw.clarityScore === "number" ? qualityRaw.clarityScore : 8.0,
+              specificityScore: typeof qualityRaw.specificityScore === "number" ? qualityRaw.specificityScore : 8.0,
+              reasoning: String(qualityRaw.reasoning ?? ""),
+            }
+          : undefined,
       })
     }
   }

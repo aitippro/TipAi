@@ -38,7 +38,8 @@ export async function generatePromptForgeResult(
   input: GeneratePromptInput,
 ) {
   // console.log("[PF] generate start", { userId, intent: input.intent.slice(0, 40), hasAnswers: !!input.answers, model: input.model })
-  const { model, apiKey } = await resolvePromptForgeModelApiKey(userId, input.model);
+  const { settings, model, apiKey } = await resolvePromptForgeModelApiKey(userId, input.model);
+  const userLanguage = input.language || settings?.defaultLanguage || "zh";
   // console.log("[PF] resolved key", { model, hasKey: !!apiKey })
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
@@ -66,11 +67,11 @@ export async function generatePromptForgeResult(
     try {
       // Use top-1 framework by default for speed; user can regenerate for more variants
       const frameworks = recommendations.slice(0, 1).map((recommendation) => recommendation.framework);
-      results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey);
+      results = await generateMultipleVersions(finalIntent, analysis, frameworks, model, apiKey, undefined, userLanguage);
     } catch (error) {
       console.error("AI generation failed, using fallback:", error);
       try {
-        const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
+        const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey, undefined, userLanguage);
         results = [prompt];
       } catch (fallbackError) {
         console.error("Fallback generation also failed:", fallbackError);
@@ -86,7 +87,7 @@ export async function generatePromptForgeResult(
     }
   } else {
     // No API Key: use local fallback template generation
-    const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey);
+    const prompt = await generatePrompt(finalIntent, analysis, selectedFramework, model, apiKey, undefined, userLanguage);
     results = [prompt];
   }
 
@@ -205,7 +206,8 @@ export async function quickGeneratePromptForgeResult(
   userId: number,
   input: QuickGenerateInput,
 ) {
-  const { model, apiKey } = await resolvePromptForgeModelApiKey(userId);
+  const { settings, model, apiKey } = await resolvePromptForgeModelApiKey(userId);
+  const userLanguage = input.language || settings?.defaultLanguage || "zh";
 
   const { command: slashCmd, cleanIntent } = parseSlashCommand(input.intent);
   const analysis = await analyzeIntent(cleanIntent, model, apiKey);
@@ -216,7 +218,7 @@ export async function quickGeneratePromptForgeResult(
     slashCmd,
   );
   const framework = recommendations[0]?.framework || DEFAULT_FRAMEWORK_KEY;
-  const result = await generatePrompt(cleanIntent, analysis, framework, model, apiKey);
+  const result = await generatePrompt(cleanIntent, analysis, framework, model, apiKey, undefined, userLanguage);
 
   return {
     analysis,

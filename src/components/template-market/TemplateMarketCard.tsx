@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   Check,
   Copy,
@@ -33,6 +34,7 @@ export function TemplateMarketCard({
   onRate,
   onUse,
 }: TemplateMarketCardProps) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const domain = template.domain || "general"
@@ -43,7 +45,7 @@ export function TemplateMarketCard({
     navigator.clipboard.writeText(template.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-    toast.success("已复制到剪贴板")
+    toast.success(t("prompt.copySuccess"))
   }
 
   return (
@@ -97,7 +99,7 @@ export function TemplateMarketCard({
               </button>
             ))}
             <span className="text-[10px] text-slate-400 ml-1">
-              {template.rating ? template.rating.toFixed(1) : "未评分"}
+              {template.rating ? template.rating.toFixed(1) : t("common.unrated")}
             </span>
           </div>
           {showActions && (
@@ -113,7 +115,7 @@ export function TemplateMarketCard({
                 ) : (
                   <Copy className="w-3 h-3 mr-1" />
                 )}
-                {copied ? "已复制" : "复制"}
+                {copied ? t("common.copied") : t("common.copy")}
               </Button>
               <Button
                 size="sm"
@@ -122,7 +124,7 @@ export function TemplateMarketCard({
                 onClick={() => onUse(template.id)}
               >
                 <Wand2 className="w-3 h-3 mr-1" />
-                使用
+                {t("common.use")}
               </Button>
             </div>
           )}

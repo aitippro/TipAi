@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
 import { trpc } from "@/providers/trpc"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -18,17 +19,6 @@ import {
   Loader2,
 } from "lucide-react"
 
-const DOMAIN_LABELS: Record<string, string> = {
-  "content-marketing": "内容营销",
-  programming: "编程开发",
-  education: "教育教学",
-  "data-analysis": "数据分析",
-  legal: "法律分析",
-  general: "通用",
-  "image-gen": "图像生成",
-  "video-gen": "视频生成",
-}
-
 const DOMAIN_COLORS: Record<string, string> = {
   "content-marketing": "bg-rose-50 text-rose-700 border-rose-200",
   programming: "bg-blue-50 text-blue-700 border-blue-200",
@@ -40,14 +30,6 @@ const DOMAIN_COLORS: Record<string, string> = {
   "video-gen": "bg-orange-50 text-orange-700 border-orange-200",
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "草稿",
-  ready: "就绪",
-  executing: "执行中",
-  completed: "已完成",
-  archived: "已归档",
-}
-
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-50 text-slate-600 border-slate-200",
   ready: "bg-emerald-50 text-emerald-600 border-emerald-200",
@@ -56,17 +38,37 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-gray-50 text-gray-500 border-gray-200",
 }
 
-const CLARIFICATION_STATUS_LABELS: Record<string, string> = {
-  pending: "待澄清",
-  in_progress: "澄清中",
-  completed: "已澄清",
-}
-
 export default function Projects() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
+  const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const utils = trpc.useUtils()
+
+  const DOMAIN_LABELS: Record<string, string> = {
+    "content-marketing": t("projects.domain.contentMarketing"),
+    programming: t("projects.domain.programming"),
+    education: t("projects.domain.education"),
+    "data-analysis": t("projects.domain.dataAnalysis"),
+    legal: t("projects.domain.legal"),
+    general: t("common.general"),
+    "image-gen": t("projects.domain.imageGen"),
+    "video-gen": t("projects.domain.videoGen"),
+  }
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: t("projects.status.draft"),
+    ready: t("projects.status.ready"),
+    executing: t("projects.status.executing"),
+    completed: t("projects.status.completed"),
+    archived: t("projects.status.archived"),
+  }
+
+  const CLARIFICATION_STATUS_LABELS: Record<string, string> = {
+    pending: t("projects.clarificationStatus.pending"),
+    in_progress: t("projects.clarificationStatus.inProgress"),
+    completed: t("projects.clarificationStatus.completed"),
+  }
 
   const { data: items, isLoading } = trpc.project.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -75,7 +77,7 @@ export default function Projects() {
   const deleteMutation = trpc.project.delete.useMutation({
     onSuccess: () => {
       utils.project.list.invalidate()
-      toast.success("项目已删除")
+      toast.success(t("projects.deleteSuccess"))
     },
     onError: (e) => toast.error(e.message),
   })
@@ -95,10 +97,10 @@ export default function Projects() {
         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
           <FolderOpen className="w-7 h-7 text-slate-400" />
         </div>
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">请先登录</h2>
-        <p className="text-sm text-slate-400 mb-8">登录后查看你的项目</p>
+        <h2 className="text-xl font-semibold text-slate-800 mb-2">{t("projects.loginRequired")}</h2>
+        <p className="text-sm text-slate-400 mb-8">{t("projects.loginRequiredDesc")}</p>
         <Button onClick={() => navigate("/login")} className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl">
-          去登录
+          {t("projects.goLogin")}
         </Button>
       </div>
     )
@@ -107,13 +109,13 @@ export default function Projects() {
     <div className="max-w-5xl mx-auto px-6 py-14">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900 mb-1">项目</h1>
-          <p className="text-sm text-slate-400">需求澄清对话与生成记录</p>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-1">{t("projects.title")}</h1>
+          <p className="text-sm text-slate-400">{t("projects.subtitle")}</p>
         </div>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
-            placeholder="搜索项目..."
+            placeholder={t("projects.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 bg-white border-slate-100 rounded-xl focus-visible:ring-violet-200 focus-visible:border-violet-300"
@@ -124,7 +126,7 @@ export default function Projects() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-32">
           <Loader2 className="w-8 h-8 animate-spin text-violet-400 mb-3" />
-          <p className="text-sm text-slate-400">加载中...</p>
+          <p className="text-sm text-slate-400">{t("common.loading")}</p>
         </div>
       ) : filtered && filtered.length > 0 ? (
         <div className="space-y-3">
@@ -146,10 +148,10 @@ export default function Projects() {
                         {item.title}
                       </h3>
                       <Badge variant="outline" className={`text-[10px] rounded-md ${DOMAIN_COLORS[item.domain || "general"] || DOMAIN_COLORS.general}`}>
-                        {DOMAIN_LABELS[item.domain || "general"] || "通用"}
+                        {DOMAIN_LABELS[item.domain || "general"] || t("common.general")}
                       </Badge>
                       <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[item.status || "draft"] || STATUS_COLORS.draft}`}>
-                        {STATUS_LABELS[item.status || "draft"] || item.status || "草稿"}
+                        {STATUS_LABELS[item.status || "draft"] || item.status || t("projects.status.draft")}
                       </Badge>
                       {item.clarificationStatus && (
                         <Badge variant="outline" className="text-[10px] rounded-md bg-slate-50">
@@ -168,7 +170,7 @@ export default function Projects() {
                     {item.turnCount != null && item.turnCount > 0 && (
                       <div className="flex items-center gap-1 text-xs text-slate-400">
                         <MessageSquare className="w-3 h-3" />
-                        {item.turnCount} 轮
+                        {t("projects.turnCount", { count: item.turnCount })}
                       </div>
                     )}
                     <div className="flex items-center gap-1 text-xs text-slate-400">
@@ -181,7 +183,7 @@ export default function Projects() {
                       className="h-7 w-7 p-0 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (confirm("确定删除此项目？相关对话和摘要也将被删除。")) {
+                        if (confirm(t("projects.confirmDelete"))) {
                           deleteMutation.mutate({ id: item.id })
                         }
                       }}
@@ -200,13 +202,13 @@ export default function Projects() {
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
             <FolderOpen className="w-7 h-7 text-slate-400" />
           </div>
-          <p className="text-slate-400 mb-2">还没有项目</p>
+          <p className="text-slate-400 mb-2">{t("projects.emptyTitle")}</p>
           <p className="text-sm text-slate-400 mb-8">
-            在首页输入需求并生成提示词，AI会自动创建项目并记录澄清对话
+            {t("projects.emptyDesc")}
           </p>
           <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl" onClick={() => navigate("/")}>
             <Sparkles className="w-4 h-4 mr-2" />
-            去生成
+            {t("projects.goGenerate")}
           </Button>
         </div>
       )}

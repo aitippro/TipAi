@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { logger, type LogEntry } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +22,7 @@ function formatTime(ts: number) {
 }
 
 export default function LogsPage() {
+  const { t } = useTranslation()
   const [items, setItems] = useState<LogEntry[]>(() => [...logger.logs].reverse())
   const [filter, setFilter] = useState("")
   const [levelFilter, setLevelFilter] = useState<string | null>(null)
@@ -44,20 +46,20 @@ export default function LogsPage() {
 
   const handleCopy = (entry: LogEntry) => {
     const text = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.source}] ${entry.message}${entry.detail ? "\n" + entry.detail : ""}`
-    navigator.clipboard?.writeText(text).then(() => toast.success("已复制")).catch(() => {
+    navigator.clipboard?.writeText(text).then(() => toast.success(t("common.copied"))).catch(() => {
       const ta = document.createElement("textarea")
       ta.value = text
       document.body.appendChild(ta)
       ta.select()
       document.execCommand("copy")
       document.body.removeChild(ta)
-      toast.success("已复制")
+      toast.success(t("common.copied"))
     })
   }
 
   const handleCopyAll = () => {
     const text = logger.export()
-    navigator.clipboard?.writeText(text).then(() => toast.success(`已复制 ${logger.logs.length} 条日志`)).catch(() => toast.error("复制失败"))
+    navigator.clipboard?.writeText(text).then(() => toast.success(t("logs.copiedAll", { count: logger.logs.length }))).catch(() => toast.error(t("logs.copyFailed")))
   }
 
   const handleExportFile = () => {
@@ -69,12 +71,12 @@ export default function LogsPage() {
     a.download = `tipai-logs-${Date.now()}.txt`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success("日志已导出")
+    toast.success(t("logs.exported"))
   }
 
   const handleClear = () => {
     logger.clear()
-    toast.success("日志已清空")
+    toast.success(t("logs.cleared"))
   }
 
   const countByLevel = useMemo(() => {
@@ -87,23 +89,23 @@ export default function LogsPage() {
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">应用日志</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t("logs.title")}</h1>
           <p className="text-sm text-slate-400 mt-1">
-            共 {items.length} 条 ·
-            <span className="text-red-500 ml-1">{countByLevel.error || 0} 错误</span>
-            <span className="text-amber-500 ml-1">{countByLevel.warn || 0} 警告</span>
-            <span className="text-blue-500 ml-1">{countByLevel.info || 0} 信息</span>
+            {t("logs.totalCount", { count: items.length })} ·
+            <span className="text-red-500 ml-1">{t("logs.errorCount", { count: countByLevel.error || 0 })}</span>
+            <span className="text-amber-500 ml-1">{t("logs.warnCount", { count: countByLevel.warn || 0 })}</span>
+            <span className="text-blue-500 ml-1">{t("logs.infoCount", { count: countByLevel.info || 0 })}</span>
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={handleCopyAll}>
-            <Copy className="w-3.5 h-3.5 mr-1" />复制全部
+            <Copy className="w-3.5 h-3.5 mr-1" />{t("logs.copyAll")}
           </Button>
           <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={handleExportFile}>
-            <Download className="w-3.5 h-3.5 mr-1" />导出
+            <Download className="w-3.5 h-3.5 mr-1" />{t("logs.export")}
           </Button>
           <Button variant="outline" size="sm" className="rounded-xl text-xs text-red-500 hover:text-red-600" onClick={handleClear}>
-            <Trash2 className="w-3.5 h-3.5 mr-1" />清空
+            <Trash2 className="w-3.5 h-3.5 mr-1" />{t("logs.clear")}
           </Button>
         </div>
       </div>
@@ -113,7 +115,7 @@ export default function LogsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <Input
-            placeholder="搜索日志..."
+            placeholder={t("logs.searchPlaceholder")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="pl-9 h-9 text-sm rounded-xl"
@@ -137,8 +139,8 @@ export default function LogsPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Clock className="w-8 h-8 mb-2 opacity-50" />
-            <p className="text-sm">{items.length === 0 ? "暂无日志" : "无匹配日志"}</p>
-            <p className="text-xs mt-1">应用运行过程中会自动记录日志</p>
+            <p className="text-sm">{items.length === 0 ? t("logs.noLogs") : t("logs.noMatchingLogs")}</p>
+            <p className="text-xs mt-1">{t("logs.autoRecordHint")}</p>
           </div>
         ) : (
           filtered.map((entry) => {
@@ -164,7 +166,7 @@ export default function LogsPage() {
                   <button
                     className="shrink-0 p-1 rounded hover:bg-slate-200 transition-colors"
                     onClick={(e) => { e.stopPropagation(); handleCopy(entry) }}
-                    title="复制此条"
+                    title={t("logs.copyEntryTitle")}
                   >
                     <Copy className="w-3 h-3 text-slate-400" />
                   </button>

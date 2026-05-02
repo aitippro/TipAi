@@ -16,6 +16,7 @@ export const generatePromptSchema = z.object({
   framework: z.string().optional(),
   answers: z.record(z.string(), z.string()).optional(),
   stepMode: z.boolean().optional(),
+  language: z.string().optional(),
 });
 
 export const clarifyIntentSchema = z.object({
@@ -29,6 +30,7 @@ export const decomposeIntentSchema = z.object({
 
 export const quickGenerateSchema = z.object({
   intent: z.string().min(1).max(2000),
+  language: z.string().optional(),
 });
 
 export const saveLibraryItemSchema = z.object({

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { MessageSquare, Wand2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ export function ClarificationOverlay({
   onSubmit,
   onSkip,
 }: ClarificationOverlayProps) {
+  const { t } = useTranslation()
   const requiredCount = questions.filter((question) => question.required !== false).length
   const optionalCount = questions.filter((question) => question.required === false).length
 
@@ -27,20 +29,20 @@ export function ClarificationOverlay({
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-semibold text-slate-800">需求澄清</span>
+          <span className="text-sm font-semibold text-slate-800">{t("generate.clarifyTitle")}</span>
           <span className="text-xs text-slate-400 ml-2">
-            {requiredCount} 项必填 · {optionalCount} 项选填
+            {requiredCount} {t("clarify.requiredCount")} · {optionalCount} {t("clarify.optionalCount")}
           </span>
         </div>
         {questions.some((question) => question.required === false) && (
           <button onClick={onSkip} className="text-xs text-slate-400 hover:text-slate-600">
-            跳过选填项
+            {t("clarify.skipOptional")}
           </button>
         )}
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-          <p className="text-sm text-slate-500">为了生成更精准的提示词，请补充以下信息：</p>
+          <p className="text-sm text-slate-500">{t("generate.clarifyDesc")}</p>
           {questions.map((question, index) => {
             const isRequired = question.required !== false
             const value = answers[question.id] ?? ""
@@ -57,7 +59,7 @@ export function ClarificationOverlay({
                     <p className="text-sm font-medium text-slate-800">
                       {question.question}
                       {isRequired && <span className="text-red-500 ml-1">*</span>}
-                      {!isRequired && <span className="text-slate-400 text-xs ml-1">(选填)</span>}
+                      {!isRequired && <span className="text-slate-400 text-xs ml-1">({t("clarify.optional")})</span>}
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">{question.why}</p>
                   </div>
@@ -83,7 +85,7 @@ export function ClarificationOverlay({
                     type="text"
                     value={value}
                     onChange={(e) => onAnswerChange(question.id, e.target.value)}
-                    placeholder={isRequired ? "必填，请输入..." : "选填，可留空..."}
+                    placeholder={isRequired ? t("clarify.requiredPlaceholder") : t("clarify.optionalPlaceholder")}
                     className="ml-8 w-full text-sm px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-100 outline-none transition-all"
                   />
                 )}
@@ -95,7 +97,7 @@ export function ClarificationOverlay({
             className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-violet-200/50 mt-4"
           >
             <Wand2 className="w-4 h-4 mr-2" />
-            开始生成
+            {t("home.startGenerate")}
           </Button>
         </div>
       </div>

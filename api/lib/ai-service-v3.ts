@@ -241,7 +241,13 @@ export async function decomposeSteps(
   return null;
 }
 
-export async function generatePrompt(
+// ── Bilingual Generation Pipeline ───────────────────────────────────────────
+
+/**
+ * Stage 2: Write the prompt in English (regardless of input language).
+ * English prompts work best with all major AI models.
+ */
+async function generateEnglishPrompt(
   intent: string,
   analysis: IntentAnalysis,
   framework: string,
@@ -249,6 +255,185 @@ export async function generatePrompt(
   apiKey: string,
   decodeStrategy?: DecodeStrategy,
 ): Promise<GeneratedPrompt> {
+  const frameworkConfig = resolveFramework(framework);
+
+  const systemPrompt = `You are an elite Prompt Engineer. Your task is to write a perfect, production-ready English prompt based on the user's requirement and intent analysis, using the specified framework.
+
+## Rules
+1. The prompt MUST be written entirely in English
+2. It must be complete and ready to copy-paste into any AI chat interface
+3. Every framework component must be fully filled with specific, unambiguous content
+4. Incorporate domain best practices
+5. Output format: Markdown
+6. If applicable, add Few-shot examples
+7. The prompt should be comprehensive enough that a non-expert user gets expert-level output
+
+## Output Format (JSON)
+{
+  "title": "Prompt title",
+  "prompt": "The complete prompt content",
+  "explanation": "Why this prompt works (2-3 sentences)",
+  "tips": ["Tip 1", "Tip 2", "Tip 3"],
+  "usageExample": "Expected usage scenario"
+}`;
+
+  const userMessage = `## User Requirement
+${intent}
+
+## Intent Analysis
+- Goal: ${analysis.goal}
+- Domain: ${analysis.domain}
+- Sub-domain: ${analysis.subDomain}
+- Audience: ${analysis.audience || "unspecified"}
+- Tone: ${analysis.tone}
+- Style: ${analysis.style}
+- Constraints: ${analysis.constraints.join(", ") || "none"}
+- Output Format: ${analysis.outputFormat}
+- Complexity: ${analysis.complexity}
+
+## Framework
+Name: ${frameworkConfig.nameEn || frameworkConfig.name}
+Description: ${frameworkConfig.description}
+Components: ${frameworkConfig.components.join(", ")}
+
+## Template
+${frameworkConfig.template}
+
+## Example
+${frameworkConfig.example}
+
+Please generate a perfect English prompt using the ${frameworkConfig.nameEn || frameworkConfig.name} framework.`;
+
+  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.5, decodeStrategy);
+  if (result) {
+    const parsed = parseAIJsonResponse<Record<string, unknown>>(result);
+    if (parsed) {
+      const tips = toStringArray(parsed.tips);
+      return {
+        title: toStringValue(parsed.title, analysis.goal),
+        framework: frameworkConfig.name,
+        prompt: toStringValue(parsed.prompt, result),
+        explanation: toStringValue(
+          parsed.explanation,
+          `Generated using the ${frameworkConfig.nameEn || frameworkConfig.name} framework for the ${analysis.domain} domain`,
+        ),
+        tips:
+          tips.length > 0
+            ? tips
+            : ["Copy and paste directly into AI chat", "Adjust specific fields based on actual needs"],
+        usageExample: toStringValue(
+          parsed.usageExample,
+          "Copy the prompt and paste it into an AI chat interface",
+        ),
+      };
+    }
+    throw new Error("English prompt generation failed: AI response could not be parsed as valid JSON.");
+  }
+  throw new Error("English prompt generation failed: AI model returned no valid result. Please check API Key and network.");
+}
+
+/**
+ * Stage 3: Translate the English prompt to Chinese and provide structured breakdown.
+ */
+async function generateChineseBreakdown(
+  englishPrompt: GeneratedPrompt,
+  analysis: IntentAnalysis,
+  provider: string,
+  apiKey: string,
+  decodeStrategy?: DecodeStrategy,
+): Promise<Pick<GeneratedPrompt, "promptTranslation" | "breakdown" | "qualityCheck">> {
+  const systemPrompt = `你是一位专业的提示词翻译与解析专家。你的任务是将英文提示词翻译为流畅的中文，并进行结构化解析。
+
+## 规则
+1. 翻译要准确、自然，保留原文的专业性和完整性
+2. 结构化解析要提取提示词的关键组件
+3. 质量自检要诚实评估提示词的覆盖度、清晰度和具体性
+
+## 输出格式（JSON）
+{
+  "promptTranslation": "完整的中文翻译",
+  "breakdown": {
+    "role": "提示词赋予 AI 的角色",
+    "task": "核心任务描述",
+    "format": "输出格式要求",
+    "constraints": ["约束1", "约束2"],
+    "examples": "示例说明（如有）"
+  },
+  "qualityCheck": {
+    "coversAllRequirements": true,
+    "clarityScore": 8.5,
+    "specificityScore": 8.0,
+    "reasoning": "质量评估理由"
+  }
+}
+
+clarityScore 和 specificityScore 范围 0-10，保留一位小数。`;
+
+  const userMessage = `## 英文提示词
+${englishPrompt.prompt}
+
+## 框架信息
+- 框架：${englishPrompt.framework}
+- 目标：${analysis.goal}
+- 领域：${analysis.domain}
+- 受众：${analysis.audience || "未指定"}
+
+请提供中文翻译和结构化解析。`;
+
+  const result = await callAI(provider, apiKey, systemPrompt, userMessage, 0.3, decodeStrategy);
+  if (result) {
+    const parsed = parseAIJsonResponse<Record<string, unknown>>(result);
+    if (parsed) {
+      const breakdownRaw = parsed.breakdown as Record<string, unknown> | undefined;
+      const qualityRaw = parsed.qualityCheck as Record<string, unknown> | undefined;
+      return {
+        promptTranslation: toStringValue(parsed.promptTranslation, englishPrompt.prompt),
+        breakdown: breakdownRaw
+          ? {
+              role: toStringValue(breakdownRaw.role, ""),
+              task: toStringValue(breakdownRaw.task, ""),
+              format: toStringValue(breakdownRaw.format, ""),
+              constraints: toStringArray(breakdownRaw.constraints),
+              examples: toStringValue(breakdownRaw.examples, ""),
+            }
+          : undefined,
+        qualityCheck: qualityRaw
+          ? {
+              coversAllRequirements: !!qualityRaw.coversAllRequirements,
+              clarityScore: typeof qualityRaw.clarityScore === "number" ? qualityRaw.clarityScore : 8.0,
+              specificityScore: typeof qualityRaw.specificityScore === "number" ? qualityRaw.specificityScore : 8.0,
+              reasoning: toStringValue(qualityRaw.reasoning, ""),
+            }
+          : undefined,
+      };
+    }
+  }
+  // Graceful fallback: return empty translation, don't fail the whole pipeline
+  return {
+    promptTranslation: englishPrompt.prompt,
+  };
+}
+
+// ── Main Generation Orchestration ───────────────────────────────────────────
+
+export async function generatePrompt(
+  intent: string,
+  analysis: IntentAnalysis,
+  framework: string,
+  provider: string,
+  apiKey: string,
+  decodeStrategy?: DecodeStrategy,
+  /** User interface language. 'zh' triggers bilingual generation. */
+  language?: string,
+): Promise<GeneratedPrompt> {
+  // For Chinese users: generate English prompt + Chinese translation/breakdown
+  if (language === "zh") {
+    const english = await generateEnglishPrompt(intent, analysis, framework, provider, apiKey, decodeStrategy);
+    const breakdown = await generateChineseBreakdown(english, analysis, provider, apiKey, decodeStrategy);
+    return { ...english, ...breakdown };
+  }
+
+  // For other languages: use the original generation logic
   const frameworkConfig = resolveFramework(framework);
 
   const systemPrompt = `你是一位顶级提示词工程师（Prompt Engineer）。你的任务是根据用户的模糊需求和意图分析，使用指定的框架生成一条完美的、可直接使用的提示词。
@@ -397,12 +582,14 @@ export async function generateMultipleVersions(
   provider: string,
   apiKey: string,
   decodeStrategy?: DecodeStrategy,
+  /** User interface language. 'zh' triggers bilingual generation. */
+  language?: string,
 ): Promise<GeneratedPrompt[]> {
   // Parallel generation for speed; cap at 2 frameworks to limit API load
   const limited = frameworks.slice(0, 2);
   const promises = limited.map(async (framework) => {
     try {
-      return await generatePrompt(intent, analysis, framework, provider, apiKey, decodeStrategy);
+      return await generatePrompt(intent, analysis, framework, provider, apiKey, decodeStrategy, language);
     } catch (error) {
       console.error(`Framework ${framework} failed:`, error);
       return null;

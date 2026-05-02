@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,6 +32,7 @@ function generateMessageId(): string {
 }
 
 export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatPanelProps) {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState<ClarifyMessage[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<ClarifyQuestion | null>(null)
   const [answerText, setAnswerText] = useState("")
@@ -404,7 +406,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
                   ref={textareaRef}
                   value={answerText}
                   onChange={(e) => setAnswerText(e.target.value)}
-                  placeholder="请输入您的回答..."
+                  placeholder={t("generate.answerPlaceholder")}
                   className="min-h-[80px] rounded-xl resize-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -439,14 +441,14 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         ) : !isLoading ? (
           <div className="flex items-center justify-center gap-2 py-4">
             {summary ? (
-              <span className="text-sm text-emerald-600 font-medium">需求澄清已完成</span>
+              <span className="text-sm text-emerald-600 font-medium">{t("generate.clarifyComplete")}</span>
             ) : (
               <div className="flex items-center gap-2 text-slate-400">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
                 </span>
-                <span className="text-sm">AI 正在分析你的需求...</span>
+                <span className="text-sm">{t("home.analyzing")}</span>
               </div>
             )}
           </div>

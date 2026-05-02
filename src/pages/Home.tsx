@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
 import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search, Compass } from "lucide-react"
@@ -21,21 +22,22 @@ import { HowItWorksSection } from "@/components/home/HowItWorksSection"
 type FlowStage = "input" | "clarify" | "results"
 
 const STEPS = [
-  { key: "input" as const, label: "描述需求", icon: MessageSquare },
-  { key: "clarify" as const, label: "AI 分析", icon: Sparkles },
-  { key: "results" as const, label: "生成结果", icon: CheckCircle2 },
+  { key: "input" as const, labelKey: "home.stepInput", icon: MessageSquare },
+  { key: "clarify" as const, labelKey: "home.stepAnalyze", icon: Sparkles },
+  { key: "results" as const, labelKey: "home.stepResults", icon: CheckCircle2 },
 ]
 
 // ── Scene Cards ────────────────────────────────────
 const SCENES = [
-  { icon: FileText, label: "文案创作", desc: "产品文案 / 邮件 / 社媒", color: "from-blue-500/20 to-cyan-500/20" },
-  { icon: Palette, label: "创意生成", desc: "海报 / 插画 / 视频脚本", color: "from-purple-500/20 to-pink-500/20" },
-  { icon: Mail, label: "办公辅助", desc: "会议纪要 / PPT / 邮件", color: "from-orange-500/20 to-yellow-500/20" },
-  { icon: Search, label: "信息检索", desc: "论文 / 竞品 / 行业分析", color: "from-green-500/20 to-teal-500/20" },
+  { id: "copywriting", icon: FileText, labelKey: "home.sceneCopywriting", descKey: "home.sceneCopywritingDesc", color: "from-blue-500/20 to-cyan-500/20" },
+  { id: "creative", icon: Palette, labelKey: "home.sceneCreative", descKey: "home.sceneCreativeDesc", color: "from-purple-500/20 to-pink-500/20" },
+  { id: "office", icon: Mail, labelKey: "home.sceneOffice", descKey: "home.sceneOfficeDesc", color: "from-orange-500/20 to-yellow-500/20" },
+  { id: "research", icon: Search, labelKey: "home.sceneResearch", descKey: "home.sceneResearchDesc", color: "from-green-500/20 to-teal-500/20" },
 ]
 
 // ── Progress Indicator ───────────────────────────────
 function ProgressSteps({ stage }: { stage: FlowStage }) {
+  const { t } = useTranslation()
   const idx = STEPS.findIndex((s) => s.key === stage)
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
@@ -49,7 +51,7 @@ function ProgressSteps({ stage }: { stage: FlowStage }) {
               ${done ? "bg-emerald-50 text-emerald-600" : active ? "bg-violet-100 text-violet-700 shadow-sm" : "bg-slate-50 text-slate-400"}`}
             >
               <Icon className={`w-3.5 h-3.5 ${active ? "text-violet-500" : done ? "text-emerald-500" : "text-slate-300"}`} />
-              <span className="hidden sm:inline">{s.label}</span>
+              <span className="hidden sm:inline">{t(s.labelKey)}</span>
             </div>
             {i < STEPS.length - 1 && (
               <div className={`w-6 h-px ${i < idx ? "bg-emerald-300" : "bg-slate-200"}`} />
@@ -93,6 +95,7 @@ function ClarifyStage({
 
 // ── Home ─────────────────────────────────────────────
 export default function Home() {
+  const { t } = useTranslation()
   const [intent, setIntent] = useState("")
   const [stage, setStage] = useState<FlowStage>("input")
   const [clarifyProjectId, setClarifyProjectId] = useState<number | null>(null)
@@ -178,8 +181,8 @@ export default function Home() {
   }, [])
 
   const handleStart = useCallback(async () => {
-    if (!intent.trim()) { toast.error("请输入你的需求"); return }
-    if (!isAuthenticated) { toast.info("请先登录"); navigate("/login"); return }
+    if (!intent.trim()) { toast.error(t("home.toastEmptyIntent")); return }
+    if (!isAuthenticated) { toast.info(t("home.toastLoginRequired")); navigate("/login"); return }
 
     setIsCreating(true)
     try {
@@ -189,11 +192,11 @@ export default function Home() {
       setClarifyProjectId(project.id)
       setStage("clarify")
     } catch {
-      toast.error("创建项目失败，请重试")
+      toast.error(t("home.toastCreateFailed"))
     } finally {
       setIsCreating(false)
     }
-  }, [intent, isAuthenticated, navigate, createProject, updateProject])
+  }, [intent, isAuthenticated, navigate, createProject, updateProject, t])
 
   const handleClarifyComplete = useCallback(async (answers: Record<string, string>, _summary: RequirementSummary) => {
     if (clarifyProjectId) {
@@ -234,14 +237,14 @@ export default function Home() {
           <div className="w-full max-w-2xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-3 whitespace-nowrap">
-                <TextReveal text="模糊需求" mode="word" stagger={80} />
+                <TextReveal text={t("home.heroTitle")} mode="word" stagger={80} />
                 <span className="mx-3 text-slate-300 font-light">→</span>
                 <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  完美提示词
+                  {t("home.heroSubtitle")}
                 </span>
               </h1>
               <p className="text-slate-400 max-w-md mx-auto text-sm">
-                <TextReveal text="用自然语言描述任务，AI 自动分析意图并生成专业级提示词" mode="word" stagger={20} delay={400} />
+                <TextReveal text={t("home.heroDesc")} mode="word" stagger={20} delay={400} />
               </p>
             </div>
 
@@ -252,7 +255,7 @@ export default function Home() {
                 value={intent}
                 onChange={(e) => setIntent(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="描述你想完成的任务，例如：帮我写一份产品发布会的演讲稿..."
+                placeholder={t("home.placeholder")}
                 className="min-h-[140px] text-base resize-none border-0 focus-visible:ring-0 p-5 shadow-none bg-transparent placeholder:text-slate-300 leading-relaxed"
               />
 
@@ -272,18 +275,18 @@ export default function Home() {
               {/* Action bar */}
               <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
                 <span className="text-xs text-slate-400 flex items-center gap-2">
-                  {intent.length > 0 ? `${intent.length} 字` : "⌘↵ 快速生成"}
+                  {intent.length > 0 ? t("home.charCount", { count: intent.length }) : t("home.shortcutHint")}
                   {detectedComplexity && (
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                       detectedComplexity === "complex" ? "bg-purple-100 text-purple-700" :
                       detectedComplexity === "medium" ? "bg-blue-100 text-blue-700" :
                       "bg-green-100 text-green-700"
                     }`}>
-                      {detectedComplexity === "complex" ? "复杂任务" : detectedComplexity === "medium" ? "中等任务" : "简单任务"}
+                      {detectedComplexity === "complex" ? t("home.complexityComplex") : detectedComplexity === "medium" ? t("home.complexityMedium") : t("home.complexitySimple")}
                     </span>
                   )}
                   {isAnalyzing && (
-                    <span className="text-[10px] text-slate-300">AI 分析中...</span>
+                    <span className="text-[10px] text-slate-300">{t("home.analyzing")}</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
@@ -294,16 +297,16 @@ export default function Home() {
                         ? "bg-violet-100 text-violet-700 border border-violet-200"
                         : "text-slate-400 hover:text-slate-600 bg-slate-50 border border-transparent"
                     }`}
-                    title="复杂任务分步骤处理"
+                    title={t("home.stepModeDesc")}
                   >
                     <Compass className="w-3.5 h-3.5" />
-                    {stepMode ? "分步骤" : "单步骤"}
+                    {stepMode ? t("home.stepModeOn") : t("home.stepModeOff")}
                   </button>
                   <RippleButton variant="primary" size="md" onClick={handleStart}>
                     {isCreating ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />创建中...</>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("home.creating")}</>
                     ) : (
-                      <><Wand2 className="w-4 h-4 mr-2" />开始生成<ArrowRight className="w-3.5 h-3.5 ml-1.5" /></>
+                      <><Wand2 className="w-4 h-4 mr-2" />{t("home.startGenerate")}<ArrowRight className="w-3.5 h-3.5 ml-1.5" /></>
                     )}
                   </RippleButton>
                 </div>
@@ -313,14 +316,14 @@ export default function Home() {
             {/* Scene Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
               {SCENES.map((scene) => (
-                <TiltCard key={scene.label} maxTilt={8} scale={1.03}>
+                <TiltCard key={scene.id} maxTilt={8} scale={1.03}>
                   <button
-                    onClick={() => setIntent(scene.desc)}
+                    onClick={() => setIntent(t(scene.descKey))}
                     className={`w-full p-4 rounded-xl bg-gradient-to-br ${scene.color} border border-white/40 backdrop-blur-sm hover:shadow-lg transition-shadow text-left`}
                   >
                     <scene.icon className="w-5 h-5 mb-2 text-slate-600" />
-                    <div className="text-sm font-medium text-slate-700">{scene.label}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{scene.desc}</div>
+                    <div className="text-sm font-medium text-slate-700">{t(scene.labelKey)}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{t(scene.descKey)}</div>
                   </button>
                 </TiltCard>
               ))}
@@ -347,10 +350,10 @@ export default function Home() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                需求澄清完成，正在生成提示词
+                {t("home.resultsTitle")}
               </p>
               <Button variant="ghost" size="sm" className="text-xs text-slate-400" onClick={() => navigate("/workspace")}>
-                查看工作台
+                {t("home.viewWorkspace")}
               </Button>
             </div>
             <GenerateModal

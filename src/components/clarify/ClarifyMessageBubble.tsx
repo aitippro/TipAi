@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { Bot, User, Sparkles } from "lucide-react"
 
 import type { ClarifyMessage } from "./types"
@@ -7,6 +8,7 @@ type ClarifyMessageBubbleProps = {
 }
 
 export function ClarifyMessageBubble({ message }: ClarifyMessageBubbleProps) {
+  const { t } = useTranslation()
   const isUser = message.role === "user"
   const isAssistant = message.role === "assistant"
 
@@ -49,7 +51,7 @@ export function ClarifyMessageBubble({ message }: ClarifyMessageBubbleProps) {
           {message.isLoading ? (
             <div className="flex items-center gap-2 text-slate-400">
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span className="text-xs">AI 正在思考...</span>
+              <span className="text-xs">{t("generate.aiThinking")}</span>
             </div>
           ) : (
             <>

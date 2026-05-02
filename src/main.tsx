@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { ThemeProvider } from 'next-themes'
 import './index.css'
+import './i18n'
 import { TRPCProvider } from "@/providers/trpc"
 import { Toaster } from "@/components/ui/sonner"
 import App from './App.tsx'

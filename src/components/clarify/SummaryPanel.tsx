@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { CheckCircle2, Lightbulb, AlertCircle, BookOpen, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -11,6 +12,7 @@ type SummaryPanelProps = {
 }
 
 export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }: SummaryPanelProps) {
+  const { t } = useTranslation()
   return (
     <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl border border-slate-100 shadow-lg overflow-hidden">
       {/* Header */}
@@ -19,8 +21,8 @@ export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }:
           <CheckCircle2 className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-slate-800">需求澄清完成</h3>
-          <p className="text-xs text-slate-500">AI 已分析并总结你的需求</p>
+          <h3 className="font-semibold text-slate-800">{t("generate.clarifyComplete")}</h3>
+          <p className="text-xs text-slate-500">{t("generate.aiAnalyzed")}</p>
         </div>
       </div>
 
@@ -29,7 +31,7 @@ export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }:
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <Lightbulb className="w-4 h-4 text-amber-500" />
-            <span>需求摘要</span>
+            <span>{t("generate.summaryTitle")}</span>
           </div>
           <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
             <p className="text-sm text-slate-700 leading-relaxed">{summary.summary}</p>
@@ -41,7 +43,7 @@ export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }:
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>核心需求</span>
+              <span>{t("generate.coreRequirement")}</span>
               <span className="text-xs text-slate-400 ml-auto">{summary.requirements.length} 项</span>
             </div>
             <ul className="space-y-2">
@@ -125,7 +127,7 @@ export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }:
             onClick={onRegenerate}
             disabled={isGenerating}
           >
-            重新生成
+            {t("prompt.regenerate")}
           </Button>
           <Button
             className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-200/50"
@@ -133,7 +135,7 @@ export function SummaryPanel({ summary, onProceed, onRegenerate, isGenerating }:
             disabled={isGenerating}
           >
             <Wand2 className="w-4 h-4 mr-2" />
-            生成提示词
+            {t("home.startGenerate")}
           </Button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
 import { motion, AnimatePresence } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
@@ -27,37 +28,12 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal"
 import { Skeleton } from "@/components/ui/Skeleton"
 import GenerateModal from "@/components/GenerateModal"
 
-const DOMAIN_LABELS: Record<string, string> = {
-  "content-marketing": "内容营销",
-  programming: "编程开发",
-  education: "教育教学",
-  "data-analysis": "数据分析",
-  legal: "法律分析",
-  general: "通用",
-  "image-gen": "图像生成",
-  "video-gen": "视频生成",
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "草稿",
-  ready: "就绪",
-  executing: "执行中",
-  completed: "已完成",
-  archived: "已归档",
-}
-
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-100 text-slate-600",
   ready: "bg-emerald-50 text-emerald-600",
   executing: "bg-blue-50 text-blue-600",
   completed: "bg-violet-50 text-violet-600",
   archived: "bg-gray-50 text-gray-400",
-}
-
-const CLARIFICATION_STATUS_LABELS: Record<string, string> = {
-  pending: "待澄清",
-  in_progress: "澄清中",
-  completed: "已澄清",
 }
 
 interface ConversationTurn {
@@ -75,10 +51,36 @@ interface ConversationTurn {
 export default function ProjectDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const projectId = parseInt(id || "0", 10)
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [inputValue, setInputValue] = useState("")
   const [showGenerate, setShowGenerate] = useState(false)
+
+  const DOMAIN_LABELS: Record<string, string> = {
+    "content-marketing": t("projects.domain.contentMarketing"),
+    programming: t("projects.domain.programming"),
+    education: t("projects.domain.education"),
+    "data-analysis": t("projects.domain.dataAnalysis"),
+    legal: t("projects.domain.legal"),
+    general: t("common.general"),
+    "image-gen": t("projects.domain.imageGen"),
+    "video-gen": t("projects.domain.videoGen"),
+  }
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: t("projects.status.draft"),
+    ready: t("projects.status.ready"),
+    executing: t("projects.status.executing"),
+    completed: t("projects.status.completed"),
+    archived: t("projects.status.archived"),
+  }
+
+  const CLARIFICATION_STATUS_LABELS: Record<string, string> = {
+    pending: t("projects.clarificationStatus.pending"),
+    in_progress: t("projects.clarificationStatus.inProgress"),
+    completed: t("projects.clarificationStatus.completed"),
+  }
 
   const { data: project, isLoading: isLoadingProject } = trpc.project.get.useQuery(
     { id: projectId },
@@ -100,9 +102,9 @@ export default function ProjectDetail() {
   const generateSummaryMutation = trpc.project.generateSummary.useMutation({
     onSuccess: () => {
       utils.project.getSummary.invalidate({ id: projectId })
-      toast.success("需求摘要已生成")
+      toast.success(t("projectDetail.generateSummarySuccess"))
     },
-    onError: (e: { message?: string }) => toast.error(e.message || "生成失败"),
+    onError: (e: { message?: string }) => toast.error(e.message || t("projectDetail.generateSummaryError")),
   })
 
   const utils = trpc.useUtils()
@@ -128,20 +130,20 @@ export default function ProjectDetail() {
   if (!project) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-32 text-center">
-        <p className="text-slate-400 mb-4">项目不存在或已被删除</p>
+        <p className="text-slate-400 mb-4">{t("projectDetail.projectNotFound")}</p>
         <Button variant="outline" className="rounded-xl" onClick={() => navigate("/workspace")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />返回工作台
+          <ArrowLeft className="w-4 h-4 mr-2" />{t("projectDetail.backToWorkspace")}
         </Button>
       </div>
     )
   }
 
-  const turns: ConversationTurn[] = (conversation || []).map((t: { id: number; role: "user" | "assistant" | "system"; content: string; turnNumber?: number; createdAt?: string | Date }) => ({
-    id: t.id,
-    role: t.role,
-    content: t.content,
-    turnNumber: t.turnNumber,
-    createdAt: t.createdAt,
+  const turns: ConversationTurn[] = (conversation || []).map((turnData: { id: number; role: "user" | "assistant" | "system"; content: string; turnNumber?: number; createdAt?: string | Date }) => ({
+    id: turnData.id,
+    role: turnData.role,
+    content: turnData.content,
+    turnNumber: turnData.turnNumber,
+    createdAt: turnData.createdAt,
   }))
 
   return (
@@ -157,7 +159,7 @@ export default function ProjectDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-semibold text-slate-900 truncate">{project.title}</h1>
               <Badge variant="outline" className={`rounded-lg text-xs ${STATUS_COLORS[project.status || "draft"] || "bg-slate-100 text-slate-600"}`}>
-                {STATUS_LABELS[project.status || "draft"] || project.status || "草稿"}
+                {STATUS_LABELS[project.status || "draft"] || project.status || t("projects.status.draft")}
               </Badge>
               {project.clarificationStatus && (
                 <Badge variant="outline" className="rounded-lg text-xs bg-slate-50">
@@ -178,7 +180,7 @@ export default function ProjectDetail() {
               onClick={() => setDrawerOpen(!drawerOpen)}
             >
               {drawerOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRight className="w-3.5 h-3.5" />}
-              {drawerOpen ? "收起" : "摘要"}
+              {drawerOpen ? t("projectDetail.collapse") : t("projectDetail.summary")}
             </Button>
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
               <Clock className="w-3 h-3" />
@@ -198,13 +200,13 @@ export default function ProjectDetail() {
             {isLoadingConversation ? (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
-                <p className="text-xs text-slate-400">加载对话...</p>
+                <p className="text-xs text-slate-400">{t("projectDetail.loadingConversation")}</p>
               </div>
             ) : turns.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
                 <MessageSquare className="w-10 h-10 mb-3 text-slate-200" />
-                <p className="text-sm">暂无对话记录</p>
-                <p className="text-xs mt-1">开始与 AI 澄清你的需求</p>
+                <p className="text-sm">{t("projectDetail.noConversation")}</p>
+                <p className="text-xs mt-1">{t("projectDetail.startClarifying")}</p>
               </div>
             ) : (
               turns.map((turn, i) => (
@@ -245,7 +247,7 @@ export default function ProjectDetail() {
                       <p className="whitespace-pre-wrap break-words">{turn.content}</p>
                     </motion.div>
                     <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 ${turn.role === "user" ? "justify-end" : ""}`}>
-                      {turn.turnNumber > 0 && <span>第 {turn.turnNumber} 轮</span>}
+                      {turn.turnNumber > 0 && <span>{t("projectDetail.turnLabel", { turnNumber: turn.turnNumber })}</span>}
                       {turn.createdAt && (
                         <span>{new Date(turn.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
                       )}
@@ -266,16 +268,16 @@ export default function ProjectDetail() {
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={
                     project.status === "ready"
-                      ? "项目已就绪，点击右侧「生成提示词」继续"
+                      ? t("projectDetail.inputPlaceholderReady")
                       : project.status === "completed"
-                        ? "项目已完成，可在提示词库查看结果"
-                        : "输入消息继续对话..."
+                        ? t("projectDetail.inputPlaceholderCompleted")
+                        : t("projectDetail.inputPlaceholderDefault")
                   }
                   className="w-full h-10 px-4 pr-10 rounded-full bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all"
                   disabled={project.status !== "draft"}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && inputValue.trim()) {
-                      toast.info("对话功能开发中")
+                      toast.info(t("projectDetail.dialogInDev"))
                       setInputValue("")
                     }
                   }}
@@ -286,7 +288,7 @@ export default function ProjectDetail() {
                 className="rounded-full bg-gradient-to-br from-apple-blue to-apple-purple text-white shadow-md shrink-0"
                 disabled={!inputValue.trim() || project.status !== "draft"}
                 onClick={() => {
-                  toast.info("对话功能开发中")
+                  toast.info(t("projectDetail.dialogInDev"))
                   setInputValue("")
                 }}
               >
@@ -309,10 +311,10 @@ export default function ProjectDetail() {
               <div className="w-[320px] p-5 space-y-5">
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-emerald-500" />
-                  <span className="font-medium text-sm text-slate-800">需求摘要</span>
+                  <span className="font-medium text-sm text-slate-800">{t("projectDetail.summaryTitle")}</span>
                   {summaryData && (
                     <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 ml-auto">
-                      已生成
+                      {t("projectDetail.summaryGenerated")}
                     </Badge>
                   )}
                 </div>
@@ -323,7 +325,7 @@ export default function ProjectDetail() {
                   </div>
                 ) : !summaryData ? (
                   <div className="text-center py-8">
-                    <p className="text-xs text-slate-400 mb-3">需求澄清完成后可生成摘要</p>
+                    <p className="text-xs text-slate-400 mb-3">{t("projectDetail.summaryHint")}</p>
                     <Button
                       size="sm"
                       variant="outline"
@@ -332,9 +334,9 @@ export default function ProjectDetail() {
                       disabled={generateSummaryMutation.isPending}
                     >
                       {generateSummaryMutation.isPending ? (
-                        <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />生成中...</>
+                        <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />{t("projectDetail.generating")}</>
                       ) : (
-                        <><Wand2 className="w-3.5 h-3.5 mr-1" />生成摘要</>
+                        <><Wand2 className="w-3.5 h-3.5 mr-1" />{t("projectDetail.generateSummary")}</>
                       )}
                     </Button>
                   </div>
@@ -343,7 +345,7 @@ export default function ProjectDetail() {
                     <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
                       <div className="flex items-center gap-2 mb-2">
                         <Lightbulb className="w-4 h-4 text-emerald-600" />
-                        <span className="text-sm font-medium text-emerald-800">摘要</span>
+                        <span className="text-sm font-medium text-emerald-800">{t("projectDetail.summarySectionTitle")}</span>
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">{summaryData.summary}</p>
                     </div>
@@ -352,7 +354,7 @@ export default function ProjectDetail() {
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          <span className="text-xs font-medium text-slate-700">核心需求</span>
+                          <span className="text-xs font-medium text-slate-700">{t("projectDetail.coreRequirements")}</span>
                         </div>
                         <ul className="space-y-1.5">
                           {summaryData.requirements.map((req: string, idx: number) => (
@@ -371,7 +373,7 @@ export default function ProjectDetail() {
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <AlertCircle className="w-4 h-4 text-amber-500" />
-                          <span className="text-xs font-medium text-slate-700">约束条件</span>
+                          <span className="text-xs font-medium text-slate-700">{t("projectDetail.constraints")}</span>
                         </div>
                         <ul className="space-y-1">
                           {summaryData.constraints.map((c: string, idx: number) => (
@@ -388,7 +390,7 @@ export default function ProjectDetail() {
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <BookOpen className="w-4 h-4 text-violet-500" />
-                          <span className="text-xs font-medium text-slate-700">推荐框架</span>
+                          <span className="text-xs font-medium text-slate-700">{t("projectDetail.suggestedFrameworks")}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {summaryData.suggestedFrameworks.map((fw: string, idx: number) => (
@@ -402,20 +404,20 @@ export default function ProjectDetail() {
 
                     <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">
-                        <div className="text-[10px] text-slate-400 mb-0.5">领域</div>
+                        <div className="text-[10px] text-slate-400 mb-0.5">{t("projectDetail.domain")}</div>
                         <div className="text-xs font-medium text-slate-700">
                           {(() => {
                             const _domain = (summaryData as { intentAnalysis?: { domain?: string } }).intentAnalysis?.domain;
-                            return _domain && DOMAIN_LABELS[_domain] ? DOMAIN_LABELS[_domain] : "通用";
+                            return _domain && DOMAIN_LABELS[_domain] ? DOMAIN_LABELS[_domain] : t("common.general");
                           })()}
                         </div>
                       </div>
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">
-                        <div className="text-[10px] text-slate-400 mb-0.5">复杂度</div>
+                        <div className="text-[10px] text-slate-400 mb-0.5">{t("projectDetail.complexity")}</div>
                         <div className="text-xs font-medium text-slate-700">
-                          {(summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "simple" ? "简单"
-                            : (summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "medium" ? "中等"
-                            : "复杂"}
+                          {(summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "simple" ? t("projectDetail.complexitySimple")
+                            : (summaryData as { intentAnalysis?: { complexity?: string } }).intentAnalysis?.complexity === "medium" ? t("projectDetail.complexityMedium")
+                            : t("projectDetail.complexityComplex")}
                         </div>
                       </div>
                     </div>
@@ -427,7 +429,7 @@ export default function ProjectDetail() {
                         onClick={() => setShowGenerate(true)}
                       >
                         <Sparkles className="w-4 h-4 mr-2" />
-                        生成提示词
+                        {t("projectDetail.generatePrompt")}
                       </Button>
                     )}
 
@@ -441,7 +443,7 @@ export default function ProjectDetail() {
                           onClose={() => setShowGenerate(false)}
                           onSaved={() => {
                             setShowGenerate(false)
-                            toast.success("已保存到提示词库")
+                            toast.success(t("projectDetail.savedToLibrary"))
                             utils.project.get.invalidate({ id: projectId })
                           }}
                         />

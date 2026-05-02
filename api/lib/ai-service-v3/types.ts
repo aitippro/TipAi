@@ -46,6 +46,23 @@ export interface GeneratedPrompt {
   explanation: string;
   tips: string[];
   usageExample: string;
+  /** Chinese translation / explanation of the English prompt */
+  promptTranslation?: string;
+  /** Structured breakdown of the prompt components */
+  breakdown?: {
+    role: string;
+    task: string;
+    format: string;
+    constraints: string[];
+    examples: string;
+  };
+  /** Quality self-check results */
+  qualityCheck?: {
+    coversAllRequirements: boolean;
+    clarityScore: number;
+    specificityScore: number;
+    reasoning: string;
+  };
 }
 
 export interface SlashCommand {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router";
@@ -61,33 +62,34 @@ export type DecodeType = "greedy" | "sampling" | "self-consistency";
 const staticStrategies = [
   {
     value: "general" as StaticStrategy,
-    label: "通用优化",
-    description: "基于CRISPE/CO-STAR框架的全面优化，适合大多数场景",
+    labelKey: "optimizer.strategyGeneral",
+    descKey: "optimizer.strategyGeneralDesc",
     icon: Zap,
   },
   {
     value: "structured" as StaticStrategy,
-    label: "结构化",
-    description: "添加步骤分解和思维链引导，适合复杂任务",
+    labelKey: "optimizer.strategyStructured",
+    descKey: "optimizer.strategyStructuredDesc",
     icon: Layers,
   },
   {
     value: "concise" as StaticStrategy,
-    label: "精简",
-    description: "删除冗余，保留核心，追求最高信息密度",
+    labelKey: "optimizer.strategyConcise",
+    descKey: "optimizer.strategyConciseDesc",
     icon: Minimize2,
   },
 ];
 
-const decodeStrategyOptions: { value: DecodeType; label: string; desc: string }[] = [
-  { value: "greedy", label: "Greedy", desc: "确定性最高，成本最低" },
-  { value: "sampling", label: "Sampling", desc: "平衡质量与成本" },
-  { value: "self-consistency", label: "Self-Consistency", desc: "多路径投票，质量最高，成本最高" },
+const decodeStrategyOptions: { value: DecodeType; label: string; descKey: string }[] = [
+  { value: "greedy", label: "Greedy", descKey: "optimizer.decodeGreedyDesc" },
+  { value: "sampling", label: "Sampling", descKey: "optimizer.decodeSamplingDesc" },
+  { value: "self-consistency", label: "Self-Consistency", descKey: "optimizer.decodeSelfConsistencyDesc" },
 ];
 
 /* ------------------------------------------------------------------ */
 
 export default function Optimizer() {
+  const { t } = useTranslation();
   const [originalPrompt, setOriginalPrompt] = useState("");
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>("static");
   const [selectedStrategy, setSelectedStrategy] = useState<StaticStrategy>("general");
@@ -104,13 +106,13 @@ export default function Optimizer() {
   const navigate = useNavigate();
 
   const optimizeMutation = trpc.optimizer.optimize.useMutation({
-    onSuccess: () => toast.success("提示词优化完成！"),
-    onError: (error) => toast.error(error.message || "优化失败，请重试"),
+    onSuccess: () => toast.success(t("optimizer.toastOptimizeSuccess")),
+    onError: (error) => toast.error(error.message || t("optimizer.toastOptimizeError")),
   });
 
   const oproMutation = trpc.optimizer.optimizeOPRO.useMutation({
-    onSuccess: () => toast.success("OPRO 自动优化完成！"),
-    onError: (error) => toast.error(error.message || "OPRO 优化失败，请重试"),
+    onSuccess: () => toast.success(t("optimizer.toastOproSuccess")),
+    onError: (error) => toast.error(error.message || t("optimizer.toastOproError")),
   });
 
   const { data: historyData, refetch: refetchHistory } = trpc.optimizer.history.useQuery(
@@ -122,11 +124,11 @@ export default function Optimizer() {
 
   const handleOptimize = () => {
     if (!originalPrompt.trim()) {
-      toast.error("请输入需要优化的提示词");
+      toast.error(t("optimizer.toastEmptyPrompt"));
       return;
     }
     if (!isAuthenticated) {
-      toast.info("请先登录");
+      toast.info(t("home.toastLoginRequired"));
       navigate("/login");
       return;
     }
@@ -152,7 +154,7 @@ export default function Optimizer() {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success("已复制到剪贴板");
+    toast.success(t("optimizer.toastCopied"));
   };
 
   const loadFromHistory = (item: PromptOptimization) => {
@@ -161,7 +163,7 @@ export default function Optimizer() {
       setSelectedStrategy(item.strategy as StaticStrategy);
     }
     setShowHistory(false);
-    toast.success("已加载历史记录");
+    toast.success(t("optimizer.toastLoaded"));
   };
 
   const isPending = optimizeMutation.isPending || oproMutation.isPending;
@@ -183,14 +185,14 @@ export default function Optimizer() {
         <div className="flex-1"
         >
           <h1 className="text-xl font-semibold tracking-tight"
-          >提示词优化器</h1>
+          >{t("optimizer.title")}</h1>
           <p className="text-muted-foreground text-xs mt-0.5"
-          >一键优化你的提示词，让AI输出更精准</p>
+          >{t("optimizer.subtitle")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)} className="rounded-lg"
         >
           <History className="w-4 h-4 mr-2" />
-          历史
+          {t("optimizer.history")}
         </Button>
       </div>
 
@@ -216,9 +218,9 @@ export default function Optimizer() {
                 >
                   <Zap className={`w-4 h-4 mb-1.5 ${optimizeMode === "static" ? "text-apple-blue" : "text-muted-foreground"}`} />
                   <span className={`text-xs font-medium ${optimizeMode === "static" ? "text-apple-blue" : ""}`}
-                  >静态优化</span>
+                  >{t("optimizer.staticOptimize")}</span>
                   <span className="text-[10px] text-muted-foreground mt-0.5"
-                  >单轮策略，快速出结果</span>
+                  >{t("optimizer.staticOptimizeDesc")}</span>
                 </button>
               </TiltCard>
               <TiltCard maxTilt={3} scale={1.02}
@@ -233,9 +235,9 @@ export default function Optimizer() {
                 >
                   <BrainCircuit className={`w-4 h-4 mb-1.5 ${optimizeMode === "opro" ? "text-apple-blue" : "text-muted-foreground"}`} />
                   <span className={`text-xs font-medium ${optimizeMode === "opro" ? "text-apple-blue" : ""}`}
-                  >OPRO 自动优化</span>
+                  >{t("optimizer.oproOptimize")}</span>
                   <span className="text-[10px] text-muted-foreground mt-0.5"
-                  >多轮迭代，自动评估</span>
+                  >{t("optimizer.oproOptimizeDesc")}</span>
                 </button>
               </TiltCard>
             </div>
@@ -260,9 +262,9 @@ export default function Optimizer() {
                         <Icon className={`w-4 h-4 shrink-0 ${selectedStrategy === strategy.value ? "text-apple-blue" : "text-muted-foreground"}`} />
                         <div>
                           <span className={`text-xs font-medium ${selectedStrategy === strategy.value ? "text-apple-blue" : ""}`}
-                          >{strategy.label}</span>
+                          >{t(strategy.labelKey)}</span>
                           <p className="text-[10px] text-muted-foreground mt-0.5"
-                          >{strategy.description}</p>
+                          >{t(strategy.descKey)}</p>
                         </div>
                       </button>
                     </StaggerItem>
@@ -282,9 +284,9 @@ export default function Optimizer() {
                     <div className="flex items-center justify-between"
                     >
                       <label className="text-xs font-medium"
-                      >最大迭代轮次</label>
+                      >{t("optimizer.maxIterations")}</label>
                       <span className="text-xs text-apple-blue font-medium"
-                      >{maxIterations[0]} 轮</span>
+                      >{t("optimizer.rounds", { count: maxIterations[0] })}</span>
                     </div>
                     <Slider value={maxIterations} onValueChange={setMaxIterations} min={1} max={5} step={1} />
                   </div>
@@ -293,9 +295,9 @@ export default function Optimizer() {
                     <div className="flex items-center justify-between"
                     >
                       <label className="text-xs font-medium"
-                      >每轮候选数</label>
+                      >{t("optimizer.candidatesPerIteration")}</label>
                       <span className="text-xs text-apple-blue font-medium"
-                      >{candidatesPerIteration[0]} 个</span>
+                      >{t("optimizer.candidates", { count: candidatesPerIteration[0] })}</span>
                     </div>
                     <Slider value={candidatesPerIteration} onValueChange={setCandidatesPerIteration} min={3} max={8} step={1} />
                   </div>
@@ -304,16 +306,16 @@ export default function Optimizer() {
                     <div className="flex items-center justify-between"
                     >
                       <label className="text-xs font-medium"
-                      >目标分数</label>
+                      >{t("optimizer.targetScore")}</label>
                       <span className="text-xs text-apple-blue font-medium"
-                      >{targetScore[0]}/10</span>
+                      >{t("optimizer.scoreOutOf10", { score: targetScore[0] })}</span>
                     </div>
                     <Slider value={targetScore} onValueChange={setTargetScore} min={5} max={10} step={0.5} />
                   </div>
                   <div className="space-y-1.5"
                   >
                     <label className="text-xs font-medium"
-                    >解码策略</label>
+                    >{t("optimizer.decodeStrategy")}</label>
                     <div className="grid grid-cols-3 gap-2"
                     >
                       {decodeStrategyOptions.map((opt) => (
@@ -329,7 +331,7 @@ export default function Optimizer() {
                           <div className={`text-[10px] font-medium ${decodeType === opt.value ? "text-apple-blue" : ""}`}
                           >{opt.label}</div>
                           <div className="text-[9px] text-muted-foreground mt-0.5"
-                          >{opt.desc}</div>
+                          >{t(opt.descKey)}</div>
                         </button>
                       ))}
                     </div>
@@ -342,7 +344,7 @@ export default function Optimizer() {
             <div className="space-y-3"
             >
               <Textarea
-                placeholder="在这里粘贴你需要优化的提示词…"
+                placeholder={t("optimizer.placeholder")}
                 value={originalPrompt}
                 onChange={(e) => setOriginalPrompt(e.target.value)}
                 className="min-h-[160px] resize-none border-border/50 focus-visible:ring-apple-blue/30 font-mono text-sm leading-relaxed rounded-xl"
@@ -350,7 +352,7 @@ export default function Optimizer() {
               <div className="flex items-center justify-between"
               >
                 <span className="text-xs text-muted-foreground"
-                >{originalPrompt.length} / 5000 字符</span>
+                >{t("optimizer.charCount", { count: originalPrompt.length })}</span>
                 <Button
                   onClick={handleOptimize}
                   disabled={isPending || !originalPrompt.trim()}
@@ -359,12 +361,12 @@ export default function Optimizer() {
                   {isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {optimizeMode === "opro" ? "OPRO 优化中…" : "优化中…"}
+                      {optimizeMode === "opro" ? t("optimizer.optimizingOpro") : t("optimizer.optimizing")}
                     </>
                   ) : (
                     <>
                       <Wand2 className="w-4 h-4 mr-2" />
-                      {optimizeMode === "opro" ? "启动 OPRO" : "开始优化"}
+                      {optimizeMode === "opro" ? t("optimizer.startOpro") : t("optimizer.startOptimize")}
                     </>
                   )}
                 </Button>
@@ -381,8 +383,8 @@ export default function Optimizer() {
             >
               <EmptyState
                 icon={<GitCompare className="w-10 h-10" />}
-                title="准备优化"
-                description="在左侧输入提示词并点击优化，结果将在这里显示"
+                title={t("optimizer.emptyTitle")}
+                description={t("optimizer.emptyDesc")}
               />
             </div>
           ) : (
@@ -418,7 +420,7 @@ export default function Optimizer() {
                       >
                         <GitCompare className="w-4 h-4 text-apple-blue" />
                         <CardTitle className="text-sm font-medium"
-                        >优化对比</CardTitle>
+                        >{t("optimizer.diffTitle")}</CardTitle>
                       </div>
                       <div className="flex items-center gap-2"
                       >
@@ -468,7 +470,7 @@ export default function Optimizer() {
                   }}
                   className="rounded-xl"
                 >
-                  重新优化
+                  {t("optimizer.retry")}
                 </Button>
                 <Button
                   onClick={() =>
@@ -478,12 +480,12 @@ export default function Optimizer() {
                   {copied ? (
                     <>
                       <Check className="w-4 h-4 mr-2" />
-                      已复制
+                      {t("common.copied")}
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4 mr-2" />
-                      复制结果
+                      {t("optimizer.copyResult")}
                     </>
                   )}
                 </Button>

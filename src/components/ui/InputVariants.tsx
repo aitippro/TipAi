@@ -16,7 +16,7 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
-  placeholder = "搜索...",
+  placeholder = "Search...",
   className,
   icon: Icon = Search,
 }: SearchInputProps) {
@@ -55,7 +55,7 @@ interface TextareaInputProps {
 export function TextareaInput({
   value,
   onChange,
-  placeholder = "请输入...",
+  placeholder = "Enter...",
   rows = 4,
   className,
   maxLength,

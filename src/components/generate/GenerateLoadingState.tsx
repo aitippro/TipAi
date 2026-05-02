@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { Check, Compass, Layers, Loader2, Sparkles, X, Zap } from "lucide-react"
 
 type GenerateLoadingStateProps = {
@@ -8,9 +9,9 @@ type GenerateLoadingStateProps = {
 }
 
 const LOADING_STEPS = [
-  { icon: Compass, text: "分析意图与场景", step: 1 },
-  { icon: Layers, text: "匹配最佳框架", step: 2 },
-  { icon: Zap, text: "生成完美提示词", step: 3 },
+  { icon: Compass, labelKey: "generate.stepAnalyze", step: 1 },
+  { icon: Layers, labelKey: "generate.stepFramework", step: 2 },
+  { icon: Zap, labelKey: "generate.stepGenerate", step: 3 },
 ]
 
 export function GenerateLoadingState({
@@ -19,6 +20,7 @@ export function GenerateLoadingState({
   onClose,
   inline,
 }: GenerateLoadingStateProps) {
+  const { t } = useTranslation()
   const wrapperCls = inline
     ? "bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden"
     : "fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col"
@@ -30,7 +32,7 @@ export function GenerateLoadingState({
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">生成提示词</h2>
+            <h2 className="text-sm font-semibold text-slate-800">{t("generate.loadingTitle")}</h2>
             <p className="text-xs text-slate-400 truncate max-w-md">{intent}</p>
           </div>
         </div>
@@ -47,11 +49,11 @@ export function GenerateLoadingState({
           </div>
         </div>
 
-        <h3 className="text-xl font-semibold text-slate-800 mb-2">AI 正在为你生成提示词...</h3>
-        <p className="text-sm text-slate-400 mb-10">自动分析意图 · 匹配框架 · 生成内容</p>
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">{t("generate.loadingTitle")}</h3>
+        <p className="text-sm text-slate-400 mb-10">{t("generate.loadingDesc")}</p>
 
         <div className="space-y-3 w-full max-w-sm">
-          {LOADING_STEPS.map(({ icon: Icon, text, step }) => (
+          {LOADING_STEPS.map(({ icon: Icon, labelKey, step }) => (
             <div
               key={step}
               className={`flex items-center gap-3 p-4 rounded-2xl transition-all duration-700 ${
@@ -71,7 +73,7 @@ export function GenerateLoadingState({
               }`}>
                 {activeStep > step ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
               </div>
-              <span className="text-sm font-medium">{text}</span>
+              <span className="text-sm font-medium">{t(labelKey)}</span>
               {activeStep === step && <Loader2 className="w-4 h-4 animate-spin ml-auto text-violet-400" />}
             </div>
           ))}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { flushSync } from "react-dom"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function GenerateModal({ intent, answers, stepMode, inline, onClose, onSaved }: Props) {
+  const { t, i18n } = useTranslation()
   const [result, setResult] = useState<GenResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [activeStep, setActiveStep] = useState(1)
@@ -46,7 +48,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       setIsGenerating(false)
       const validated = validateGenResult(rawData)
       if (!validated) {
-        setErrorMsg("生成结果解析失败，请重试")
+        setErrorMsg(t("generate.errorDesc"))
         return
       }
       setResult(validated)
@@ -68,11 +70,11 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     },
     onError: (error) => {
       setIsGenerating(false)
-      const msg = error.message || "生成失败"
+      const msg = error.message || t("generate.errorTitle")
       setErrorMsg(msg)
       if (msg.includes("API Key")) {
-        toast.error("请先配置API Key", {
-          action: { label: "去设置", onClick: () => { onClose(); navigate("/settings") } },
+        toast.error(t("settings.modelKeysDesc"), {
+          action: { label: t("nav.settings"), onClick: () => { onClose(); navigate("/settings") } },
         })
       }
     },
@@ -87,10 +89,10 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     hasStartedRef.current = true
     queueMicrotask(() => {
       setIsGenerating(true)
-      mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
+      mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current, language: i18n.language === 'en-US' ? 'en' : 'zh' })
     })
      
-  }, [intent, onClose])
+  }, [intent, onClose, i18n.language])
 
   useEffect(() => {
     if (!isGenerating) return
@@ -106,7 +108,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   const utils = trpc.useUtils()
   const saveMutation = trpc.promptForge.saveToLibrary.useMutation({
     onSuccess: () => {
-      toast.success("已保存到提示词库")
+      toast.success(t("prompt.saveToLibrary"))
       utils.promptForge.getLibrary.invalidate()
       onSaved?.()
     },
@@ -115,7 +117,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
 
   const autoSaveMutation = trpc.promptForge.saveToLibrary.useMutation({
     onSuccess: () => {
-      toast.success("已自动保存到提示词库")
+      toast.success(t("prompt.saved"))
       utils.promptForge.getLibrary.invalidate()
     },
     onError: (e) => {
@@ -125,7 +127,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   })
 
   const handleSave = useCallback((index: number) => {
-    if (!isAuthenticated) { toast.info("请先登录"); return }
+    if (!isAuthenticated) { toast.info(t("home.toastLoginRequired")); return }
     if (!result) return
     const item = result.results[index]
     saveMutation.mutate({
@@ -136,7 +138,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       domain: result.analysis.domain,
     })
     setSavedIds((prev) => new Set(prev).add(index))
-  }, [isAuthenticated, result, intent, saveMutation])
+  }, [isAuthenticated, result, intent, saveMutation, t])
 
   const handleCopy = useCallback(async (text: string, index: number) => {
     try {
@@ -156,11 +158,11 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       }
       setCopiedIndex(index)
       setTimeout(() => setCopiedIndex(null), 2000)
-      toast.success("已复制到剪贴板")
+      toast.success(t("prompt.copySuccess"))
     } catch {
       // silent fail — clipboard unavailable
     }
-  }, [])
+  }, [t])
 
   const handleRegenerate = useCallback(() => {
     flushSync(() => {
@@ -201,10 +203,10 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   if (!result) {
     return (
       <div className={inline ? "bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col p-8 items-center gap-3" : "fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center gap-3"}>
-        <p className="text-sm text-slate-500">生成未自动触发，请点击开始</p>
-        <Button onClick={() => mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })} className="rounded-xl">
+        <p className="text-sm text-slate-500">{t("generate.loadingDesc")}</p>
+        <Button onClick={() => mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current, language: i18n.language === 'en-US' ? 'en' : 'zh' })} className="rounded-xl">
           <Sparkles className="w-4 h-4 mr-2" />
-          开始生成
+          {t("home.startGenerate")}
         </Button>
       </div>
     )

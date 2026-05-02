@@ -20,5 +20,6 @@ export default defineConfig({
     deps: {
       interopDefault: true,
     },
+    setupFiles: ["src/test-setup.ts"],
   },
 });

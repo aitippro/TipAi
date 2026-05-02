@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -50,6 +51,7 @@ export function GenerateResultState({
   onCopy,
   onSave,
 }: GenerateResultStateProps) {
+  const { t } = useTranslation()
   const activeResult = result.results[activeTab] || result.results[0]
 
   if (!activeResult) return null
@@ -62,14 +64,14 @@ export function GenerateResultState({
             <Check className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">生成完成</h2>
+            <h2 className="text-sm font-semibold text-slate-800">{t("generate.resultTitle")}</h2>
             <p className="text-xs text-slate-400 truncate max-w-md">{intent}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={onRegenerate} className="rounded-lg text-slate-500 hover:text-violet-600">
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            重新生成
+            {t("prompt.regenerate")}
           </Button>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-colors">
             <X className="w-4 h-4 text-slate-400" />
@@ -83,21 +85,21 @@ export function GenerateResultState({
             <div className="p-4 rounded-2xl bg-violet-50/50 border border-violet-100">
               <div className="flex items-center gap-2 mb-1.5">
                 <Target className="w-3.5 h-3.5 text-violet-500" />
-                <span className="text-xs text-slate-400">核心目标</span>
+                <span className="text-xs text-slate-400">{t("prompt.goal")}</span>
               </div>
-              <p className="text-sm font-medium text-slate-800 truncate">{result.analysis.goal || "未识别"}</p>
+              <p className="text-sm font-medium text-slate-800 truncate">{result.analysis.goal || t("common.unknown")}</p>
             </div>
             <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
               <div className="flex items-center gap-2 mb-1.5">
                 <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="text-xs text-slate-400">领域</span>
+                <span className="text-xs text-slate-400">{t("prompt.domain")}</span>
               </div>
-              <p className="text-sm font-medium text-slate-800">{result.analysis.domain || "通用"}</p>
+              <p className="text-sm font-medium text-slate-800">{result.analysis.domain || t("common.general")}</p>
             </div>
             <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100">
               <div className="flex items-center gap-2 mb-1.5">
                 <Layers className="w-3.5 h-3.5 text-purple-500" />
-                <span className="text-xs text-slate-400">复杂度</span>
+                <span className="text-xs text-slate-400">{t("prompt.complexity")}</span>
               </div>
               <Badge variant="outline" className={`text-xs ${COMPLEXITY_COLORS[result.analysis.complexity] || ""}`}>
                 {COMPLEXITY_LABELS[result.analysis.complexity] || result.analysis.complexity || "未知"}
@@ -106,9 +108,9 @@ export function GenerateResultState({
             <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
               <div className="flex items-center gap-2 mb-1.5">
                 <Users className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs text-slate-400">受众</span>
+                <span className="text-xs text-slate-400">{t("prompt.audience")}</span>
               </div>
-              <p className="text-sm font-medium text-slate-800 truncate">{result.analysis.audience || "未指定"}</p>
+              <p className="text-sm font-medium text-slate-800 truncate">{result.analysis.audience || t("common.unspecified")}</p>
             </div>
           </div>
 
@@ -125,7 +127,7 @@ export function GenerateResultState({
                   }`}
                 >
                   {index === 0 && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                  {item.framework || `方案 ${index + 1}`}
+                  {item.framework || `${t("common.plan")} ${index + 1}`}
                 </button>
               ))}
             </div>
@@ -134,7 +136,7 @@ export function GenerateResultState({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-slate-800 mb-1">{activeResult.title || "生成结果"}</h3>
+                <h3 className="text-xl font-semibold text-slate-800 mb-1">{activeResult.title || t("generate.resultTitle")}</h3>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
                     {activeResult.framework || "通用"}
@@ -154,7 +156,7 @@ export function GenerateResultState({
                   className="rounded-xl border-slate-200"
                 >
                   {copiedIndex === activeTab ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-                  {copiedIndex === activeTab ? "已复制" : "复制"}
+                  {copiedIndex === activeTab ? t("common.copied") : t("common.copy")}
                 </Button>
                 <Button
                   size="sm"
@@ -181,32 +183,105 @@ export function GenerateResultState({
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Lightbulb className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-slate-700">设计说明</span>
+                  <span className="text-sm font-medium text-slate-700">{t("prompt.explanation")}</span>
                 </div>
                 <p className="text-sm text-slate-500 leading-relaxed">{activeResult.explanation}</p>
               </div>
             )}
 
-            <div className="relative group">
-              <div className="code-block rounded-2xl p-6 overflow-x-auto">
-                <pre className="text-sm whitespace-pre-wrap leading-relaxed text-slate-200">{activeResult.prompt || "（提示词内容为空）"}</pre>
+            {/* English Prompt */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{t("prompt.englishPrompt")}</span>
+                <span className="text-[10px] text-slate-300">{t("prompt.copyTip")}</span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="absolute top-4 right-4 h-8 text-xs opacity-0 group-hover:opacity-100 transition-all bg-white/90 text-slate-800 hover:bg-white rounded-lg shadow-lg"
-                onClick={() => onCopy(activeResult.prompt, activeTab)}
-              >
-                {copiedIndex === activeTab ? <Check className="w-3 h-3 mr-1 text-emerald-500" /> : <Copy className="w-3 h-3 mr-1" />}
-                {copiedIndex === activeTab ? "已复制" : "复制"}
-              </Button>
+              <div className="relative group">
+                <div className="code-block rounded-2xl p-6 overflow-x-auto">
+                  <pre className="text-sm whitespace-pre-wrap leading-relaxed text-slate-200">{activeResult.prompt || t("prompt.emptyContent")}</pre>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute top-4 right-4 h-8 text-xs opacity-0 group-hover:opacity-100 transition-all bg-white/90 text-slate-800 hover:bg-white rounded-lg shadow-lg"
+                  onClick={() => onCopy(activeResult.prompt, activeTab)}
+                >
+                  {copiedIndex === activeTab ? <Check className="w-3 h-3 mr-1 text-emerald-500" /> : <Copy className="w-3 h-3 mr-1" />}
+                  {copiedIndex === activeTab ? t("common.copied") : t("prompt.copyEnglish")}
+                </Button>
+              </div>
             </div>
+
+            {/* Chinese Translation / Breakdown */}
+            {activeResult.promptTranslation && (
+              <div className="space-y-3">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{t("prompt.chineseExplanation")}</span>
+                <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100">
+                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{activeResult.promptTranslation}</p>
+                </div>
+
+                {activeResult.breakdown && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {activeResult.breakdown.role && (
+                      <div className="p-3 rounded-xl bg-white border border-slate-100">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Role</span>
+                        <p className="text-sm text-slate-700 mt-0.5">{activeResult.breakdown.role}</p>
+                      </div>
+                    )}
+                    {activeResult.breakdown.task && (
+                      <div className="p-3 rounded-xl bg-white border border-slate-100">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Task</span>
+                        <p className="text-sm text-slate-700 mt-0.5">{activeResult.breakdown.task}</p>
+                      </div>
+                    )}
+                    {activeResult.breakdown.format && (
+                      <div className="p-3 rounded-xl bg-white border border-slate-100">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Format</span>
+                        <p className="text-sm text-slate-700 mt-0.5">{activeResult.breakdown.format}</p>
+                      </div>
+                    )}
+                    {activeResult.breakdown.examples && (
+                      <div className="p-3 rounded-xl bg-white border border-slate-100">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Examples</span>
+                        <p className="text-sm text-slate-700 mt-0.5">{activeResult.breakdown.examples}</p>
+                      </div>
+                    )}
+                    {activeResult.breakdown.constraints.length > 0 && (
+                      <div className="p-3 rounded-xl bg-white border border-slate-100 sm:col-span-2">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Constraints</span>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {activeResult.breakdown.constraints.map((c, i) => (
+                            <Badge key={i} variant="outline" className="text-[10px] bg-slate-50">{c}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeResult.qualityCheck && (
+                  <div className="p-4 rounded-2xl bg-emerald-50/30 border border-emerald-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-slate-700">{t("prompt.qualityCheck")}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span>{t("prompt.coversAllRequirements")}: {activeResult.qualityCheck.coversAllRequirements ? "✅" : "❌"}</span>
+                      <span>{t("prompt.clarityScore")}: {activeResult.qualityCheck.clarityScore.toFixed(1)}</span>
+                      <span>{t("prompt.specificityScore")}: {activeResult.qualityCheck.specificityScore.toFixed(1)}</span>
+                    </div>
+                    {activeResult.qualityCheck.reasoning && (
+                      <p className="text-xs text-slate-400 mt-1.5">{activeResult.qualityCheck.reasoning}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {activeResult.tips.length > 0 && (
               <div className="p-5 rounded-2xl bg-violet-50/30 border border-violet-100">
                 <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-violet-500" />
-                  使用技巧
+                  {t("prompt.tips")}
                 </h4>
                 <div className="space-y-2.5">
                   {activeResult.tips.map((tip, index) => (
@@ -223,7 +298,7 @@ export function GenerateResultState({
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100">
                 <h4 className="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-violet-500" />
-                  建议分步骤执行
+                  {t("prompt.stepDecomposition")}
                 </h4>
                 <p className="text-xs text-slate-400 mb-4">{result.stepDecomposition.reason}</p>
                 <div className="space-y-3">
@@ -235,7 +310,7 @@ export function GenerateResultState({
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-800">{step.title}</p>
                         <p className="text-xs text-slate-400 mt-0.5">{step.description}</p>
-                        <p className="text-xs text-violet-500 mt-1">输入：{step.inputNeeded}</p>
+                        <p className="text-xs text-violet-500 mt-1">{t("prompt.inputNeeded")}: {step.inputNeeded}</p>
                       </div>
                     </div>
                   ))}
@@ -245,12 +320,12 @@ export function GenerateResultState({
 
             {result.recommendations.length > 1 && (
               <div className="pt-4 border-t border-slate-100">
-                <h4 className="text-sm font-medium text-slate-500 mb-3">其他推荐框架</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("prompt.otherFrameworks")}</h4>
                 <div className="flex flex-wrap gap-2">
                   {result.recommendations.slice(1).map((recommendation) => (
                     <div key={recommendation.framework} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-500">
                       <span className="font-medium">{recommendation.frameworkName}</span>
-                      <span className="opacity-50">{Math.round(recommendation.confidence * 100)}% 匹配</span>
+                      <span className="opacity-50">{Math.round(recommendation.confidence * 100)}% {t("prompt.match")}</span>
                     </div>
                   ))}
                 </div>
@@ -262,12 +337,12 @@ export function GenerateResultState({
 
       <div className="px-6 py-4 border-t border-slate-100 bg-white/50 flex items-center justify-between">
         <Button size="sm" variant="ghost" onClick={onClose} className="rounded-lg text-slate-500">
-          关闭
+          {t("common.close")}
         </Button>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onOpenLibrary} className="rounded-xl border-slate-200">
             <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-            查看提示词库
+            {t("prompt.viewLibrary")}
           </Button>
           <Button
             size="sm"

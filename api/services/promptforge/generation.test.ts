@@ -159,6 +159,8 @@ describe("promptForge generation service", () => {
       ["react"],
       "kimi",
       "secret",
+      undefined,
+      "zh",
     );
     expect(result).toMatchObject({
       analysis: baseAnalysis,
@@ -212,6 +214,8 @@ describe("promptForge generation service", () => {
       "crispe",
       "deepseek",
       "secret",
+      undefined,
+      "zh",
     );
     expect(result.results).toEqual([fallbackPrompt]);
   });
@@ -309,6 +313,8 @@ describe("promptForge generation service", () => {
       DEFAULT_FRAMEWORK_KEY,
       "kimi",
       "system-key",
+      undefined,
+      "zh",
     );
     expect(result.framework).toBe(DEFAULT_FRAMEWORK_KEY);
     expect(result.result).toEqual(basePrompt);

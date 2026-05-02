@@ -1,4 +1,5 @@
 import { useState, memo } from "react"
+import { useTranslation } from "react-i18next"
 import { Link, useLocation, type Location } from "react-router"
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/useAuth"
@@ -45,46 +46,49 @@ import {
 // 分组导航结构 — Apple 式空间组织
 // ============================================================================
 
-const NAV_GROUPS = [
+// 分组 key 用于翻译
+type NavGroupKey = 'create' | 'manage' | 'tools' | 'system'
+
+const NAV_GROUPS: { title: NavGroupKey; items: { path: string; icon: typeof Sparkles; labelKey: string }[] }[] = [
   {
-    title: "创建",
+    title: "create",
     items: [
-      { path: "/", icon: Sparkles, label: "首页" },
+      { path: "/", icon: Sparkles, labelKey: "home" },
     ],
   },
   {
-    title: "管理",
+    title: "manage",
     items: [
-      { path: "/workspace", icon: FolderOpen, label: "工作台" },
-      { path: "/library", icon: BookOpen, label: "提示词库" },
-      { path: "/templates", icon: LayoutGrid, label: "模板" },
+      { path: "/workspace", icon: FolderOpen, labelKey: "workspace" },
+      { path: "/library", icon: BookOpen, labelKey: "library" },
+      { path: "/templates", icon: LayoutGrid, labelKey: "templates" },
     ],
   },
   {
-    title: "工具",
+    title: "tools",
     items: [
-      { path: "/optimizer", icon: PenTool, label: "优化器" },
-      { path: "/frameworks", icon: BrainCircuit, label: "框架匹配" },
-      { path: "/tot", icon: GitBranch, label: "ToT 推理" },
-      { path: "/multimodal", icon: Image, label: "多模态" },
-      { path: "/quality-gate", icon: ShieldCheck, label: "质量门禁" },
-      { path: "/feedback", icon: BarChart3, label: "反馈闭环" },
-      { path: "/drift", icon: Activity, label: "漂移检测" },
-      { path: "/swarm", icon: Users, label: "Agent Swarm" },
-      { path: "/academic", icon: GraduationCap, label: "学术合作" },
-      { path: "/api-docs", icon: Globe, label: "API 文档" },
-      { path: "/export", icon: Download, label: "导出" },
+      { path: "/optimizer", icon: PenTool, labelKey: "optimizer" },
+      { path: "/frameworks", icon: BrainCircuit, labelKey: "frameworks" },
+      { path: "/tot", icon: GitBranch, labelKey: "tot" },
+      { path: "/multimodal", icon: Image, labelKey: "multimodal" },
+      { path: "/quality-gate", icon: ShieldCheck, labelKey: "qualityGate" },
+      { path: "/feedback", icon: BarChart3, labelKey: "feedback" },
+      { path: "/drift", icon: Activity, labelKey: "drift" },
+      { path: "/swarm", icon: Users, labelKey: "swarm" },
+      { path: "/academic", icon: GraduationCap, labelKey: "academic" },
+      { path: "/api-docs", icon: Globe, labelKey: "apiDocs" },
+      { path: "/export", icon: Download, labelKey: "export" },
     ],
   },
   {
-    title: "系统",
+    title: "system",
     items: [
-      { path: "/settings", icon: Settings, label: "设置" },
-      { path: "/logs", icon: ScrollText, label: "日志" },
-      { path: "/about", icon: Info, label: "关于" },
+      { path: "/settings", icon: Settings, labelKey: "settings" },
+      { path: "/logs", icon: ScrollText, labelKey: "logs" },
+      { path: "/about", icon: Info, labelKey: "about" },
     ],
   },
-] as const
+]
 
 function getPlatform() {
   if (typeof window !== 'undefined' && window.electronAPI) {
@@ -117,6 +121,7 @@ function SidebarContent({
   isAuthenticated,
   setMobileOpen,
 }: SidebarContentProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -145,7 +150,7 @@ function SidebarContent({
           <div key={group.title} className="space-y-1">
             {!collapsed && (
               <span className="px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                {group.title}
+                {t(`nav.groups.${group.title}`)}
               </span>
             )}
             {group.items.map((item) => {
@@ -167,7 +172,7 @@ function SidebarContent({
                     }
                     ${collapsed ? "justify-center" : ""}
                   `}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? t(`nav.${item.labelKey}`) : undefined}
                 >
                   {/* 激活态 indicator */}
                   {isActive && (
@@ -183,7 +188,7 @@ function SidebarContent({
                   >
                     <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? "text-apple-blue" : ""}`} />
                   </motion.div>
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && <span>{t(`nav.${item.labelKey}`)}</span>}
                 </Link>
               )
             })}
@@ -211,7 +216,7 @@ function SidebarContent({
                 {!collapsed && (
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-                      {user?.name || "用户"}
+                      {user?.name || t('common.user')}
                     </span>
                     <span className="text-xs text-muted-foreground truncate max-w-[120px]">
                       {user?.email || ""}
@@ -226,7 +231,7 @@ function SidebarContent({
               className="w-48 rounded-xl shadow-xl border-border/50"
             >
               <DropdownMenuItem className="text-slate-400 cursor-default rounded-lg mx-1 my-1">
-                本地模式
+                {t('sidebar.localMode')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -240,7 +245,7 @@ function SidebarContent({
               `}
             >
               <User className="w-4 h-4" />
-              {!collapsed && "登录"}
+              {!collapsed && t('common.login')}
             </Button>
           </Link>
         )}
@@ -250,6 +255,7 @@ function SidebarContent({
 }
 
 export default memo(function Sidebar() {
+  const { t } = useTranslation()
   const { user, isAuthenticated } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -280,7 +286,7 @@ export default memo(function Sidebar() {
           whileTap={{ scale: 0.9 }}
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-sm flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
-          title={collapsed ? "展开侧边栏" : "折叠侧边栏"}
+          title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           {collapsed ? (
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
