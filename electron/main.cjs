@@ -23,6 +23,20 @@ let backendServer = null;
 let honoApp = null;
 let backendBaseUrl = '';
 
+// Native Addon (Rust core) — replaces better-sqlite3 for DB + AI calls
+let nativeAddon = null;
+try {
+  if (isDev) {
+    nativeAddon = require('../native');
+  } else {
+    const nativePath = require('path').join(require('path').dirname(process.execPath), 'resources/native/tipai_core.node');
+    nativeAddon = require(nativePath);
+  }
+  log(`Native addon loaded: v${nativeAddon.version()}`);
+} catch (err) {
+  logError('Failed to load native addon, falling back to JS', err);
+}
+
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   try { fs.appendFileSync(LOG_FILE, line); } catch {}
@@ -74,8 +88,20 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// Run SQL migrations using better-sqlite3 (available in main process)
+// Run SQL migrations — prefer Native Addon, fallback to better-sqlite3
 function runMigrations(dbPath, migrationsDir) {
+  if (nativeAddon) {
+    try {
+      nativeAddon.dbOpen(dbPath, process.env.API_KEY_SECRET || null);
+      nativeAddon.dbMigrate(migrationsDir);
+      log('Migrations completed via Native Addon');
+      return;
+    } catch (err) {
+      logError('Native Addon migration failed, falling back to better-sqlite3', err);
+    }
+  }
+
+  // Fallback: better-sqlite3
   const Database = require('better-sqlite3');
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -134,6 +160,29 @@ async function startBackend() {
       const key = randomBytes(32).toString('hex');
       fs.writeFileSync(keyFile, key, { mode: 0o600 });
       process.env.API_KEY_SECRET = key;
+    }
+  }
+
+  // Ensure persistent API_KEY_SECRET for encryption
+  if (!process.env.API_KEY_SECRET) {
+    const keyFile = path.join(dataDir, '.key');
+    if (fs.existsSync(keyFile)) {
+      process.env.API_KEY_SECRET = fs.readFileSync(keyFile, 'utf-8').trim();
+    } else {
+      const { randomBytes } = require('crypto');
+      const key = randomBytes(32).toString('hex');
+      fs.writeFileSync(keyFile, key, { mode: 0o600 });
+      process.env.API_KEY_SECRET = key;
+    }
+  }
+
+  // Open database via Native Addon (dev + prod)
+  if (nativeAddon) {
+    try {
+      nativeAddon.dbOpen(dbPath, process.env.API_KEY_SECRET);
+      log(`Native DB opened: ${dbPath}`);
+    } catch (err) {
+      logError('Native dbOpen failed', err);
     }
   }
 
@@ -232,6 +281,87 @@ ipcMain.handle('dialog:showOpen', async (_e, opts) => dialog.showOpenDialog(main
 ipcMain.handle('shell:openExternal', async (_e, url) => shell.openExternal(url));
 ipcMain.handle('db:getPath', () => dbPath);
 
+// ── Native Addon IPC Handlers ───────────────────────────────
+// Expose Rust core functions directly to renderer via IPC
+
+ipcMain.handle('native:version', () => nativeAddon ? nativeAddon.version() : 'js-only');
+
+ipcMain.handle('native:userFindByUnionId', (_e, unionId) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.userFindByUnionId(unionId);
+});
+
+ipcMain.handle('native:userUpsert', (_e, data) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.userUpsert(data);
+});
+
+ipcMain.handle('native:settingsGet', (_e, userId) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.settingsGet(userId);
+});
+
+ipcMain.handle('native:settingsUpdate', (_e, userId, data) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.settingsUpdate(userId, data);
+});
+
+ipcMain.handle('native:settingsGetApiKey', (_e, userId, provider) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.settingsGetApiKey(userId, provider);
+});
+
+ipcMain.handle('native:promptList', (_e, userId, opts) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.promptList(userId, opts);
+});
+
+ipcMain.handle('native:promptCreate', (_e, data) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.promptCreate(data);
+});
+
+ipcMain.handle('native:templateListPublic', () => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.templateListPublic();
+});
+
+ipcMain.handle('native:templateListByUser', (_e, userId) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.templateListByUser(userId);
+});
+
+ipcMain.handle('native:projectList', (_e, userId) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.projectList(userId);
+});
+
+ipcMain.handle('native:projectCreate', (_e, data) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.projectCreate(data);
+});
+
+ipcMain.handle('native:stepList', (_e, projectId) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.stepList(projectId);
+});
+
+ipcMain.handle('native:stepUpdate', (_e, id, data) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.stepUpdate(id, data);
+});
+
+// AI calls (async — non-blocking)
+ipcMain.handle('native:aiCall', async (_e, req) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.aiCall(req);
+});
+
+ipcMain.handle('native:aiCallSelfConsistency', async (_e, req, sampleCount) => {
+  if (!nativeAddon) throw new Error('Native addon not loaded');
+  return nativeAddon.aiCallSelfConsistency(req, sampleCount);
+});
+
 function createApplicationMenu() {
   const isMacOS = process.platform === 'darwin';
   const updateItems = getUpdateMenuItems();
@@ -285,11 +415,14 @@ if (!gotLock) {
   });
 }
 
-// Clean shutdown — close backend server on quit
+// Clean shutdown — close backend server + native DB on quit
 app.on('before-quit', () => {
   if (backendServer?.close) {
     backendServer.close();
     backendServer = null;
+  }
+  if (nativeAddon) {
+    try { nativeAddon.dbClose(); log('Native DB closed'); } catch (e) {}
   }
 });
 app.on('window-all-closed', () => { app.quit(); process.exit(0); });

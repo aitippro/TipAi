@@ -15,6 +15,7 @@ import type { RequirementSummary } from "@/components/clarify/types"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { QUICK_EXAMPLES } from "@/components/home/config"
+import { HowItWorksSection } from "@/components/home/HowItWorksSection"
 
 // ── Types ────────────────────────────────────────────
 type FlowStage = "input" | "clarify" | "results"
@@ -228,7 +229,7 @@ export default function Home() {
         {stage === "input" && (
           <div className="w-full max-w-2xl">
             <div className="text-center mb-8">
-              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-3">
+              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-3 whitespace-nowrap">
                 <TextReveal text="模糊需求" mode="word" stagger={80} />
                 <span className="mx-3 text-slate-300 font-light">→</span>
                 <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
@@ -320,6 +321,9 @@ export default function Home() {
                 </TiltCard>
               ))}
             </div>
+
+            {/* How It Works */}
+            <HowItWorksSection />
           </div>
         )}
 

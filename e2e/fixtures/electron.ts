@@ -87,7 +87,7 @@ export const test = base.extend<ElectronFixtures>({
           : [mainPath],         // Prod mode: loads built dist/
         env: {
           ...process.env,
-          NODE_ENV: 'production',
+          NODE_ENV: isDev ? 'development' : 'test',
           TEST_MODE: '1',
           // Use isolated data dir so tests don't pollute real user data
           TIPAI_TEST_DATA_DIR: dataDir,

@@ -1,0 +1,8 @@
+[net.http]
+proxy = "http://127.0.0.1:7897"
+
+[net.https]
+proxy = "http://127.0.0.1:7897"
+
+[registries.crates-io]
+protocol = "sparse"
