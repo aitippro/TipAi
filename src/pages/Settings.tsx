@@ -230,7 +230,7 @@ export default function SettingsPage() {
           <>
             {MODELS.map((model) => {
               const keyField = `has${model.key === "openai" ? "OpenAI" : model.key === "deepseek" ? "DeepSeek" : model.key === "claude" ? "Claude" : "Kimi"}Key` as const
-              const hasKeyConfigured = settings ? (settings as Record<string, boolean>)[keyField] : false
+              const hasKeyConfigured = settings ? (settings as unknown as Record<string, boolean>)[keyField] : false
               return (
                 <StaggerItem key={model.key}>
                   <Card className={`border-0 shadow-sm rounded-2xl ${model.color} bg-opacity-30 backdrop-blur-sm`}>

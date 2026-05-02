@@ -272,7 +272,7 @@ export default function ProjectDetail() {
                         : "输入消息继续对话..."
                   }
                   className="w-full h-10 px-4 pr-10 rounded-full bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all"
-                  disabled={project.status !== "draft" && project.status !== "in_progress"}
+                  disabled={project.status !== "draft"}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && inputValue.trim()) {
                       toast.info("对话功能开发中")
@@ -284,7 +284,7 @@ export default function ProjectDetail() {
               <Button
                 size="icon"
                 className="rounded-full bg-gradient-to-br from-apple-blue to-apple-purple text-white shadow-md shrink-0"
-                disabled={!inputValue.trim() || (project.status !== "draft" && project.status !== "in_progress")}
+                disabled={!inputValue.trim() || project.status !== "draft"}
                 onClick={() => {
                   toast.info("对话功能开发中")
                   setInputValue("")
@@ -404,7 +404,10 @@ export default function ProjectDetail() {
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                         <div className="text-[10px] text-slate-400 mb-0.5">领域</div>
                         <div className="text-xs font-medium text-slate-700">
-                          {DOMAIN_LABELS[(summaryData as { intentAnalysis?: { domain?: string } }).intentAnalysis?.domain] || "通用"}
+                          {(() => {
+                            const _domain = (summaryData as { intentAnalysis?: { domain?: string } }).intentAnalysis?.domain;
+                            return _domain && DOMAIN_LABELS[_domain] ? DOMAIN_LABELS[_domain] : "通用";
+                          })()}
                         </div>
                       </div>
                       <div className="bg-slate-50 rounded-lg p-2.5 text-center">

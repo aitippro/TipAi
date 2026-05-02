@@ -368,7 +368,7 @@ export async function runOPRO(
 
     // 检查本轮最佳
     const iterationBest = iterationCandidates[0];
-    const previousBest = bestEver.score;
+    // const previousBest = bestEver.score;
 
     if (iterationBest && iterationBest.score > bestEver.score) {
       bestEver = iterationBest;

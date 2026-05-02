@@ -224,7 +224,6 @@ const CHECKERS: Record<string, (prompt: string) => Omit<QualityCheck, "id" | "na
 // ============================================================================
 
 function buildQualityAnalysisPrompt(prompt: string, checks: QualityCheck[]): string {
-  const failedChecks = checks.filter((c) => !c.passed);
   const checkSummary = checks.map((c) =>
     `- ${c.name}: ${c.score}/10 — ${c.message}${c.passed ? "" : `（建议：${c.suggestion}）`}`
   ).join("\n");
