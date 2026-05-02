@@ -1,34 +1,19 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
-import { env } from "../lib/env";
-import * as schema from "@db/schema";
-import * as relations from "@db/relations";
-
-const fullSchema = { ...schema, ...relations };
-
-let instance: ReturnType<typeof drizzle<typeof fullSchema>>;
-let dbInstance: Database;
-
-export function getDb() {
-  if (!instance) {
-    dbInstance = new Database(env.databaseUrl.replace("file:", ""));
-    dbInstance.pragma("journal_mode = WAL");
-    instance = drizzle(dbInstance, { schema: fullSchema });
-  }
-  return instance;
+// Native Addon 连接 stub（原 Drizzle connection 已迁移）
+let native: any = null;
+try {
+  native = require("../../native");
+} catch {
+  // fallback
 }
 
-export function getRawDb(): Database {
-  if (!dbInstance) {
-    getDb();
-  }
-  return dbInstance!;
+export function getDb() {
+  throw new Error("Drizzle ORM 已移除，请使用 Native Addon 直接调用");
+}
+
+export function getRawDb() {
+  throw new Error("Drizzle ORM 已移除，请使用 Native Addon 直接调用");
 }
 
 export function closeDb() {
-  if (dbInstance) {
-    dbInstance.close();
-    dbInstance = undefined as never;
-    instance = undefined as never;
-  }
+  // no-op
 }

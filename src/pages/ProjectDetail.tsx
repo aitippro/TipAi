@@ -136,7 +136,7 @@ export default function ProjectDetail() {
     )
   }
 
-  const turns: ConversationTurn[] = (conversation || []).map((t) => ({
+  const turns: ConversationTurn[] = (conversation || []).map((t: any) => ({
     id: t.id,
     role: t.role,
     content: t.content,
@@ -156,8 +156,8 @@ export default function ProjectDetail() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-semibold text-slate-900 truncate">{project.title}</h1>
-              <Badge variant="outline" className={`rounded-lg text-xs ${STATUS_COLORS[project.status] || "bg-slate-100 text-slate-600"}`}>
-                {STATUS_LABELS[project.status] || project.status}
+              <Badge variant="outline" className={`rounded-lg text-xs ${STATUS_COLORS[project.status || "draft"] || "bg-slate-100 text-slate-600"}`}>
+                {STATUS_LABELS[project.status || "draft"] || project.status || "草稿"}
               </Badge>
               {project.clarificationStatus && (
                 <Badge variant="outline" className="rounded-lg text-xs bg-slate-50">

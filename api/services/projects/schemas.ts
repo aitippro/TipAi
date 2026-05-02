@@ -25,6 +25,8 @@ export const updateProjectSchema = z.object({
   id: z.number(),
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
+  domain: z.string().optional(),
+  intent: z.string().optional(),
   status: z.enum(["draft", "ready", "executing", "completed", "archived"]).optional(),
   clarificationStatus: z.enum(["pending", "in_progress", "completed"]).optional(),
   turnCount: z.number().optional(),

@@ -148,8 +148,8 @@ export default function Projects() {
                       <Badge variant="outline" className={`text-[10px] rounded-md ${DOMAIN_COLORS[item.domain || "general"] || DOMAIN_COLORS.general}`}>
                         {DOMAIN_LABELS[item.domain || "general"] || "通用"}
                       </Badge>
-                      <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[item.status] || STATUS_COLORS.draft}`}>
-                        {STATUS_LABELS[item.status] || item.status}
+                      <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[item.status || "draft"] || STATUS_COLORS.draft}`}>
+                        {STATUS_LABELS[item.status || "draft"] || item.status || "草稿"}
                       </Badge>
                       {item.clarificationStatus && (
                         <Badge variant="outline" className="text-[10px] rounded-md bg-slate-50">
@@ -165,7 +165,7 @@ export default function Projects() {
                   </div>
 
                   <div className="flex items-center gap-4 ml-4 shrink-0">
-                    {item.turnCount !== null && item.turnCount > 0 && (
+                    {item.turnCount != null && item.turnCount > 0 && (
                       <div className="flex items-center gap-1 text-xs text-slate-400">
                         <MessageSquare className="w-3 h-3" />
                         {item.turnCount} 轮

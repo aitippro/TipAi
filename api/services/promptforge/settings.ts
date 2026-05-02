@@ -1,10 +1,25 @@
-import { eq } from "drizzle-orm";
-
-import { userSettings, type UserSettings } from "@db/schema";
-
-import { decrypt, encrypt } from "../../lib/crypto";
-import { getDb } from "../../queries/connection";
+import { decrypt } from "../../lib/crypto";
 import type { UpdatePromptForgeSettingsInput } from "./schemas";
+
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
+
+// Local UserSettings type (matches DB schema, camelCase)
+interface UserSettings {
+  userId: number;
+  defaultModel: string;
+  defaultFramework: string;
+  defaultLanguage: string;
+  kimiApiKey?: string | null;
+  openaiApiKey?: string | null;
+  claudeApiKey?: string | null;
+  deepseekApiKey?: string | null;
+}
 
 /**
  * Infer the best default model based on user's configured API keys.
@@ -79,19 +94,19 @@ function buildSettingsUpdateData(
   let newDeepSeekKey: string | undefined;
 
   if (input.kimiApiKey && input.kimiApiKey.trim().length > 0 && input.kimiApiKey !== "***") {
-    newKimiKey = encrypt(input.kimiApiKey.trim());
+    newKimiKey = input.kimiApiKey.trim();
     updateData.kimiApiKey = newKimiKey;
   }
   if (input.openaiApiKey && input.openaiApiKey.trim().length > 0 && input.openaiApiKey !== "***") {
-    newOpenAIKey = encrypt(input.openaiApiKey.trim());
+    newOpenAIKey = input.openaiApiKey.trim();
     updateData.openaiApiKey = newOpenAIKey;
   }
   if (input.claudeApiKey && input.claudeApiKey.trim().length > 0 && input.claudeApiKey !== "***") {
-    newClaudeKey = encrypt(input.claudeApiKey.trim());
+    newClaudeKey = input.claudeApiKey.trim();
     updateData.claudeApiKey = newClaudeKey;
   }
   if (input.deepseekApiKey && input.deepseekApiKey.trim().length > 0 && input.deepseekApiKey !== "***") {
-    newDeepSeekKey = encrypt(input.deepseekApiKey.trim());
+    newDeepSeekKey = input.deepseekApiKey.trim();
     updateData.deepseekApiKey = newDeepSeekKey;
   }
 
@@ -145,13 +160,26 @@ export function resolveStoredApiKey(model: string, settings?: UserSettings): str
   return getApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
 }
 
-export async function getPromptForgeSettingsRecord(userId: number): Promise<UserSettings | undefined> {
-  const [settings] = await getDb()
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId));
+function mapNativeSettings(userId: number, s: any): UserSettings {
+  return {
+    userId: s.user_id,
+    defaultModel: s.default_model,
+    defaultFramework: s.default_framework,
+    defaultLanguage: s.default_language,
+    kimiApiKey: native.settingsGetApiKey(userId, "kimi"),
+    openaiApiKey: native.settingsGetApiKey(userId, "openai"),
+    claudeApiKey: native.settingsGetApiKey(userId, "claude"),
+    deepseekApiKey: native.settingsGetApiKey(userId, "deepseek"),
+  };
+}
 
-  return settings;
+export async function getPromptForgeSettingsRecord(userId: number): Promise<UserSettings | undefined> {
+  try {
+    const s = native.settingsGet(userId);
+    return mapNativeSettings(userId, s);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getPromptForgeSettings(userId: number): Promise<PromptForgeSettingsResponse> {
@@ -162,16 +190,18 @@ export async function getPromptForgeSettings(userId: number): Promise<PromptForg
 
   // New user: infer default model from env keys (no DB keys yet)
   const inferredModel = inferDefaultModel();
-  await getDb().insert(userSettings).values({
-    userId,
-    ...DEFAULT_SETTINGS,
-    defaultModel: inferredModel,
+  native.settingsUpdate(userId, {
+    default_model: inferredModel,
+    default_framework: "auto",
+    default_language: "zh",
   });
 
   return mapSettingsResponse({
-    ...DEFAULT_SETTINGS,
+    userId,
     defaultModel: inferredModel,
-  } as unknown as UserSettings);
+    defaultFramework: "auto",
+    defaultLanguage: "zh",
+  });
 }
 
 export async function updatePromptForgeSettings(
@@ -181,18 +211,17 @@ export async function updatePromptForgeSettings(
   const existing = await getPromptForgeSettingsRecord(userId);
   const updateData = buildSettingsUpdateData(input, existing);
 
-  if (existing) {
-    await getDb()
-      .update(userSettings)
-      .set(updateData)
-      .where(eq(userSettings.userId, userId));
-  } else {
-    await getDb().insert(userSettings).values({
-      userId,
-      ...updateData,
-    });
-  }
+  // Convert camelCase to snake_case for native
+  const nativeUpdate: Record<string, any> = {};
+  if (updateData.defaultModel !== undefined) nativeUpdate.default_model = updateData.defaultModel;
+  if (updateData.defaultFramework !== undefined) nativeUpdate.default_framework = updateData.defaultFramework;
+  if (updateData.defaultLanguage !== undefined) nativeUpdate.default_language = updateData.defaultLanguage;
+  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = updateData.kimiApiKey;
+  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = updateData.openaiApiKey;
+  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = updateData.claudeApiKey;
+  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = updateData.deepseekApiKey;
 
+  native.settingsUpdate(userId, nativeUpdate);
   return { success: true };
 }
 

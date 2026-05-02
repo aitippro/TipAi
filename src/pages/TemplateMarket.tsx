@@ -86,7 +86,7 @@ export default function TemplateMarket() {
   const sourceTemplates =
     apiTemplates && apiTemplates.length > 0 ? apiTemplates : DEFAULT_TEMPLATES
 
-  const filteredTemplates = sourceTemplates.filter((template) => {
+  const filteredTemplates = sourceTemplates.filter((template: any) => {
     if (selectedDomain !== "all" && template.domain !== selectedDomain) {
       return false
     }
@@ -264,7 +264,7 @@ export default function TemplateMarket() {
             />
           ) : (
             <StaggerContainer className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-              {filteredTemplates.map((template) => (
+              {filteredTemplates.map((template: any) => (
                 <StaggerItem key={template.id}>
                   <TiltCard maxTilt={4} scale={1.01}>
                     <TemplateMarketCard
@@ -283,7 +283,7 @@ export default function TemplateMarket() {
           <TabsContent value="my">
             {myTemplates && myTemplates.length > 0 ? (
               <StaggerContainer className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-                {myTemplates.map((template) => (
+                {myTemplates.map((template: any) => (
                   <StaggerItem key={template.id}>
                     <TiltCard maxTilt={4} scale={1.01}>
                       <TemplateMarketCard

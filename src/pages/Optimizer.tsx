@@ -154,7 +154,7 @@ export default function Optimizer() {
     toast.success("已复制到剪贴板");
   };
 
-  const loadFromHistory = (item: { originalPrompt: string; optimizedPrompt?: string; strategy?: string }) => {
+  const loadFromHistory = (item: any) => {
     setOriginalPrompt(item.originalPrompt);
     if (item.strategy && ["general", "structured", "concise"].includes(item.strategy)) {
       setSelectedStrategy(item.strategy as StaticStrategy);

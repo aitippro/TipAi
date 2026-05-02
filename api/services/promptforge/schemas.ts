@@ -39,6 +39,7 @@ export const saveLibraryItemSchema = z.object({
   domain: z.string().optional(),
   model: z.string().optional(),
   tags: z.string().optional(),
+  isFavorite: z.boolean().optional(),
 });
 
 export const deleteLibraryItemSchema = z.object({

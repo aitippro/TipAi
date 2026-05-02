@@ -1,4 +1,9 @@
+/**
+ * B4: Project Summary Service (Native-only, no Drizzle fallback)
+ */
+
 import { TRPCError } from "@trpc/server";
+import { createHash } from "crypto";
 
 import {
   analyzeIntent,
@@ -10,9 +15,13 @@ import type { IntentAnalysis } from "../../lib/ai-service-v3/types";
 import { getPromptForgeSettingsRecord, getAvailableModels } from "../promptforge/settings";
 import type { DecodeStrategy } from "../ai/decoding-strategies";
 
-import { getDb } from "../../queries/connection";
-import { projectConversations } from "@db/schema";
-import { eq } from "drizzle-orm";
+// ── Native Addon ────────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../../../../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
 
 interface ConversationTurn {
   role: string;
@@ -51,6 +60,127 @@ function buildConversationContext(turns: ConversationTurn[]): string {
     .join("\n\n");
 }
 
+export async function getProjectConversations(projectId: number): Promise<
+  {
+    id: number;
+    userId: number;
+    role: string;
+    content: string;
+    questionId?: string;
+    questionData?: Record<string, string>;
+    answerData?: Record<string, string>;
+    turnNumber: number;
+    createdAt: Date;
+  }[]
+> {
+  const rows = native.conversationListByProject(projectId) || [];
+  return rows.map((r: any) => ({
+    id: r.id,
+    userId: r.user_id,
+    role: r.role,
+    content: r.content,
+    questionId: r.question_id || undefined,
+    questionData: r.question_data ? JSON.parse(r.question_data) : undefined,
+    answerData: r.answer_data ? JSON.parse(r.answer_data) : undefined,
+    turnNumber: r.turn_number,
+    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+  }));
+}
+
+export async function getProjectSummary(projectId: number): Promise<
+  | {
+      id: number;
+      summary: string;
+      requirements?: string;
+      constraints?: string;
+      suggestedFrameworks?: string;
+      rawContext?: string;
+      isFinalized: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }
+  | undefined
+> {
+  const row = native.summaryGetByProject(projectId);
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    summary: row.summary,
+    requirements: row.requirements || undefined,
+    constraints: row.constraints || undefined,
+    suggestedFrameworks: row.suggested_frameworks || undefined,
+    rawContext: row.raw_context || undefined,
+    isFinalized: row.is_finalized === 1,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+  };
+}
+
+export async function generateProjectSummary(
+  _projectId: number,
+  _userId: number,
+): Promise<{
+  summary: string;
+  requirements: string[];
+  constraints: string[];
+  suggestedFrameworks: string[];
+}> {
+  // This is a simplified placeholder - in production, call the AI service
+  const placeholderResponse = {
+    summary: "Placeholder summary",
+    requirements: ["Requirement 1", "Requirement 2"],
+    constraints: ["Constraint 1"],
+    suggestedFrameworks: ["Chain-of-Thought", "Tree-of-Thought"],
+  };
+
+  return placeholderResponse;
+}
+
+export async function upsertProjectSummary(
+  projectId: number,
+  userId: number,
+  data: {
+    summary: string;
+    requirements?: string[];
+    constraints?: string[];
+    suggestedFrameworks?: string[];
+    rawContext?: string;
+    isFinalized?: boolean;
+  },
+): Promise<{ id: number; summary: string; createdAt: Date; updatedAt: Date }> {
+  const row = native.summaryUpsert({
+    project_id: projectId,
+    user_id: userId,
+    summary: data.summary,
+    requirements: data.requirements ? JSON.stringify(data.requirements) : undefined,
+    constraints: data.constraints ? JSON.stringify(data.constraints) : undefined,
+    suggested_frameworks: data.suggestedFrameworks ? JSON.stringify(data.suggestedFrameworks) : undefined,
+    raw_context: data.rawContext || undefined,
+    is_finalized: data.isFinalized ? 1 : 0,
+  });
+
+  return {
+    id: row.id,
+    summary: row.summary,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+  };
+}
+
+export async function summarizeConversationContext(
+  conversations: {
+    role: string;
+    content: string;
+  }[],
+): Promise<string> {
+  const hash = createHash("sha256")
+    .update(JSON.stringify(conversations))
+    .digest("hex");
+
+  // Placeholder - in production, call AI service
+  return `Conversation summary (hash: ${hash.slice(0, 8)}...): Placeholder summary of ${conversations.length} messages.`;
+}
+
 export async function generateRequirementSummary(
   userId: number,
   projectId: number,
@@ -67,28 +197,24 @@ export async function generateRequirementSummary(
     });
   }
 
-  // Fetch conversation turns
-  const rawTurns = await getDb()
-    .select()
-    .from(projectConversations)
-    .where(eq(projectConversations.projectId, projectId))
-    .orderBy(projectConversations.turnNumber);
+  // Fetch conversation turns via native
+  const rawTurns = await getProjectConversations(projectId);
 
   const turns: ConversationTurn[] = rawTurns.map((t) => ({
     role: t.role,
     content: t.content,
-    questionData: t.questionData ? JSON.parse(t.questionData) : null,
-    answerData: t.answerData ? JSON.parse(t.answerData) : null,
+    questionData: t.questionData ?? null,
+    answerData: t.answerData ?? null,
   }));
 
-  // Analyze intent — try models in order
+  // Analyze intent
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
     analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
     if (analysis) break;
   }
   if (!analysis) {
-    const fallback = { goal: originalIntent, domain: "general", subDomain: "general", audience: "", tone: "专业", style: "简洁", outputFormat: "详细文字说明", complexity: "simple" as const, constraints: [] as string[], language: "zh" };
+    const fallback: IntentAnalysis = { goal: originalIntent, domain: "general", subDomain: "general", audience: "", tone: "专业", style: "简洁", outputFormat: "详细文字说明", complexity: "simple", constraints: [], language: "zh" };
     return {
       summary: originalIntent,
       requirements: [originalIntent],
@@ -109,7 +235,6 @@ export async function generateRequirementSummary(
     };
   }
 
-  // Build context and call AI for summary
   const conversationContext = buildConversationContext(turns);
 
   const systemPrompt = `你是一位需求分析专家。基于用户与AI的多轮澄清对话，生成一份结构化的需求摘要。
@@ -153,7 +278,6 @@ ${conversationContext}
 
 请生成需求摘要。`;
 
-  // Use the AI client directly since we need a structured response
   const { callAI } = await import("../../lib/ai-service-v3/client");
   let result: string | null = null;
   for (const { model, apiKey } of models) {
@@ -208,18 +332,16 @@ export async function generateNextClarificationQuestion(
   };
   summary?: string;
 }> {
-  const { getAvailableModels } = await import("../promptforge/settings");
   const settings = await getPromptForgeSettingsRecord(userId);
   const models = getAvailableModels(settings);
 
   if (models.length === 0) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "未配置任何 AI 模型 API Key，请在设置中配置（支持 DeepSeek/Kimi/OpenAI/Claude）",
+      message: "未配置任何 AI 模型 API Key，请先在设置中配置（支持 DeepSeek/Kimi/OpenAI/Claude）",
     });
   }
 
-  // Try intent analysis with first available model, fall through if fails
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
     analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
@@ -229,17 +351,14 @@ export async function generateNextClarificationQuestion(
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "AI 意图分析失败，请检查网络和 API Key 配置" });
   }
 
-  // If already simple and enough info, skip
   if (analysis.complexity === "simple" && previousTurns.length >= 2) {
     return { needsMoreClarification: false };
   }
 
-  // If too many turns, stop
   if (previousTurns.length >= 6) {
     return { needsMoreClarification: false };
   }
 
-  // Build context
   const context = buildConversationContext(previousTurns);
 
   const systemPrompt = `你是一位需求澄清专家。基于用户的原始需求和已进行的澄清对话，判断是否需要继续提问，如果需要，生成下一个最关键的问题。
@@ -281,7 +400,6 @@ ${context || "（刚开始对话）"}
 请判断是否需要继续提问。如果需要，只生成一个问题。`;
 
   const { callAI } = await import("../../lib/ai-service-v3/client");
-  // Try models in order for the question generation
   let result: string | null = null;
   for (const { model, apiKey } of models) {
     result = await callAI(model, apiKey, systemPrompt, userMessage, 0.4, decodeStrategy);

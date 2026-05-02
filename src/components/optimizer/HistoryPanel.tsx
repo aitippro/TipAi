@@ -71,12 +71,12 @@ export function HistoryPanel({ history, onSelect, onRefresh }: HistoryPanelProps
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {item.originalPrompt.substring(0, 40)}
-                            {item.originalPrompt.length > 40 && "..."}
+                            {(item.originalPrompt || "").substring(0, 40)}
+                            {(item.originalPrompt || "").length > 40 && "..."}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(item.createdAt)}
+                              {formatDate(item.createdAt ? new Date(item.createdAt) : null)}
                             </span>
                             {item.domain && item.domain !== "general" && (
                               <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto">

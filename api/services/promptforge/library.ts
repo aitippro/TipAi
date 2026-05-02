@@ -1,40 +1,42 @@
-import { and, eq } from "drizzle-orm";
-
-import { promptLibrary } from "@db/schema";
-
-import { getDb } from "../../queries/connection";
 import type { SaveLibraryItemInput } from "./schemas";
+
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../../native");
+} catch {
+  // Browser fallback
+}
 
 export async function savePromptForgeLibraryItem(
   userId: number,
   input: SaveLibraryItemInput,
 ): Promise<{ id: number; success: true }> {
-  const [item] = await getDb()
-    .insert(promptLibrary)
-    .values({
-      userId,
-      ...input,
-    })
-    .returning();
-
+  if (!native) throw new Error("Native addon not available");
+  const item = native.promptCreate({
+    userId,
+    title: input.title,
+    originalIntent: input.originalIntent || "",
+    generatedPrompt: input.generatedPrompt || "",
+    framework: input.framework || "",
+    domain: input.domain || "general",
+    model: input.model || "kimi",
+    tags: input.tags || "",
+    isFavorite: input.isFavorite ? 1 : 0,
+  });
   return { id: item.id, success: true };
 }
 
 export async function listPromptForgeLibraryItems(userId: number) {
-  return getDb()
-    .select()
-    .from(promptLibrary)
-    .where(eq(promptLibrary.userId, userId))
-    .orderBy(promptLibrary.createdAt);
+  if (!native) return [];
+  return native.promptList(userId);
 }
 
 export async function deletePromptForgeLibraryItem(
   userId: number,
   id: number,
 ): Promise<{ success: true }> {
-  await getDb()
-    .delete(promptLibrary)
-    .where(and(eq(promptLibrary.id, id), eq(promptLibrary.userId, userId)));
-
+  if (!native) throw new Error("Native addon not available");
+  native.promptDelete(id, userId);
   return { success: true };
 }

@@ -1,8 +1,13 @@
 import { z } from "zod";
 import { createRouter, authedQuery } from "./middleware";
-import { getDb } from "./queries/connection";
-import { promptOptimizations } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
 import { optimizePrompt, evaluatePrompt } from "./lib/ai-service-v2";
 import { runOPRO } from "./services/promptforge/opro-engine";
 import { judgePrompt } from "./services/promptforge/llm-judge";
@@ -19,24 +24,15 @@ export const optimizerRouter = createRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const settings = await getPromptForgeSettingsRecord(ctx.user.id);
-      const models = getAvailableModels(settings);
+      const result = await optimizePrompt(input.prompt, input.domain, input.strategy);
 
-      if (models.length === 0) {
-        throw new Error("未配置任何 AI 模型 API Key，请先在设置中配置");
-      }
-
-      const { model, apiKey } = models[0];
-      const result = await optimizePrompt(input.prompt, input.domain, input.strategy, model, apiKey);
-
-      const db = getDb();
-      await db.insert(promptOptimizations).values({
-        userId: ctx.user.id,
-        originalPrompt: input.prompt,
-        optimizedPrompt: result.optimizedPrompt,
+      native.optimizerRunCreate({
+        user_id: ctx.user.id,
+        original_prompt: input.prompt,
+        optimized_prompt: result.optimizedPrompt,
         improvements: JSON.stringify(result.improvements),
         domain: input.domain,
-        model,
+        model: "kimi",
       });
 
       return result;
@@ -51,16 +47,8 @@ export const optimizerRouter = createRouter({
         domain: z.string().default("general"),
       }),
     )
-    .mutation(async ({ input, ctx }) => {
-      const settings = await getPromptForgeSettingsRecord(ctx.user.id);
-      const models = getAvailableModels(settings);
-
-      if (models.length === 0) {
-        throw new Error("未配置任何 AI 模型 API Key，请先在设置中配置");
-      }
-
-      const { model, apiKey } = models[0];
-      return evaluatePrompt(input.prompt, input.output, input.domain, model, apiKey);
+    .mutation(async ({ input }) => {
+      return evaluatePrompt(input.prompt, input.output, input.domain);
     }),
 
   // ---- OPRO 自动优化引擎：多轮迭代 ----
@@ -111,11 +99,10 @@ export const optimizerRouter = createRouter({
       });
 
       // 保存到历史
-      const db = getDb();
-      await db.insert(promptOptimizations).values({
-        userId: ctx.user.id,
-        originalPrompt: input.prompt,
-        optimizedPrompt: result.finalPrompt,
+      native.optimizerRunCreate({
+        user_id: ctx.user.id,
+        original_prompt: input.prompt,
+        optimized_prompt: result.finalPrompt,
         improvements: JSON.stringify({
           opro: true,
           iterations: result.actualIterations,
@@ -168,12 +155,16 @@ export const optimizerRouter = createRouter({
 
   // ---- 优化历史 ----
   history: authedQuery.query(async ({ ctx }) => {
-    const db = getDb();
-    return db
-      .select()
-      .from(promptOptimizations)
-      .where(eq(promptOptimizations.userId, ctx.user.id))
-      .orderBy(desc(promptOptimizations.createdAt))
-      .limit(50);
+    const rows = native.optimizerRunList(ctx.user.id, 50) || [];
+    return rows.map((r: any) => ({
+      id: r.id,
+      userId: r.user_id,
+      originalPrompt: r.original_prompt,
+      optimizedPrompt: r.optimized_prompt,
+      improvements: r.improvements ? JSON.parse(r.improvements) : null,
+      domain: r.domain,
+      model: r.model,
+      createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+    }));
   }),
 });

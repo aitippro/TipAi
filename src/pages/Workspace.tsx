@@ -27,6 +27,14 @@ const DOMAIN_COLORS: Record<string, string> = {
   creative: "bg-amber-100 text-amber-700",
 };
 
+const DOMAIN_LABELS: Record<string, string> = {
+  general: "通用",
+  marketing: "营销",
+  technical: "技术",
+  education: "教育",
+  creative: "创意",
+};
+
 const STATUS_LABELS: Record<string, string> = {
   draft: "草稿", ready: "就绪", executing: "执行中", completed: "已完成", archived: "已归档",
 };
@@ -252,8 +260,8 @@ export default function WorkspacePage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-slate-800 text-sm truncate">{project.title}</h3>
-                            <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[project.status] || ""}`}>
-                              {STATUS_LABELS[project.status] || project.status}
+                            <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[project.status || "draft"] || ""}`}>
+                              {STATUS_LABELS[project.status || "draft"] || project.status || "草稿"}
                             </Badge>
                           </div>
                           {project.description && (
@@ -308,12 +316,12 @@ export default function WorkspacePage() {
                     <p className="text-xs text-slate-500">{selectedProject.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className={`text-xs ${STATUS_COLORS[selectedProject.status] || ""}`}>
-                      {STATUS_LABELS[selectedProject.status] || selectedProject.status}
+                    <Badge variant="outline" className={`text-xs ${STATUS_COLORS[selectedProject.status || "draft"] || ""}`}>
+                      {STATUS_LABELS[selectedProject.status || "draft"] || selectedProject.status || "草稿"}
                     </Badge>
                     {selectedProject.domain && (
-                      <Badge variant="outline" className={`text-xs ${DOMAIN_COLORS[selectedProject.domain] || ""}`}>
-                        {selectedProject.domain}
+                      <Badge variant="outline" className={`text-xs ${DOMAIN_COLORS[selectedProject.domain || "general"] || ""}`}>
+                        {DOMAIN_LABELS[selectedProject.domain || "general"] || "通用"}
                       </Badge>
                     )}
                   </div>

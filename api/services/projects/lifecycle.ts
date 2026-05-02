@@ -3,29 +3,50 @@
  * Manages steps across the full prompt development lifecycle.
  */
 
-import { eq, and, asc } from "drizzle-orm";
-import { steps } from "@db/schema";
-import { getDb } from "../../queries/connection";
 import { STAGE_TRANSITIONS } from "@contracts/lifecycle";
 import type { LifecycleStage, PipelineSummary } from "@contracts/lifecycle";
 import type { DecodeStrategy } from "../ai/decoding-strategies";
 
+// ── Native Addon (Electron/Node main process) ─────────────
+let native: any = null;
+try {
+  native = require("../../../../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
+
+function mapNativeStep(entry: any) {
+  return {
+    id: entry.id,
+    projectId: entry.project_id,
+    title: entry.title,
+    description: entry.description,
+    prompt: entry.prompt,
+    stage: entry.stage,
+    orderNum: entry.order_num,
+    status: entry.status,
+    output: entry.output,
+    parentStepId: entry.parent_step_id,
+    model: entry.model,
+    temperature: entry.temperature,
+    decodeStrategy: entry.decode_strategy ? JSON.parse(entry.decode_strategy) : undefined,
+    createdAt: entry.created_at ? new Date(entry.created_at) : new Date(),
+    updatedAt: entry.updated_at ? new Date(entry.updated_at) : new Date(),
+  };
+}
+
 export async function getProjectPipeline(projectId: number): Promise<PipelineSummary> {
-  const allSteps = await getDb()
-    .select()
-    .from(steps)
-    .where(eq(steps.projectId, projectId))
-    .orderBy(asc(steps.stage), asc(steps.orderNum));
+  const allSteps = (native.stepList(projectId) || []).map(mapNativeStep);
 
   const stages = {} as PipelineSummary["stages"];
 
   const stageKeys: LifecycleStage[] = ["clarify", "design", "implement", "test", "deploy", "maintain"];
   for (const s of stageKeys) {
-    const stageSteps = allSteps.filter((st) => st.stage === s);
+    const stageSteps = allSteps.filter((st: any) => st.stage === s);
     stages[s] = {
       total: stageSteps.length,
-      completed: stageSteps.filter((st) => st.status === "completed").length,
-      steps: stageSteps.map((st) => ({
+      completed: stageSteps.filter((st: any) => st.status === "completed").length,
+      steps: stageSteps.map((st: any) => ({
         id: st.id,
         title: st.title,
         status: st.status,
@@ -37,11 +58,7 @@ export async function getProjectPipeline(projectId: number): Promise<PipelineSum
 }
 
 export async function moveStepStage(stepId: number, toStage: LifecycleStage): Promise<void> {
-  const [step] = await getDb()
-    .select()
-    .from(steps)
-    .where(eq(steps.id, stepId));
-
+  const step = native.stepGetById(stepId);
   if (!step) throw new Error("Step not found");
 
   const fromStage = step.stage as LifecycleStage;
@@ -50,16 +67,12 @@ export async function moveStepStage(stepId: number, toStage: LifecycleStage): Pr
     throw new Error(`Cannot move from ${fromStage} to ${toStage}. Allowed: ${allowed.join(", ")}`);
   }
 
-  await getDb()
-    .update(steps)
-    .set({ stage: toStage, updatedAt: new Date() })
-    .where(eq(steps.id, stepId));
+  native.stepUpdate(stepId, { stage: toStage });
 }
 
 export async function linkParentStep(stepId: number, parentStepId: number): Promise<void> {
-  // Verify parent is in an earlier stage
-  const [child] = await getDb().select().from(steps).where(eq(steps.id, stepId));
-  const [parent] = await getDb().select().from(steps).where(eq(steps.id, parentStepId));
+  const child = native.stepGetById(stepId);
+  const parent = native.stepGetById(parentStepId);
 
   if (!child || !parent) throw new Error("Step not found");
 
@@ -68,18 +81,17 @@ export async function linkParentStep(stepId: number, parentStepId: number): Prom
     throw new Error("Parent step must be in an earlier stage than child step");
   }
 
-  await getDb()
-    .update(steps)
-    .set({ parentStepId, updatedAt: new Date() })
-    .where(eq(steps.id, stepId));
+  native.stepUpdate(stepId, { parent_step_id: parentStepId });
 }
 
 export async function getChildSteps(stepId: number) {
-  return getDb()
-    .select()
-    .from(steps)
-    .where(eq(steps.parentStepId, stepId))
-    .orderBy(asc(steps.stage), asc(steps.orderNum));
+  const parent = native.stepGetById(stepId);
+  if (!parent) return [];
+  const children = (native.stepList(parent.project_id) || [])
+    .filter((s: any) => s.parent_step_id === stepId)
+    .sort((a: any, b: any) => (a.order_num || 0) - (b.order_num || 0))
+    .map(mapNativeStep);
+  return children;
 }
 
 export async function createLifecycleStep(input: {
@@ -93,30 +105,24 @@ export async function createLifecycleStep(input: {
   temperature?: number;
   decodeStrategy?: DecodeStrategy;
 }) {
-  const maxOrder = await getDb()
-    .select({ orderNum: steps.orderNum })
-    .from(steps)
-    .where(and(eq(steps.projectId, input.projectId), eq(steps.stage, input.stage)))
-    .orderBy(asc(steps.orderNum))
-    .all();
+  const allSteps = (native.stepList(input.projectId) || []);
+  const stageSteps = allSteps.filter((s: any) => s.stage === input.stage);
+  const nextOrder = (stageSteps.length > 0
+    ? Math.max(...stageSteps.map((s: any) => s.order_num || 0))
+    : 0) + 1;
 
-  const nextOrder = (maxOrder.length > 0 ? Math.max(...maxOrder.map((s) => s.orderNum)) : 0) + 1;
+  const inserted = native.stepCreate({
+    project_id: input.projectId,
+    title: input.title,
+    description: input.description || undefined,
+    prompt: input.prompt,
+    stage: input.stage,
+    order_num: nextOrder,
+    parent_step_id: input.parentStepId || undefined,
+    model: input.model || "kimi",
+    temperature: input.temperature ?? 0.7,
+    decode_strategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : undefined,
+  });
 
-  const [inserted] = await getDb()
-    .insert(steps)
-    .values({
-      projectId: input.projectId,
-      title: input.title,
-      description: input.description || null,
-      prompt: input.prompt,
-      stage: input.stage,
-      orderNum: nextOrder,
-      parentStepId: input.parentStepId || null,
-      model: input.model || "kimi",
-      temperature: input.temperature ?? 0.7,
-      decodeStrategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : null,
-    })
-    .returning();
-
-  return inserted;
+  return mapNativeStep(inserted);
 }

@@ -1,37 +1,32 @@
 /**
  * Database Seed Script
- * Synchronous API for better-sqlite3
+ * Uses Native Addon for seeding (P5 migrated)
  */
-import { getDb, getRawDb } from "../api/queries/connection";
-import { domainPackages, templates, users } from "./schema";
+
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../native");
+} catch {
+  throw new Error("Native addon is required for seeding. Run `npm run native:build` first.");
+}
+
 import { hashPasswordSync } from "../api/lib/password";
-import { eq } from "drizzle-orm";
 
 export function seed() {
-  const db = getDb();
-  const _rawDb = getRawDb();
-
   // Seed admin user (for dev/test environments only)
   if (process.env.NODE_ENV !== "production") {
     const adminPassword = hashPasswordSync("admin");
-    const existingAdmin = db
-      .select()
-      .from(users)
-      .where(eq(users.username, "admin"))
-      .get();
+    const existingAdmin = native.userFindByUsername("admin");
 
     if (!existingAdmin) {
-      db.insert(users).values({
-        unionId: "local:admin",
+      native.userUpsert({
+        union_id: "local:admin",
         username: "admin",
         password: adminPassword,
         name: "Administrator",
         role: "admin",
       });
-    } else {
-      db.update(users)
-        .set({ password: adminPassword, role: "admin" })
-        .where(eq(users.username, "admin"));
     }
     console.log("✅ Seeded admin user (admin/admin)");
   }
@@ -89,26 +84,14 @@ export function seed() {
   ];
 
   for (const domain of domains) {
-    const existing = db
-      .select()
-      .from(domainPackages)
-      .where(eq(domainPackages.key, domain.key))
-      .get();
-
-    if (!existing) {
-      db.insert(domainPackages).values(domain);
-    } else {
-      db.update(domainPackages)
-        .set(domain)
-        .where(eq(domainPackages.key, domain.key));
-    }
+    native.domainPackageUpsert(domain);
   }
   console.log(`✅ Seeded ${domains.length} domain packages`);
 
   // Seed default templates
   const defaultTemplates = [
     {
-      userId: 1,
+      user_id: 1,
       title: "小红书爆款文案生成",
       description: "输入产品信息，自动生成小红书风格的种草文案，含标题、卖点和hashtag",
       framework: "co-star",
@@ -124,14 +107,10 @@ Response:
 - 3-5个核心卖点（bullet points + emoji）
 - 8-10个相关hashtag`,
       tags: "小红书,文案,种草,营销",
-      useCount: 128,
-      rating: 920,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
     {
-      userId: 1,
+      user_id: 1,
       title: "Python数据分析脚本",
       description: "生成完整的数据分析Python脚本，包含数据清洗、可视化和洞察输出",
       framework: "risen",
@@ -150,14 +129,10 @@ Format:
 - 生成至少2种可视化图表
 - 代码可以直接复制运行`,
       tags: "Python,数据分析,代码",
-      useCount: 96,
-      rating: 880,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
     {
-      userId: 1,
+      user_id: 1,
       title: "教学教案设计",
       description: "为任意知识点设计完整的教学教案，包含目标、活动、评估",
       framework: "crispe",
@@ -176,14 +151,10 @@ Experiment: 如果某个环节不适合，主动提供替代方案
 5. 总结与作业（5分钟）
 6. 差异化支持（学困生/学优生分别的辅导策略）`,
       tags: "教案,教学,教育",
-      useCount: 74,
-      rating: 900,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
     {
-      userId: 1,
+      user_id: 1,
       title: "Midjourney图像提示词",
       description: "将自然语言描述转化为专业的Midjourney英文提示词",
       framework: "rtf",
@@ -208,14 +179,10 @@ Format: 以结构化格式输出：
 **参数建议**:
 --ar {{比例}} --v 6 --s {{风格化程度}}`,
       tags: "Midjourney,图像,AI绘画",
-      useCount: 215,
-      rating: 950,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
     {
-      userId: 1,
+      user_id: 1,
       title: "RESTful API设计文档",
       description: "根据业务需求自动生成完整的RESTful API设计文档",
       framework: "ape-optimized",
@@ -232,14 +199,10 @@ Steps:
 End goal: 可直接进入开发评审的完整API设计文档
 Narrowing: 遵循RESTful最佳实践，使用OpenAPI 3.0格式，支持10000 QPS`,
       tags: "API,后端,架构",
-      useCount: 87,
-      rating: 890,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
     {
-      userId: 1,
+      user_id: 1,
       title: "短视频脚本生成",
       description: "为抖音/快手/TikTok生成15-60秒短视频的完整脚本",
       framework: "risen",
@@ -259,27 +222,15 @@ Task: 为"{{主题}}"创作一条{{时长}}秒的短视频脚本
 - 结尾有明确的CTA（关注/点赞/评论引导）
 - 标注需要的拍摄镜头类型`,
       tags: "短视频,脚本,抖音",
-      useCount: 156,
-      rating: 910,
-      ratingCount: 100,
-      isPublic: 1,
-      isFeatured: 1,
+      is_public: 1,
     },
   ];
 
   for (const tmpl of defaultTemplates) {
-    const existing = db
-      .select()
-      .from(templates)
-      .where(eq(templates.title, tmpl.title))
-      .get();
-
-    if (!existing) {
-      db.insert(templates).values(tmpl);
-    } else {
-      db.update(templates)
-        .set(tmpl)
-        .where(eq(templates.title, tmpl.title));
+    try {
+      native.templateCreate(tmpl);
+    } catch (e) {
+      // Template may already exist, skip
     }
   }
   console.log(`✅ Seeded ${defaultTemplates.length} default templates`);

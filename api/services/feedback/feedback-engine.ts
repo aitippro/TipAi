@@ -7,9 +7,38 @@
  *  - 进化建议生成
  */
 
-import { getDb } from "../../queries/connection";
-import { evaluations } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../../../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
+
+function mapNativeEvaluation(row: NativeEvalEntry): FeedbackHistoryItem {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    stepId: row.step_id ?? null,
+    userId: row.user_id,
+    dimension: row.dimension as FeedbackDimension,
+    score: row.score,
+    feedback: row.feedback ?? null,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
+  };
+}
+
+// 复用 index.d.ts 中的类型（运行时从 native 模块获取）
+interface NativeEvalEntry {
+  id: number;
+  project_id: number;
+  step_id?: number;
+  user_id: number;
+  dimension: string;
+  score: number;
+  feedback?: string;
+  created_at?: string;
+}
 
 export type FeedbackDimension = "clarity" | "relevance" | "completeness" | "actionability" | "overall";
 
@@ -33,6 +62,7 @@ export interface FeedbackHistoryItem {
   id: number;
   projectId: number;
   stepId: number | null;
+  userId: number;
   dimension: FeedbackDimension;
   score: number;
   feedback: string | null;
@@ -80,21 +110,18 @@ const DIMENSION_SUGGESTIONS: Record<FeedbackDimension, string[]> = {
 // ============================================================================
 
 export async function submitFeedback(input: FeedbackSubmission): Promise<number[]> {
-  const db = getDb();
   const ids: number[] = [];
-  const now = new Date();
 
   for (const [dimension, score] of Object.entries(input.scores)) {
-    const result = await db.insert(evaluations).values({
-      projectId: input.projectId,
-      stepId: input.stepId ?? null,
-      userId: input.userId,
+    const entry = native.evaluationCreate({
+      project_id: input.projectId,
+      step_id: input.stepId ?? null,
+      user_id: input.userId,
       dimension: dimension as FeedbackDimension,
       score: Math.max(1, Math.min(10, score)),
       feedback: input.comment ?? null,
-      createdAt: now,
-    }).returning({ id: evaluations.id });
-    ids.push(result[0].id);
+    });
+    ids.push(entry.id);
   }
 
   return ids;
@@ -105,15 +132,10 @@ export async function submitFeedback(input: FeedbackSubmission): Promise<number[
 // ============================================================================
 
 export async function getFeedbackStats(projectId?: number): Promise<FeedbackStats> {
-  const db = getDb();
+  const stats = native.evaluationStats(projectId ?? null);
+  const rows: NativeEvalEntry[] = native.evaluationList(projectId ?? null, 1000);
 
-  const baseQuery = projectId
-    ? db.select().from(evaluations).where(eq(evaluations.projectId, projectId))
-    : db.select().from(evaluations);
-
-  const rows = await baseQuery;
-
-  if (rows.length === 0) {
+  if (stats.total_count === 0 && rows.length === 0) {
     return {
       totalCount: 0,
       avgScores: { clarity: null, relevance: null, completeness: null, actionability: null, overall: null },
@@ -123,27 +145,25 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
     };
   }
 
-  // 按维度分组计算平均分
   const dims: FeedbackDimension[] = ["clarity", "relevance", "completeness", "actionability", "overall"];
-  const avgScores: Record<string, number | null> = {};
 
-  for (const dim of dims) {
-    const dimRows = rows.filter((r) => r.dimension === dim);
-    if (dimRows.length === 0) {
-      avgScores[dim] = null;
-    } else {
-      avgScores[dim] = Math.round(
-        (dimRows.reduce((s, r) => s + r.score, 0) / dimRows.length) * 10
-      ) / 10;
-    }
-  }
+  // 平均值从 Rust stats 获取
+  const avgScores: Record<string, number | null> = {
+    clarity: stats.avg_clarity ?? null,
+    relevance: stats.avg_relevance ?? null,
+    completeness: stats.avg_completeness ?? null,
+    actionability: stats.avg_actionability ?? null,
+    overall: stats.avg_overall ?? null,
+  };
 
   // 趋势分析：最近 30% vs 之前 70%
   const trends: Record<string, "up" | "down" | "stable"> = {};
   for (const dim of dims) {
     const dimRows = rows
-      .filter((r) => r.dimension === dim)
-      .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
+      .filter((r: NativeEvalEntry) => r.dimension === dim)
+      .sort((a: NativeEvalEntry, b: NativeEvalEntry) =>
+        (a.created_at ? new Date(a.created_at).getTime() : 0) - (b.created_at ? new Date(b.created_at).getTime() : 0)
+      );
 
     if (dimRows.length < 4) {
       trends[dim] = "stable";
@@ -154,8 +174,8 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
     const early = dimRows.slice(0, split);
     const recent = dimRows.slice(split);
 
-    const earlyAvg = early.reduce((s, r) => s + r.score, 0) / early.length;
-    const recentAvg = recent.reduce((s, r) => s + r.score, 0) / recent.length;
+    const earlyAvg = early.reduce((s: number, r: NativeEvalEntry) => s + r.score, 0) / early.length;
+    const recentAvg = recent.reduce((s: number, r: NativeEvalEntry) => s + r.score, 0) / recent.length;
     const diff = recentAvg - earlyAvg;
 
     trends[dim] = diff > 0.5 ? "up" : diff < -0.5 ? "down" : "stable";
@@ -185,7 +205,7 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
   }
 
   return {
-    totalCount: rows.length / dims.length, // 每组 5 条
+    totalCount: stats.total_count,
     avgScores: avgScores as Record<FeedbackDimension, number | null>,
     trends: trends as Record<FeedbackDimension, "up" | "down" | "stable">,
     topIssues,
@@ -201,23 +221,9 @@ export async function getFeedbackHistory(
   projectId?: number,
   limit = 50,
 ): Promise<FeedbackHistoryItem[]> {
-  const db = getDb();
+  const rows: NativeEvalEntry[] = native.evaluationList(projectId ?? null, limit);
 
-  const query = projectId
-    ? db.select().from(evaluations).where(eq(evaluations.projectId, projectId))
-    : db.select().from(evaluations);
-
-  const rows = await query.orderBy(desc(evaluations.createdAt)).limit(limit);
-
-  return rows.map((r) => ({
-    id: r.id,
-    projectId: r.projectId,
-    stepId: r.stepId,
-    dimension: r.dimension as FeedbackDimension,
-    score: r.score,
-    feedback: r.feedback,
-    createdAt: r.createdAt,
-  }));
+  return rows.map(mapNativeEvaluation);
 }
 
 // ============================================================================
@@ -231,15 +237,13 @@ export async function quickRate(
   score: number,
   comment?: string,
 ): Promise<number> {
-  const db = getDb();
-  const result = await db.insert(evaluations).values({
-    projectId,
-    userId,
+  const entry = native.evaluationCreate({
+    project_id: projectId,
+    user_id: userId,
     dimension,
     score: Math.max(1, Math.min(10, score)),
     feedback: comment ?? null,
-    createdAt: new Date(),
-  }).returning({ id: evaluations.id });
+  });
 
-  return result[0].id;
+  return entry.id;
 }

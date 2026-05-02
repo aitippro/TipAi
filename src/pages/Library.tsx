@@ -62,7 +62,7 @@ export default function Library() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const filtered = items?.filter((item) =>
+  const filtered = items?.filter((item: any) =>
     !search || item.title.toLowerCase().includes(search.toLowerCase()) || item.generatedPrompt.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -101,7 +101,7 @@ export default function Library() {
         />
       ) : (
         <StaggerContainer className="space-y-3">
-          {filtered?.map((item) => (
+          {filtered?.map((item: any) => (
             <StaggerItem key={item.id}>
               <TiltCard maxTilt={2} scale={1.005}>
                 <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm overflow-hidden">

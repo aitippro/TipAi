@@ -1,30 +1,29 @@
 import { createRouter, authedQuery } from "./middleware";
 import { exportProjectsSchema, exportPromptsSchema } from "./services/export/schemas";
-import { getDb } from "./queries/connection";
-import { projects, projectConversations, projectSummaries, promptLibrary } from "@db/schema";
-import { eq, inArray } from "drizzle-orm";
+
+// ── Native Addon ─────────────────────────────────────────
+let native: any = null;
+try {
+  native = require("../native");
+} catch {
+  throw new Error("Native addon is required. Browser mode fallback removed in P5.");
+}
 
 export const exportRouter = createRouter({
   // Export projects
   projects: authedQuery
     .input(exportProjectsSchema)
     .mutation(async ({ input, ctx }) => {
-      const db = getDb();
       const userId = ctx.user.id;
 
       let projectList;
       if (input.projectIds && input.projectIds.length > 0) {
-        projectList = await db
-          .select()
-          .from(projects)
-          .where(inArray(projects.id, input.projectIds))
-          .all();
+        // Filter by provided IDs
+        const all = native.projectList(userId) || [];
+        const idSet = new Set(input.projectIds);
+        projectList = all.filter((p: any) => idSet.has(p.id));
       } else {
-        projectList = await db
-          .select()
-          .from(projects)
-          .where(eq(projects.userId, userId))
-          .all();
+        projectList = native.projectList(userId) || [];
       }
 
       const result: Record<string, unknown>[] = [];
@@ -37,38 +36,30 @@ export const exportRouter = createRouter({
           intent: project.intent,
           domain: project.domain,
           status: project.status,
-          clarificationStatus: project.clarificationStatus,
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
+          clarificationStatus: project.clarification_status,
+          createdAt: project.created_at,
+          updatedAt: project.updated_at,
         };
 
         if (input.includeSummaries) {
-          const summary = await db
-            .select()
-            .from(projectSummaries)
-            .where(eq(projectSummaries.projectId, project.id))
-            .get();
+          const summary = native.summaryGetByProject(project.id);
           if (summary) {
             item.summary = {
               summary: summary.summary,
               requirements: summary.requirements,
               constraints: summary.constraints,
-              suggestedFrameworks: summary.suggestedFrameworks,
+              suggestedFrameworks: summary.suggested_frameworks,
             };
           }
         }
 
         if (input.includeConversations) {
-          const conversations = await db
-            .select()
-            .from(projectConversations)
-            .where(eq(projectConversations.projectId, project.id))
-            .all();
-          item.conversations = conversations.map((c) => ({
+          const conversations = native.conversationListByProject(project.id) || [];
+          item.conversations = conversations.map((c: any) => ({
             role: c.role,
             content: c.content,
-            turnNumber: c.turnNumber,
-            createdAt: c.createdAt,
+            turnNumber: c.turn_number,
+            createdAt: c.created_at,
           }));
         }
 
@@ -113,33 +104,26 @@ export const exportRouter = createRouter({
   prompts: authedQuery
     .input(exportPromptsSchema)
     .mutation(async ({ input, ctx }) => {
-      const db = getDb();
       const userId = ctx.user.id;
 
       let promptList;
       if (input.promptIds && input.promptIds.length > 0) {
-        promptList = await db
-          .select()
-          .from(promptLibrary)
-          .where(inArray(promptLibrary.id, input.promptIds))
-          .all();
+        const all = native.promptList(userId) || [];
+        const idSet = new Set(input.promptIds);
+        promptList = all.filter((p: any) => idSet.has(p.id));
       } else {
-        promptList = await db
-          .select()
-          .from(promptLibrary)
-          .where(eq(promptLibrary.userId, userId))
-          .all();
+        promptList = native.promptList(userId) || [];
       }
 
-      const result = promptList.map((p) => ({
+      const result = promptList.map((p: any) => ({
         id: p.id,
         title: p.title,
-        content: p.generatedPrompt,
-        description: p.originalIntent || "",
+        content: p.generated_prompt,
+        description: p.original_intent || "",
         framework: p.framework,
         tags: p.tags,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
       }));
 
       if (input.format === "markdown") {
