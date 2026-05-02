@@ -20,8 +20,23 @@ coverage/
 .nyc_output/
 *.tsbuildinfo
 release/
+out/
+win-unpacked/
+win-ia32-unpacked/
+win-arm64-unpacked/
+mac/
+linux-unpacked/
+linux-arm64-unpacked/
 *.exe
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.zip
 *.blockmap
+latest.yml
+latest-mac.yml
+latest-linux.yml
 # 依赖
 node_modules/
 # 数据�?
