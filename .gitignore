@@ -37,6 +37,8 @@ linux-arm64-unpacked/
 latest.yml
 latest-mac.yml
 latest-linux.yml
+# Native addon binaries (built by CI)
+*.node
 # 依赖
 node_modules/
 # 数据�?
