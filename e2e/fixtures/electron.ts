@@ -69,7 +69,7 @@ function getMainEntryPath(): string {
 export const test = base.extend<ElectronFixtures>({
   // Launch Electron app before each test file
   electronApp: [
-    async (_, use, testInfo) => {
+    async ({}, use, testInfo) => {
       const isDev = process.env.TEST_MODE === 'dev';
       const dataDir = path.join(process.cwd(), 'e2e-results', 'test-data', `session-${testInfo.workerIndex}`);
 
