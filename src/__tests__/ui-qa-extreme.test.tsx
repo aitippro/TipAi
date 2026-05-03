@@ -22,7 +22,7 @@ vi.mock("framer-motion", () => ({
 vi.mock("@/providers/trpc", () => ({
   trpc: {
     template: {
-      list: { useQuery: () => ({ data: [], isLoading: false, isError: false }) },
+      list: { useQuery: () => ({ data: [{ id: 1, title: "Test Template", description: "A test template", content: "test", useCount: 10, rating: 4.5, ratingCount: 2, isPublic: 1, isFeatured: 1, userId: 1, domain: "general" }], isLoading: false, isError: false }) },
       myTemplates: { useQuery: () => ({ data: [] }) },
       create: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       use: { useMutation: () => ({ mutate: vi.fn() }) },

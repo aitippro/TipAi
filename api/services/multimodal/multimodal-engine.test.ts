@@ -1,82 +1,81 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
-  generateMultimodalPrompt,
+  generateMultimodalPromptWithAI,
   getMultimodalModes,
 } from "./multimodal-engine";
 
+// Mock AI client to avoid real API calls in tests
+vi.mock("../../lib/ai-service-v3/client", () => ({
+  callAI: vi.fn((_model: string, _apiKey: string, _system: string, userMessage: string) => {
+    // Return a minimal valid JSON array response based on the prompt content
+    if (userMessage.includes("text-to-image")) {
+      return Promise.resolve(`[{"title":"DALL-E","prompt":"A cat in space","purpose":"test"}]`);
+    }
+    if (userMessage.includes("image-to-text")) {
+      return Promise.resolve(`[{"title":"Analysis","prompt":"Describe the image","purpose":"test"}]`);
+    }
+    if (userMessage.includes("video-storyboard")) {
+      return Promise.resolve(`{"variants":[{"title":"Storyboard","prompt":"Scene 1","purpose":"test"}]}`);
+    }
+    return Promise.resolve(`[{"title":"Default","prompt":"Default prompt","purpose":"test"}]`);
+  }),
+  callAIVision: vi.fn((_model: string, _apiKey: string, _system: string, _userMessage: string, _imageData: string) => {
+    return Promise.resolve(`[{"title":"Vision","prompt":"Image analysis result","purpose":"test"}]`);
+  }),
+}));
+
 describe("multimodal-engine", () => {
-  describe("text-to-image", () => {
-    it("should generate prompts for image generation", () => {
-      const result = generateMultimodalPrompt(
+  describe("generateMultimodalPromptWithAI", () => {
+    it("should generate text-to-image prompts via AI", async () => {
+      const result = await generateMultimodalPromptWithAI(
         "一只穿着宇航服的猫在月球上",
         "text-to-image",
+        "gpt-4",
+        "test-key",
       );
 
       expect(result.mode).toBe("text-to-image");
-      expect(result.generatedPrompts.length).toBe(3);
-      expect(result.generatedPrompts[0].title).toContain("DALL-E");
-      expect(result.generatedPrompts[1].negativePrompt).toBeDefined();
-      expect(result.generatedPrompts[2].title).toContain("极简");
+      expect(result.usingAI).toBe(true);
+      expect(result.generatedPrompts.length).toBeGreaterThan(0);
     });
 
-    it("should detect anime style", () => {
-      const result = generateMultimodalPrompt("动漫风格的少女", "text-to-image");
-      const prompt = result.generatedPrompts[1].prompt;
-      expect(prompt).toContain("anime");
-    });
-
-    it("should detect photorealistic style", () => {
-      const result = generateMultimodalPrompt("写实风格的汽车", "text-to-image");
-      const prompt = result.generatedPrompts[1].prompt;
-      expect(prompt).toContain("photorealistic");
-    });
-
-    it("should include tips", () => {
-      const result = generateMultimodalPrompt("test", "text-to-image");
-      expect(result.tips.length).toBeGreaterThanOrEqual(3);
-      expect(result.recommendedModel).toContain("DALL-E");
-    });
-  });
-
-  describe("image-to-text", () => {
-    it("should generate prompts for image analysis", () => {
-      const result = generateMultimodalPrompt(
+    it("should generate image-to-text prompts via AI", async () => {
+      const result = await generateMultimodalPromptWithAI(
         "分析这张产品图的设计亮点",
         "image-to-text",
+        "gpt-4",
+        "test-key",
       );
 
       expect(result.mode).toBe("image-to-text");
-      expect(result.generatedPrompts.length).toBe(3);
-      expect(result.generatedPrompts[0].title).toBe("详细描述");
-      expect(result.generatedPrompts[1].title).toBe("结构化分析");
-      expect(result.generatedPrompts[2].title).toBe("创意解读");
+      expect(result.usingAI).toBe(true);
+      expect(result.generatedPrompts.length).toBeGreaterThan(0);
     });
 
-    it("should include JSON format in structured analysis", () => {
-      const result = generateMultimodalPrompt("test", "image-to-text");
-      const prompt = result.generatedPrompts[1].prompt;
-      expect(prompt).toContain("JSON");
-    });
-  });
-
-  describe("video-storyboard", () => {
-    it("should generate storyboard scenes", () => {
-      const result = generateMultimodalPrompt(
-        "一个程序员在咖啡馆写代码，突然被窗外的流星吸引",
+    it("should generate video-storyboard prompts via AI", async () => {
+      const result = await generateMultimodalPromptWithAI(
+        "一个程序员在咖啡馆写代码",
         "video-storyboard",
+        "gpt-4",
+        "test-key",
       );
 
       expect(result.mode).toBe("video-storyboard");
-      expect(result.generatedPrompts.length).toBe(3);
-      expect(result.generatedPrompts[0].title).toBe("完整分镜脚本");
-      expect(result.generatedPrompts[2].title).toBe("AI 视频生成提示词");
+      expect(result.usingAI).toBe(true);
+      expect(result.generatedPrompts.length).toBeGreaterThan(0);
     });
 
-    it("should generate at least 3 scenes", () => {
-      const result = generateMultimodalPrompt("test", "video-storyboard");
-      const script = result.generatedPrompts[0].prompt;
-      const sceneCount = (script.match(/镜头/g) || []).length;
-      expect(sceneCount).toBeGreaterThanOrEqual(3);
+    it("should use vision API when imageData is provided", async () => {
+      const result = await generateMultimodalPromptWithAI(
+        "分析这张图片",
+        "image-to-text",
+        "gpt-4",
+        "test-key",
+        "base64image",
+      );
+
+      expect(result.mode).toBe("image-to-text");
+      expect(result.usingAI).toBe(true);
     });
   });
 

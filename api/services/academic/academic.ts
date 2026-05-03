@@ -5,7 +5,10 @@
  *  - 引用生成：从提示词/论文内容提取引用
  *  - 实验复现报告：记录提示词版本和结果，生成可复现文档
  *
- * AI 驱动：使用 LLM 生成真实、准确的学术引用。
+ * 引用生成分为两条路径：
+ *  - generateCitationsWithAI(model, apiKey): 真正调用 LLM 生成学术引用（推荐）
+ *  - generateCitations(text, format): 基于关键词提取 + 模板填充的规则引擎 fallback
+ *    返回的是格式正确但内容虚构的引用，仅用于无 API Key 时的格式演示。
  */
 
 import { callAI } from "../../lib/ai-service-v3/client";
@@ -34,57 +37,6 @@ export interface ReproStep {
   output: string;
   parameters: Record<string, string | number>;
 }
-
-// ============================================================================
-// Mock 引用生成（Fallback）
-// ============================================================================
-
-const FORMAT_TEMPLATES: Record<CitationFormat, (author: string, year: number, title: string, source: string) => string> = {
-  apa: (a, y, t, s) => `${a}. (${y}). ${t}. ${s}.`,
-  mla: (a, y, t, s) => `${a}. "${t}." ${s}, ${y}.`,
-  gb7714: (a, y, t, s) => `[1] ${a}. ${t}[M]. ${s}, ${y}.`,
-  ieee: (a, y, t, s) => `[1] ${a}, "${t}," ${s}, ${y}.`,
-  chicago: (a, y, t, s) => `${a}. ${y}. "${t}." ${s}.`,
-};
-
-const MOCK_AUTHORS: Record<string, string> = {
-  prompt: "Zhao, W. X.",
-  engineering: "Liu, P.",
-  llm: "Brown, T.",
-  optimization: "Chen, H.",
-  framework: "Wang, Y.",
-  ai: "LeCun, Y.",
-  model: "Vaswani, A.",
-  data: "McKinney, W.",
-  analysis: "Tukey, J. W.",
-  generation: "Radford, A.",
-};
-
-const MOCK_TITLES: Record<string, string> = {
-  prompt: "A Survey on Prompt Engineering for Large Language Models",
-  engineering: "Best Practices in Software Engineering",
-  llm: "Language Models are Few-Shot Learners",
-  optimization: "Automatic Prompt Optimization with Gradient Descent",
-  framework: "A Unified Framework for Prompt-based Learning",
-  ai: "Deep Learning for Artificial Intelligence",
-  model: "Attention Is All You Need",
-  data: "Data Structures and Algorithms",
-  analysis: "Exploratory Data Analysis",
-  generation: "Improving Language Understanding by Generative Pre-Training",
-};
-
-const MOCK_SOURCES: Record<string, string> = {
-  prompt: "arXiv preprint arXiv:2402.07927",
-  engineering: "IEEE Transactions on Software Engineering",
-  llm: "Advances in Neural Information Processing Systems",
-  optimization: "Proceedings of the ACL",
-  framework: "Journal of Machine Learning Research",
-  ai: "Nature Machine Intelligence",
-  model: "NeurIPS",
-  data: "O'Reilly Media",
-  analysis: "Addison-Wesley",
-  generation: "OpenAI Technical Report",
-};
 
 export function extractKeywords(text: string): string[] {
   const stopwords = new Set(["的", "了", "是", "在", "我", "有", "和", "就", "不", "人", "都", "一", "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着", "没有", "看", "好", "自己", "这", "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "shall", "can", "need", "to", "of", "in", "for", "on", "with", "at", "by", "from", "as", "and", "but", "or", "yet", "so", "if", "because", "although", "while", "where", "when", "that", "which", "who", "whom", "what", "this", "these", "those", "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them"]);
@@ -118,27 +70,6 @@ export function extractKeywords(text: string): string[] {
     .slice(0, 8)
     .map(([k]) => k);
 }
-
-function generateMockCitations(text: string, format: CitationFormat): CitationResult {
-  const keywords = extractKeywords(text);
-  const citations: string[] = [];
-  const template = FORMAT_TEMPLATES[format];
-  const year = new Date().getFullYear();
-
-  for (let i = 0; i < keywords.length && i < 5; i++) {
-    const kw = keywords[i];
-    const author = MOCK_AUTHORS[kw] || `Author, ${kw.charAt(0).toUpperCase()}.`;
-    const title = MOCK_TITLES[kw] || `Research on ${kw.charAt(0).toUpperCase() + kw.slice(1)}`;
-    const source = MOCK_SOURCES[kw] || "Proceedings of the Conference";
-    citations.push(template(author, year - i, title, source));
-  }
-
-  return { format, citations, extractedKeywords: keywords, usingAI: false };
-}
-
-// ============================================================================
-// AI 引用生成
-// ============================================================================
 
 function buildCitationPrompt(text: string, format: CitationFormat): string {
   const formatDesc: Record<CitationFormat, string> = {
@@ -198,10 +129,6 @@ export async function generateCitationsWithAI(
   }
 
   throw new Error("AI 引用生成失败：模型未返回有效结果或解析失败。请检查 API Key 和网络连接。");
-}
-
-export function generateCitations(text: string, format: CitationFormat): CitationResult {
-  return generateMockCitations(text, format);
 }
 
 // ============================================================================

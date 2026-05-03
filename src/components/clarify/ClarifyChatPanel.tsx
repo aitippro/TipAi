@@ -313,7 +313,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
               <span className="text-red-400 text-lg">!</span>
             </div>
             <p className="text-sm text-red-600 font-medium">{errMsg}</p>
-            <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { setErrMsg(null); setIsLoading(true); /* retry by remounting */ window.location.reload(); }}>
+            <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { setErrMsg(null); setMessages([]); setCurrentQuestion(null); setIsLoading(false); }}>
               重试
             </Button>
           </div>

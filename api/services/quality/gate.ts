@@ -1,11 +1,17 @@
 /**
  * P2-1: 质量门禁系统 (Quality Gate)
  *
- * 对提示词进行 ≥10 项自动化检查，输出质量评分和改进建议。
- * AI 增强：使用 LLM 生成深度分析和个性化改进建议。
+ * 对提示词进行 12 项自动化检查，输出质量评分和改进建议。
+ *
+ * 分为两条路径：
+ *  - runQualityGate(): 基于正则/启发式的规则引擎（12 项自动化检查）
+ *    速度快、零成本、不依赖外部服务，适合本地离线使用。
+ *  - runQualityGateWithAI(model, apiKey): 在规则检查结果之上调用 LLM
+ *    生成深度分析和个性化改进建议（推荐）。
  */
 
 import { callAI } from "../../lib/ai-service-v3/client";
+import { native } from "../../lib/native";
 
 export interface QualityCheck {
   id: string;
@@ -45,7 +51,7 @@ export const DEFAULT_GATE_CONFIG: GateConfig = {
 const CHECKERS: Record<string, (prompt: string) => Omit<QualityCheck, "id" | "name">> = {
   length_check: (prompt) => {
     const len = prompt.length;
-    const score = len < 20 ? 3 : len < 50 ? 6 : len > 2000 ? 5 : len > 4000 ? 2 : 10;
+    const score = len > 4000 ? 2 : len > 2000 ? 5 : len < 20 ? 3 : len < 50 ? 6 : 10;
     return {
       passed: score >= 6,
       score,
@@ -248,6 +254,20 @@ export function runQualityGate(
   prompt: string,
   config: Partial<GateConfig> = {},
 ): QualityGateResult {
+  // v2.0: prefer Rust native implementation for performance
+  if (typeof (native as Record<string, unknown>).runQualityGate === "function") {
+    try {
+      const result = (native as Record<string, (p: string, e?: string[], t?: number) => QualityGateResult>).runQualityGate(
+        prompt,
+        config.enabledChecks && config.enabledChecks.length > 0 ? config.enabledChecks : undefined,
+        config.threshold,
+      );
+      // Preserve usingAI flag (Rust doesn't know about AI)
+      return { ...result, usingAI: false };
+    } catch {
+      // Fallback to TS implementation on any error
+    }
+  }
   return runQualityGateInternal(prompt, config);
 }
 

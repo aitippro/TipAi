@@ -37,6 +37,7 @@ base64 = "0.22"
 thiserror = "1.0"
 once_cell = "1.20"
 parking_lot = "0.12"
+regex = "1.10"
 
 # Logging (optional, for debug builds)
 # log = "0.4"

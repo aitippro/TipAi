@@ -45,7 +45,7 @@ impl Database {
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
         conn.pragma_update(None, "temp_store", "MEMORY")?;
-        conn.pragma_update(None, "mmap_size", "30000000000")?;
+        conn.pragma_update(None, "mmap_size", "2147483648")?;
 
         // Optimize for single-writer, many-reader pattern
         conn.execute_batch(

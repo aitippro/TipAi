@@ -47,16 +47,6 @@ function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs: number): Pr
 }
 
 /**
- * 文本规范化（用于 Self-Consistency 投票）
- */
-function normalizeVoteKey(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
  * 对同一 prompt 进行多次采样并投票（Self-Consistency 轻量实现）
  */
 async function runSelfConsistencyCallAI(
@@ -68,49 +58,6 @@ async function runSelfConsistencyCallAI(
   temperature: number,
 ): Promise<string | null> {
   // console.log(`[callAI SC] Running ${sampleCount} paths for ${provider}`);
-
-  if (provider === "gemini") {
-    const promises: Promise<string | null>[] = [];
-    for (let i = 0; i < sampleCount; i++) {
-      promises.push(callAISingle(provider, apiKey, systemPrompt, userMessage, temperature));
-    }
-
-    const results = (await Promise.all(promises)).filter((r): r is string => r !== null);
-
-    if (results.length === 0) {
-      console.error("[callAI SC] All paths failed");
-      return null;
-    }
-
-    // 投票：按规范化文本计数
-    const voteCounts = new Map<string, { count: number; representative: string }>();
-    for (const result of results) {
-      const key = normalizeVoteKey(result);
-      const existing = voteCounts.get(key);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        voteCounts.set(key, { count: 1, representative: result });
-      }
-    }
-
-    let bestKey = "";
-    let bestCount = 0;
-    for (const [key, val] of voteCounts) {
-      if (val.count > bestCount) {
-        bestKey = key;
-        bestCount = val.count;
-      }
-    }
-
-    const winner = voteCounts.get(bestKey);
-    // const confidence = Number((bestCount / results.length).toFixed(4));
-    // console.log(
-    //   `[callAI SC] Winner: ${bestCount}/${results.length} votes (confidence=${confidence})`,
-    // );
-
-    return winner?.representative ?? null;
-  }
 
   const config = MODEL_CONFIGS[provider];
   if (!config) {
@@ -160,34 +107,6 @@ async function callAISingle(
   }
 
   try {
-    if (provider === "gemini") {
-      const response = await fetchWithTimeout(`${config.baseUrl}?key=${apiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: systemPrompt + "\n" + userMessage }] },
-          ],
-          generationConfig: {
-            temperature,
-            maxOutputTokens: 4000,
-          },
-        }),
-      }, AI_CALL_TIMEOUT_MS);
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        console.error(`Gemini error ${response.status}: ${errText}`);
-        return null;
-      }
-      const data = (await response.json()) as Record<string, unknown>;
-      const candidates = data.candidates as Array<Record<string, unknown>> | undefined;
-      const content = candidates?.[0]?.content as Record<string, unknown> | undefined;
-      const parts = content?.parts as Array<Record<string, unknown>> | undefined;
-      return (parts?.map((p) => p.text as string).filter(Boolean).join("") || null);
-    }
-
     const req = {
       provider,
       api_key: apiKey,

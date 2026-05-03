@@ -51,8 +51,10 @@ app.use("/api/*", bodyLimit({ maxSize: 5 * 1024 * 1024 }));
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function getRateLimitKey(c: Context): string {
+  // Prefer the direct connection IP; fall back to x-forwarded-for only in trusted proxy setups
+  const directIp = c.req.header("x-real-ip") || c.req.header("x-client-ip");
   const forwarded = c.req.header("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+  const ip = directIp?.trim() || forwarded?.split(",")[0]?.trim() || "unknown";
   return ip;
 }
 

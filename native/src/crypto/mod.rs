@@ -21,7 +21,7 @@ pub type CryptoResult<T> = Result<T, CryptoError>;
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
 const KEY_LENGTH: usize = 32;
-const PBKDF2_ITERATIONS: u32 = 100_000;
+const PBKDF2_ITERATIONS: u32 = 600_000;
 
 /// Derive a 256-bit key from password + salt using PBKDF2-HMAC-SHA256
 fn derive_key(password: &str, salt: &[u8]) -> [u8; KEY_LENGTH] {

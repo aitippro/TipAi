@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,7 @@ export function ExportPanel() {
   const [isExporting, setIsExporting] = useState(false)
   const [exportResult, setExportResult] = useState<string | null>(null)
   const [exportCount, setExportCount] = useState(0)
+  const isExportingRef = useRef(false)
 
   const { data: projects } = trpc.project.list.useQuery()
   const { data: prompts } = trpc.promptForge.getLibrary.useQuery()
@@ -51,6 +52,8 @@ export function ExportPanel() {
   const exportPromptsMutation = trpc.export.prompts.useMutation()
 
   const handleExport = async () => {
+    if (isExportingRef.current) return
+    isExportingRef.current = true
     setIsExporting(true)
     setExportResult(null)
 
@@ -78,6 +81,7 @@ export function ExportPanel() {
       toast.error("导出失败")
       console.error(error)
     } finally {
+      isExportingRef.current = false
       setIsExporting(false)
     }
   }

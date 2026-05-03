@@ -33,11 +33,11 @@ pub fn run(conn: &mut Connection, migrations_dir: &str) -> Result<(), Box<dyn st
             let name = name.to_string_lossy();
             name.ends_with(".sql")
         })
-        .map(|e| {
+        .filter_map(|e| {
             let path = e.path();
-            let name = path.file_name().unwrap().to_string_lossy().to_string();
-            let content = fs::read_to_string(&path).unwrap_or_default();
-            (name, content)
+            let name = path.file_name()?.to_string_lossy().to_string();
+            let content = fs::read_to_string(&path).ok()?;
+            Some((name, content))
         })
         .filter(|(name, _)| !applied_set.contains(name))
         .collect();

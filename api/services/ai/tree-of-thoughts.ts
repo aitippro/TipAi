@@ -80,10 +80,12 @@ export type ThoughtEvaluator = (
 let globalGenerator: CandidateGenerator | null = null;
 let globalEvaluator: ThoughtEvaluator | null = null;
 
+/** @deprecated Pass generator/evaluator directly to runTreeOfThoughts() to avoid race conditions */
 export function setTotGenerator(gen: CandidateGenerator | null) {
   globalGenerator = gen;
 }
 
+/** @deprecated Pass generator/evaluator directly to runTreeOfThoughts() to avoid race conditions */
 export function setTotEvaluator(evaluator: ThoughtEvaluator | null) {
   globalEvaluator = evaluator;
 }
@@ -95,14 +97,23 @@ export function setTotEvaluator(evaluator: ThoughtEvaluator | null) {
 export async function runTreeOfThoughts(
   problem: string,
   config: Partial<ToTConfig> = {},
+  generator?: CandidateGenerator,
+  evaluator?: ThoughtEvaluator,
 ): Promise<TreeOfThoughtsResult> {
   const cfg = { ...DEFAULT_TOT_CONFIG, ...config };
   const start = Date.now();
   const deadline = start + (cfg.timeoutMs ?? 30000);
 
-  if (!globalGenerator || !globalEvaluator) {
-    throw new Error("ToT engine not initialized: call setTotGenerator() and setTotEvaluator() first");
+  const activeGenerator = generator || globalGenerator;
+  const activeEvaluator = evaluator || globalEvaluator;
+
+  if (!activeGenerator || !activeEvaluator) {
+    throw new Error("ToT engine not initialized: pass generator/evaluator or call setTotGenerator() and setTotEvaluator() first");
   }
+
+  // Narrowed after guard check
+  const gen = activeGenerator;
+  const ev = activeEvaluator;
 
   const tree: Record<string, ThoughtNode> = {};
   let nodeCounter = 0;
@@ -152,13 +163,13 @@ export async function runTreeOfThoughts(
       const path = getPathToNode(current.id);
       const currentThought = current.id === root.id ? null : current.content;
 
-      const candidates = await globalGenerator!(problem, currentThought, cfg.breadth);
+      const candidates = await gen(problem, currentThought, cfg.breadth);
       if (isTimedOut()) break;
 
       // 并行评估所有候选
       const evalPromises = candidates.map(async (candidate) => {
         if (isTimedOut()) return null;
-        const evalResult = await globalEvaluator!(problem, candidate, path);
+        const evalResult = await ev(problem, candidate, path);
         return { candidate, evalResult };
       });
 
@@ -194,7 +205,7 @@ export async function runTreeOfThoughts(
       // 并行评估所有候选
       const evalPromises = candidates.map(async (candidate) => {
         if (isTimedOut()) return null;
-        const evalResult = await globalEvaluator!(problem, candidate, path);
+        const evalResult = await ev(problem, candidate, path);
         return { candidate, evalResult };
       });
 

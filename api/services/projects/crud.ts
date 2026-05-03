@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type {
   CreateProjectInput,
@@ -9,6 +9,15 @@ import type { ProjectEntry as Project } from "@db/schema";
 
 // ── Native Addon (Electron/Node main process) ─────────────
 import { native } from "../../lib/native";
+
+function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 /** Map native snake_case ProjectEntry → Drizzle-compatible camelCase */
 function mapNativeProject(entry: any): Project | null {
@@ -110,8 +119,8 @@ export async function saveConversationTurn(
     role: turn.role,
     content: turn.content,
     questionId: turn.question_id,
-    questionData: turn.question_data ? JSON.parse(turn.question_data) : null,
-    answerData: turn.answer_data ? JSON.parse(turn.answer_data) : null,
+    questionData: turn.question_data ? safeJsonParse(turn.question_data) : null,
+    answerData: turn.answer_data ? safeJsonParse(turn.answer_data) : null,
     turnNumber: turn.turn_number,
     createdAt: turn.created_at ? new Date(turn.created_at) : new Date(),
   };
@@ -130,8 +139,8 @@ export async function getProjectConversation(projectId: number, userId: number) 
     role: turn.role,
     content: turn.content,
     questionId: turn.question_id,
-    questionData: turn.question_data ? JSON.parse(turn.question_data) : null,
-    answerData: turn.answer_data ? JSON.parse(turn.answer_data) : null,
+    questionData: turn.question_data ? safeJsonParse(turn.question_data) : null,
+    answerData: turn.answer_data ? safeJsonParse(turn.answer_data) : null,
     turnNumber: turn.turn_number,
     createdAt: turn.created_at ? new Date(turn.created_at) : new Date(),
   }));
@@ -149,10 +158,10 @@ export async function getProjectSummary(projectId: number, userId: number) {
     projectId: summary.project_id,
     userId: summary.user_id,
     summary: summary.summary,
-    requirements: summary.requirements ? JSON.parse(summary.requirements) : [],
-    constraints: summary.constraints ? JSON.parse(summary.constraints) : [],
+    requirements: summary.requirements ? safeJsonParse(summary.requirements, []) : [],
+    constraints: summary.constraints ? safeJsonParse(summary.constraints, []) : [],
     suggestedFrameworks: summary.suggested_frameworks
-      ? JSON.parse(summary.suggested_frameworks)
+      ? safeJsonParse(summary.suggested_frameworks, [])
       : [],
     rawContext: summary.raw_context,
     isFinalized: summary.is_finalized === 1,
@@ -191,10 +200,10 @@ export async function saveProjectSummary(
     projectId: result.project_id,
     userId: result.user_id,
     summary: result.summary,
-    requirements: result.requirements ? JSON.parse(result.requirements) : [],
-    constraints: result.constraints ? JSON.parse(result.constraints) : [],
+    requirements: result.requirements ? safeJsonParse(result.requirements, []) : [],
+    constraints: result.constraints ? safeJsonParse(result.constraints, []) : [],
     suggestedFrameworks: result.suggested_frameworks
-      ? JSON.parse(result.suggested_frameworks)
+      ? safeJsonParse(result.suggested_frameworks, [])
       : [],
     rawContext: result.raw_context,
     isFinalized: result.is_finalized === 1,

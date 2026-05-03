@@ -84,8 +84,9 @@ export default function TemplateMarket() {
     },
   })
 
-  const sourceTemplates =
-    apiTemplates && apiTemplates.length > 0 ? apiTemplates : DEFAULT_TEMPLATES
+  // Only fallback to DEFAULT_TEMPLATES when API fails or hasn't loaded yet.
+  // Empty array from API = genuinely no templates (not fake data).
+  const sourceTemplates = isError || apiTemplates === undefined ? DEFAULT_TEMPLATES : apiTemplates
 
   const filteredTemplates = sourceTemplates.filter((template: { domain?: string; title: string; description?: string }) => {
     if (selectedDomain !== "all" && template.domain !== selectedDomain) {

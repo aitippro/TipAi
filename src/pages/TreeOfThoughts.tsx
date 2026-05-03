@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,14 +27,18 @@ export default function TreeOfThoughtsPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const solveMutation = trpc.tot.solve.useMutation({
-    onMutate: () => {
-      setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
-    },
-    onSettled: () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    },
+    onMutate: () => setElapsed(0),
   });
+
+  useEffect(() => {
+    if (solveMutation.isPending) {
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+    }
+    return undefined;
+  }, [solveMutation.isPending]);
 
   const handleSolve = () => {
     if (!problem.trim()) return;

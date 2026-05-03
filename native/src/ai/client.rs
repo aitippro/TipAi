@@ -12,6 +12,7 @@ struct ProviderConfig {
     auth_header: String,
     auth_prefix: String,
     is_claude: bool,
+    is_gemini: bool,
 }
 
 fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<&str>) -> Option<ProviderConfig> {
@@ -22,6 +23,7 @@ fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<
             auth_header: "Authorization".to_string(),
             auth_prefix: "Bearer ".to_string(),
             is_claude: false,
+            is_gemini: false,
         }),
         "kimi" => Some(ProviderConfig {
             base_url: base_url.map(|s| s.to_string()).unwrap_or_else(|| "https://api.moonshot.cn/v1/chat/completions".to_string()),
@@ -29,6 +31,7 @@ fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<
             auth_header: "Authorization".to_string(),
             auth_prefix: "Bearer ".to_string(),
             is_claude: false,
+            is_gemini: false,
         }),
         "openai" => Some(ProviderConfig {
             base_url: base_url.map(|s| s.to_string()).unwrap_or_else(|| "https://api.openai.com/v1/chat/completions".to_string()),
@@ -36,6 +39,7 @@ fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<
             auth_header: "Authorization".to_string(),
             auth_prefix: "Bearer ".to_string(),
             is_claude: false,
+            is_gemini: false,
         }),
         "claude" => Some(ProviderConfig {
             base_url: base_url.map(|s| s.to_string()).unwrap_or_else(|| "https://api.anthropic.com/v1/messages".to_string()),
@@ -43,6 +47,15 @@ fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<
             auth_header: "x-api-key".to_string(),
             auth_prefix: "".to_string(),
             is_claude: true,
+            is_gemini: false,
+        }),
+        "gemini" => Some(ProviderConfig {
+            base_url: base_url.map(|s| s.to_string()).unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent".to_string()),
+            model_id: model_id.map(|s| s.to_string()).unwrap_or_else(|| "gemini-1.5-flash".to_string()),
+            auth_header: "".to_string(),
+            auth_prefix: "".to_string(),
+            is_claude: false,
+            is_gemini: true,
         }),
         _ => base_url.map(|url| ProviderConfig {
             base_url: url.to_string(),
@@ -50,6 +63,7 @@ fn get_provider_config(provider: &str, model_id: Option<&str>, base_url: Option<
             auth_header: "Authorization".to_string(),
             auth_prefix: "Bearer ".to_string(),
             is_claude: false,
+            is_gemini: false,
         }),
     }
 }
@@ -98,7 +112,7 @@ struct OpenAiChoice {
 
 #[derive(Deserialize, Debug)]
 struct OpenAiMessageResponse {
-    content: String,
+    content: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -126,12 +140,56 @@ struct ClaudeMessage {
 struct ClaudeContent {
     #[serde(rename = "type")]
     _type: String,
-    text: String,
+    text: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
 struct ClaudeResponse {
     content: Vec<ClaudeContent>,
+}
+
+// Gemini-specific types
+#[derive(Serialize)]
+struct GeminiPart {
+    text: String,
+}
+
+#[derive(Serialize)]
+struct GeminiContent {
+    role: String,
+    parts: Vec<GeminiPart>,
+}
+
+#[derive(Serialize)]
+struct GeminiGenerationConfig {
+    temperature: f64,
+    max_output_tokens: i32,
+}
+
+#[derive(Serialize)]
+struct GeminiRequest {
+    contents: Vec<GeminiContent>,
+    generation_config: GeminiGenerationConfig,
+}
+
+#[derive(Deserialize, Debug)]
+struct GeminiPartResponse {
+    text: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+struct GeminiContentResponse {
+    parts: Vec<GeminiPartResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+struct GeminiCandidate {
+    content: GeminiContentResponse,
+}
+
+#[derive(Deserialize, Debug)]
+struct GeminiResponse {
+    candidates: Vec<GeminiCandidate>,
 }
 
 // ── Core async functions ────────────────────────────────────
@@ -153,8 +211,8 @@ async fn call_ai_single(req: &AiCallRequest) -> std::result::Result<AiCallRespon
     };
 
     let temp = req.temperature.unwrap_or(0.5).clamp(0.0, 2.0);
-    let max_tokens = req.max_tokens.unwrap_or(4000) as i32;
-    let timeout = Duration::from_millis(req.timeout_ms.unwrap_or(30000) as u64);
+    let max_tokens = req.max_tokens.filter(|&v| v > 0 && v <= 128_000).unwrap_or(4000) as i32;
+    let timeout = Duration::from_millis(req.timeout_ms.filter(|&v| v > 0).unwrap_or(30000) as u64);
 
     let client = Client::builder()
         .timeout(timeout)
@@ -163,6 +221,8 @@ async fn call_ai_single(req: &AiCallRequest) -> std::result::Result<AiCallRespon
 
     let result = if config.is_claude {
         call_claude(&client, &config, &req.api_key, &req.system_prompt, &req.user_message, temp, max_tokens).await
+    } else if config.is_gemini {
+        call_gemini(&client, &config, &req.api_key, &req.system_prompt, &req.user_message, temp, max_tokens).await
     } else {
         call_openai_compatible(&client, &config, &req.api_key, &req.system_prompt, &req.user_message, temp, max_tokens).await
     };
@@ -212,7 +272,8 @@ async fn call_openai_compatible(
     data.choices
         .into_iter()
         .next()
-        .map(|c| c.message.content)
+        .and_then(|c| c.message.content)
+        .filter(|s| !s.is_empty())
         .ok_or_else(|| "Empty response".to_string())
 }
 
@@ -256,7 +317,58 @@ async fn call_claude(
     data.content
         .into_iter()
         .next()
-        .map(|c| c.text)
+        .and_then(|c| c.text)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "Empty response".to_string())
+}
+
+async fn call_gemini(
+    client: &Client,
+    config: &ProviderConfig,
+    api_key: &str,
+    system_prompt: &str,
+    user_message: &str,
+    temperature: f64,
+    max_tokens: i32,
+) -> std::result::Result<String, String> {
+    let body = GeminiRequest {
+        contents: vec![
+            GeminiContent {
+                role: "user".to_string(),
+                parts: vec![
+                    GeminiPart { text: format!("{}\n{}", system_prompt, user_message) },
+                ],
+            },
+        ],
+        generation_config: GeminiGenerationConfig {
+            temperature,
+            max_output_tokens: max_tokens,
+        },
+    };
+
+    let response = client
+        .post(&config.base_url)
+        .header("Content-Type", "application/json")
+        .header("x-goog-api-key", api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("HTTP error: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(format!("Gemini API error {}: {}", status, text));
+    }
+
+    let data: GeminiResponse = response.json().await.map_err(|e| format!("JSON parse error: {}", e))?;
+    
+    data.candidates
+        .into_iter()
+        .next()
+        .and_then(|c| c.content.parts.into_iter().next())
+        .and_then(|p| p.text)
+        .filter(|s| !s.is_empty())
         .ok_or_else(|| "Empty response".to_string())
 }
 
@@ -282,19 +394,36 @@ pub async fn ai_call_self_consistency(req: AiCallRequest, sample_count: Option<i
     }
 
     let mut results = Vec::with_capacity(count);
+    let mut errors: Vec<String> = Vec::new();
     for task in tasks {
         match task.await {
             Ok(Ok(resp)) if resp.error.is_none() && !resp.content.is_empty() => {
                 results.push(resp.content);
             }
-            _ => {}
+            Ok(Ok(resp)) if resp.error.is_some() => {
+                errors.push(resp.error.unwrap());
+            }
+            Ok(Ok(_)) => {
+                // empty response or no error field — treat as failure
+            }
+            Ok(Err(e)) => {
+                errors.push(e);
+            }
+            Err(e) => {
+                errors.push(format!("Task panicked: {}", e));
+            }
         }
     }
 
     if results.is_empty() {
+        let error_summary = if errors.len() > 3 {
+            format!("All {} self-consistency paths failed. First 3 errors: {}", count, errors[..3].join("; "))
+        } else {
+            format!("All self-consistency paths failed: {}", errors.join("; "))
+        };
         return Ok(AiCallResponse {
             content: String::new(),
-            error: Some("All self-consistency paths failed".to_string()),
+            error: Some(error_summary),
         });
     }
 

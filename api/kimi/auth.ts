@@ -16,13 +16,13 @@ function signState(redirectUri: string): { state: string; nonce: string } {
   const nonce = randomUUID();
   const payload = `${redirectUri}:${nonce}`;
   const signature = createHmac("sha256", env.appSecret).update(payload).digest("base64url");
-  const state = btoa(JSON.stringify({ redirectUri, nonce, signature }));
+  const state = Buffer.from(JSON.stringify({ redirectUri, nonce, signature })).toString("base64url");
   return { state, nonce };
 }
 
 function verifyState(state: string): { redirectUri: string } | null {
   try {
-    const parsed = JSON.parse(atob(state));
+    const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf-8"));
     if (!parsed.redirectUri || !parsed.nonce || !parsed.signature) return null;
     const payload = `${parsed.redirectUri}:${parsed.nonce}`;
     const expectedSig = createHmac("sha256", env.appSecret).update(payload).digest("base64url");

@@ -9,7 +9,7 @@ import { runQualityGate } from "./services/quality/gate";
 import { generateMultimodalPromptWithAI } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";
 import { callAI } from "./lib/ai-service-v3/client";
-import { generateCitations } from "./services/academic/academic";
+import { generateCitationsWithAI } from "./services/academic/academic";
 
 const rest = new Hono();
 
@@ -132,10 +132,25 @@ rest.post("/academic/citations", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const text = body.text || "";
   const format = body.format || "apa";
+  const apiKey = body.apiKey || "";
+  const model = body.model || "";
   if (!text) return c.json({ error: "Missing 'text' field" }, 400);
+  if (!apiKey || !model) {
+    return c.json({ error: "Missing 'apiKey' and 'model' fields. Provide them to use real AI citation generation." }, 400);
+  }
 
-  const result = generateCitations(text, format as "apa" | "mla" | "gb7714" | "ieee" | "chicago");
-  return c.json(result);
+  try {
+    const result = await generateCitationsWithAI(
+      text,
+      format as "apa" | "mla" | "gb7714" | "ieee" | "chicago",
+      model,
+      apiKey,
+    );
+    return c.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json({ error: message }, 500);
+  }
 });
 
 rest.get("/docs", (c) => {

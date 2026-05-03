@@ -163,19 +163,6 @@ async function startBackend() {
     }
   }
 
-  // Ensure persistent API_KEY_SECRET for encryption
-  if (!process.env.API_KEY_SECRET) {
-    const keyFile = path.join(dataDir, '.key');
-    if (fs.existsSync(keyFile)) {
-      process.env.API_KEY_SECRET = fs.readFileSync(keyFile, 'utf-8').trim();
-    } else {
-      const { randomBytes } = require('crypto');
-      const key = randomBytes(32).toString('hex');
-      fs.writeFileSync(keyFile, key, { mode: 0o600 });
-      process.env.API_KEY_SECRET = key;
-    }
-  }
-
   // Open database via Native Addon (dev + prod)
   if (nativeAddon) {
     try {
@@ -403,7 +390,7 @@ app.on('before-quit', () => {
     try { nativeAddon.dbClose(); log('Native DB closed'); } catch (e) {}
   }
 });
-app.on('window-all-closed', () => { app.quit(); process.exit(0); });
+app.on('window-all-closed', () => { app.quit(); });
 app.on('web-contents-created', (_e, contents) => {
   contents.on('new-window', (e, url) => { e.preventDefault(); shell.openExternal(url); });
 });

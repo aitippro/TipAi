@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+ 
 
 /**
  * P2-2: 反馈闭环系统 (Feedback Loop)
@@ -110,15 +110,21 @@ export async function submitFeedback(input: FeedbackSubmission): Promise<number[
   const ids: number[] = [];
 
   for (const [dimension, score] of Object.entries(input.scores)) {
-    const entry = native.evaluationCreate({
-      project_id: input.projectId,
-      step_id: input.stepId ?? null,
-      user_id: input.userId,
-      dimension: dimension as FeedbackDimension,
-      score: Math.max(1, Math.min(10, score)),
-      feedback: input.comment ?? null,
-    });
-    ids.push(entry.id);
+    try {
+      const entry = native.evaluationCreate({
+        project_id: input.projectId,
+        step_id: input.stepId ?? null,
+        user_id: input.userId,
+        dimension: dimension as FeedbackDimension,
+        score: Math.max(1, Math.min(10, score)),
+        feedback: input.comment ?? null,
+      });
+      ids.push(entry.id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[submitFeedback] Failed to create evaluation for ${dimension}:`, msg);
+      throw new Error(`反馈提交失败（维度: ${dimension}）: ${msg}`);
+    }
   }
 
   return ids;
@@ -129,8 +135,16 @@ export async function submitFeedback(input: FeedbackSubmission): Promise<number[
 // ============================================================================
 
 export async function getFeedbackStats(projectId?: number): Promise<FeedbackStats> {
-  const stats = native.evaluationStats(projectId ?? null);
-  const rows: NativeEvalEntry[] = native.evaluationList(projectId ?? null, 1000);
+  let stats: ReturnType<typeof native.evaluationStats>;
+  let rows: NativeEvalEntry[];
+  try {
+    stats = native.evaluationStats(projectId ?? null);
+    rows = native.evaluationList(projectId ?? null, 1000);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[getFeedbackStats] Native evaluation query failed:", msg);
+    throw new Error(`反馈统计查询失败: ${msg}`);
+  }
 
   if (stats.total_count === 0 && rows.length === 0) {
     return {
@@ -218,7 +232,14 @@ export async function getFeedbackHistory(
   projectId?: number,
   limit = 50,
 ): Promise<FeedbackHistoryItem[]> {
-  const rows: NativeEvalEntry[] = native.evaluationList(projectId ?? null, limit);
+  let rows: NativeEvalEntry[];
+  try {
+    rows = native.evaluationList(projectId ?? null, limit);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[getFeedbackHistory] Native evaluation query failed:", msg);
+    throw new Error(`反馈历史查询失败: ${msg}`);
+  }
 
   return rows.map(mapNativeEvaluation);
 }
@@ -234,13 +255,18 @@ export async function quickRate(
   score: number,
   comment?: string,
 ): Promise<number> {
-  const entry = native.evaluationCreate({
-    project_id: projectId,
-    user_id: userId,
-    dimension,
-    score: Math.max(1, Math.min(10, score)),
-    feedback: comment ?? null,
-  });
-
-  return entry.id;
+  try {
+    const entry = native.evaluationCreate({
+      project_id: projectId,
+      user_id: userId,
+      dimension,
+      score: Math.max(1, Math.min(10, score)),
+      feedback: comment ?? null,
+    });
+    return entry.id;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[quickRate] Native evaluation create failed:", msg);
+    throw new Error(`评分提交失败: ${msg}`);
+  }
 }

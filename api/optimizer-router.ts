@@ -1,4 +1,13 @@
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 import { native } from "./lib/native";
 import { z } from "zod";
@@ -156,7 +165,7 @@ export const optimizerRouter = createRouter({
       userId: r.user_id,
       originalPrompt: r.original_prompt,
       optimizedPrompt: r.optimized_prompt,
-      improvements: r.improvements ? JSON.parse(r.improvements) : null,
+      improvements: r.improvements ? safeJsonParse(r.improvements) : null,
       domain: r.domain,
       model: r.model,
       createdAt: r.created_at ? new Date(r.created_at) : new Date(),

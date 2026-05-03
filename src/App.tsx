@@ -111,7 +111,7 @@ export default function App() {
         {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
         {showSplash && <SplashScreen onComplete={handleSplashComplete} duration={200} />}
 
-        <div className={`flex flex-1 transition-opacity duration-500 ${appReady ? "opacity-100" : "opacity-0"}`}>
+        <div className={`flex flex-1 transition-opacity duration-500 ${appReady ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <Sidebar />
           <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
           <main className="flex-1 min-h-screen md:ml-[240px] pt-14 md:pt-0 pb-8 md:pb-8">

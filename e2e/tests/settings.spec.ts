@@ -51,7 +51,7 @@ test.describe('Settings Page', () => {
 
       // Should show success feedback
       await expect(
-        page.locator('text=保存成功, text=已保存, text=设置已保存').first()
+        page.getByText(/保存成功|已保存|设置已保存/).first()
       ).toBeVisible({ timeout: 5000 });
     } else {
       test.skip('DeepSeek API key input not found');

@@ -1,11 +1,14 @@
 /**
- * P1-2: 增强版框架匹配引擎 (Enhanced Framework Matcher)
+ * P1-2: 框架匹配引擎 (Framework Matcher)
  *
- * 结合任务分类器和框架知识图谱，提供更精准的框架推荐：
- *  - 单框架推荐（基于领域 + 复杂度 + 任务类型）
- *  - 组合推荐（混合框架，针对复杂场景）
- *  - 升级建议（当前框架可升级的方向）
- *  - 相似替代（同类型备选框架）
+ * 基于规则启发式的框架推荐系统：
+ *  - 单框架推荐（基于领域 + 复杂度 + 任务类型的关键词匹配打分）
+ *  - 组合推荐（基于硬编码互补关系对）
+ *  - 升级建议（基于硬编码升级路径）
+ *  - 相似替代（基于 Jaccard 相似度）
+ *
+ * ⚠️ 本模块不含神经网络或 LLM 调用。matchFrameworksWithAI() 在规则匹配结果之上
+ *    调用 LLM 生成自然语言推荐理由，是唯一的 AI 增强路径。
  */
 
 import { classifyIntent, type ClassificationResult } from "../clarify/task-classifier";

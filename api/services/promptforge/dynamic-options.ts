@@ -120,10 +120,12 @@ export async function generateDynamicOptions(
 
   // Parse JSON from AI response (strip markdown code blocks if present)
   const jsonStr = result.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
-  const parsed = JSON.parse(jsonStr) as {
-    responseControls?: PromptControl[];
-    initialPrompt?: string;
-  };
+  let parsed: { responseControls?: PromptControl[]; initialPrompt?: string } | undefined;
+  try {
+    parsed = JSON.parse(jsonStr) as { responseControls?: PromptControl[]; initialPrompt?: string };
+  } catch {
+    throw new Error("AI 返回的选项格式不正确，无法解析");
+  }
 
   const controls = parsed.responseControls || [];
   const initialPrompt = parsed.initialPrompt || "请详细描述你的需求...";
@@ -182,7 +184,12 @@ export async function regeneratePrompt(
   }
 
   const jsonStr = result.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
-  const parsed = JSON.parse(jsonStr) as { prompt?: string; reasoning?: string };
+  let parsed: { prompt?: string; reasoning?: string } | undefined;
+  try {
+    parsed = JSON.parse(jsonStr) as { prompt?: string; reasoning?: string };
+  } catch {
+    throw new Error("AI 返回的提示词格式不正确，无法解析");
+  }
 
   const changedControls = Object.keys(input.controlValues);
 

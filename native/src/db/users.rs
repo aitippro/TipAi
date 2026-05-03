@@ -65,10 +65,40 @@ impl Database {
         Ok(user)
     }
 
+    pub fn user_find_by_username(&self, username: &str) -> DbResult<Option<User>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, unionId, username, password, name, email, avatar, role,
+                    datetime(createdAt, 'unixepoch') as created_at,
+                    datetime(updatedAt, 'unixepoch') as updated_at,
+                    datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+             FROM users WHERE username = ?1",
+        )?;
+
+        let user = stmt
+            .query_row(params![username], |row| {
+                Ok(User {
+                    id: row.get(0)?,
+                    union_id: row.get(1)?,
+                    username: row.get(2)?,
+                    password: row.get(3)?,
+                    name: row.get(4)?,
+                    email: row.get(5)?,
+                    avatar: row.get(6)?,
+                    role: row.get(7)?,
+                    created_at: row.get(8)?,
+                    updated_at: row.get(9)?,
+                    last_sign_in_at: row.get(10)?,
+                })
+            })
+            .optional()?;
+
+        Ok(user)
+    }
+
     pub fn user_upsert(&self, data: InsertUser) -> DbResult<User> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs() as i64;
 
         self.conn.execute(

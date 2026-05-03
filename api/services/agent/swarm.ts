@@ -92,23 +92,6 @@ export function createAgent(role: AgentRole, id?: string): Agent {
 }
 
 // ============================================================================
-// Mock 执行引擎（Fallback）
-// ============================================================================
-
-export function simulateAgentWork(agent: Agent, input: string): { output: string; timeMs: number } {
-  const outputs: Record<AgentRole, string> = {
-    planner: `📋 规划结果：\n1. 分析需求: "${input.substring(0, 30)}..."\n2. 分解为 3 个子任务\n3. 确定执行顺序和依赖\n4. 识别潜在风险点`,
-    executor: `✅ 执行结果：\n基于输入 "${input.substring(0, 30)}..."\n已完成核心任务，生成详细输出。包含所有必要步骤和细节。`,
-    reviewer: `🔍 审查报告：\n- 准确性: 通过\n- 完整性: 通过\n- 一致性: 通过\n- 建议: 可进一步优化表达`,
-    optimizer: `🚀 优化结果：\n基于审查反馈进行优化：\n1. 精简冗余表述\n2. 增强逻辑连贯性\n3. 提升可读性\n优化后质量提升约 20%`,
-    coordinator: `🎯 协调结果：\n整合所有子任务输出：\n- 统一术语和格式\n- 解决冲突点\n- 生成最终交付物\n整体一致性: 优秀`,
-  };
-
-  const timeMs = 50 + Math.floor(Math.random() * 250);
-  return { output: outputs[agent.role], timeMs };
-}
-
-// ============================================================================
 // AI 执行引擎
 // ============================================================================
 
@@ -122,7 +105,7 @@ async function runAgentWithAI(
   const start = Date.now();
 
   // Create a cancellable timeout promise
-  let timeoutHandle: ReturnType<typeof setTimeout>;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutHandle = setTimeout(() => {
       reject(new Error("Agent timeout"));
@@ -140,11 +123,11 @@ async function runAgentWithAI(
       ),
       timeoutPromise,
     ]);
-    clearTimeout(timeoutHandle!);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
     const timeMs = Date.now() - start;
     return { output: response || "（AI 无返回）", timeMs, timedOut: false, success: true };
   } catch (error) {
-    clearTimeout(timeoutHandle!);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
     const timeMs = Date.now() - start;
     const isTimeout = error instanceof Error && error.message === "Agent timeout";
     if (!isTimeout) {
@@ -251,7 +234,7 @@ export async function runSwarm(
         const result = await runAgent(agent, task.input);
         await new Promise((r) => setTimeout(r, Math.min(result.timeMs, 100)));
         task.output = result.output;
-        task.status = result.timedOut ? "failed" : "completed";
+        task.status = result.success ? "completed" : "failed";
         task.completedAt = Date.now();
         logEntry(`${agent.name} ${result.timedOut ? "超时" : "完成"} (${result.timeMs}ms)`);
       }),

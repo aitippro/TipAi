@@ -282,13 +282,21 @@ if (failures.length > 0) {
 }
 
 // Save JSON report
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
+
+const reportDir = process.env.APPDATA
+  ? join(process.env.APPDATA, "TipAi", "data")
+  : join(homedir(), ".config", "TipAi", "data");
+mkdirSync(reportDir, { recursive: true });
+const reportPath = join(reportDir, "qa-report-v2.json");
 writeFileSync(
-  `${process.env.APPDATA}\\TipAi\\data\\qa-report-v2.json`,
+  reportPath,
   JSON.stringify({ results, failures, summary: { total: results.length, pass: passCount, fail: failCount, timestamp: new Date().toISOString() } }, null, 2),
   "utf-8"
 );
-console.log(`Report saved to: ${process.env.APPDATA}\\TipAi\\data\\qa-report-v2.json`);
+console.log(`Report saved to: ${reportPath}`);
 
 if (failCount > 0) {
   console.log("\nFAILURE DETAILS:");

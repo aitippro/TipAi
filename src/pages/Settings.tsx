@@ -46,6 +46,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(() => localStorage.getItem("tipai_theme") || "light")
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("tipai_reduced_motion") === "true")
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("tipai_font_size") || "14"))
+  const [devMode, setDevMode] = useState(() => localStorage.getItem("tipai_dev_mode") === "true")
   const [uiLanguage, setUiLanguage] = useState(() => localStorage.getItem("tipai-language") || "zh-CN")
 
   const { data: settings, isLoading } = trpc.promptForge.getSettings.useQuery(undefined)
@@ -86,6 +87,7 @@ export default function SettingsPage() {
     localStorage.setItem("tipai_theme", theme)
     localStorage.setItem("tipai_reduced_motion", String(reducedMotion))
     localStorage.setItem("tipai_font_size", String(fontSize))
+    localStorage.setItem("tipai_dev_mode", String(devMode))
 
     try {
       await updateMutation.mutateAsync(payload)
@@ -344,7 +346,7 @@ export default function SettingsPage() {
                       <Label className="text-sm font-medium">{t("settings.cloudSync")}</Label>
                       <p className="text-xs text-slate-400">{t("settings.cloudSyncDesc")}</p>
                     </div>
-                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} disabled />
+                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -375,7 +377,10 @@ export default function SettingsPage() {
                       <Label className="text-sm font-medium">{t("settings.devMode")}</Label>
                       <p className="text-xs text-slate-400">{t("settings.devModeDesc")}</p>
                     </div>
-                    <Switch />
+                    <Switch
+                      checked={devMode}
+                      onCheckedChange={setDevMode}
+                    />
                   </div>
 
                   <div className="space-y-3">

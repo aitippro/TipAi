@@ -269,11 +269,15 @@
     "goGenerate": "去生成",
     "turnCount": "{{count}} 轮",
     "domain": {
+      "general": "通用",
       "contentMarketing": "内容营销",
+      "marketing": "营销",
       "programming": "编程开发",
+      "technical": "技术",
       "education": "教育教学",
       "dataAnalysis": "数据分析",
       "legal": "法律分析",
+      "creative": "创意",
       "imageGen": "图像生成",
       "videoGen": "视频生成"
     },

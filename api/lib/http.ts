@@ -46,8 +46,6 @@ export class HttpClient {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
         const errorData = (await response
           .json()
@@ -61,6 +59,8 @@ export class HttpClient {
         throw new Error("Request timeout");
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

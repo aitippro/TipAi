@@ -9,8 +9,6 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, authedQuery } from "../../middleware";
 import {
   runTreeOfThoughts,
-  setTotGenerator,
-  setTotEvaluator,
   flattenTreeLevels,
 } from "./tree-of-thoughts";
 import { callAI } from "../../lib/ai-service-v3/client";
@@ -64,7 +62,7 @@ function detectDomain(problem: string): string {
 }
 
 export function initMockEngine() {
-  setTotGenerator(async (problem, currentThought, breadth) => {
+  const generator = async (problem: string, currentThought: string | null, breadth: number) => {
     const domain = detectDomain(problem);
     const strategies = SIMULATED_STRATEGIES[domain] ?? SIMULATED_STRATEGIES.general;
 
@@ -80,9 +78,9 @@ export function initMockEngine() {
 
     const shuffled = [...strategies].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, breadth);
-  });
+  };
 
-  setTotEvaluator(async (_problem, thought, _path) => {
+  const evaluator = async (_problem: string, thought: string, _path: string[]) => {
     let value = 5;
     const lower = thought.toLowerCase();
 
@@ -101,7 +99,9 @@ export function initMockEngine() {
     const isTerminal = /得出结论|最终答案|完成求解|总结如下/i.test(lower) || value >= 9;
 
     return { value, isTerminal, reason: `heuristic score ${value}` };
-  });
+  };
+
+  return { generator, evaluator };
 }
 
 // ============================================================================
@@ -192,7 +192,7 @@ async function initAIEngine(userId: number) {
 
   const { model, apiKey } = models[0];
 
-  setTotGenerator(async (problem, currentThought, breadth) => {
+  const generator = async (problem: string, currentThought: string | null, breadth: number) => {
     const path: string[] = currentThought ? [currentThought] : [];
     const prompt = buildGeneratorPrompt(problem, currentThought, path);
     const response = await callAI(model, apiKey, "你是 Tree of Thoughts 候选生成器", prompt, 0.7);
@@ -200,18 +200,18 @@ async function initAIEngine(userId: number) {
       throw new Error("ToT 候选生成失败：AI 未返回有效结果。");
     }
     return parseGeneratorResponse(response, breadth);
-  });
+  };
 
-  setTotEvaluator(async (problem, thought, path) => {
+  const evaluator = async (problem: string, thought: string, path: string[]) => {
     const prompt = buildEvaluatorPrompt(problem, thought, path);
     const response = await callAI(model, apiKey, "你是 Tree of Thoughts 质量评估器", prompt, 0.3);
     const parsed = await parseAIResponse(response);
     if (parsed) return parsed;
 
     throw new Error("ToT 评估解析失败：无法从 AI 响应中提取有效评分。");
-  });
+  };
 
-  return true;
+  return { generator, evaluator };
 }
 
 async function getAvailableModelsForUser(userId: number) {
@@ -238,7 +238,7 @@ export const totRouter = createRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await initAIEngine(ctx.user.id);
+      const { generator, evaluator } = await initAIEngine(ctx.user.id);
 
       const result = await runTreeOfThoughts(input.problem, {
         strategy: input.strategy,
@@ -247,7 +247,7 @@ export const totRouter = createRouter({
         valueThreshold: input.valueThreshold,
         maxNodes: input.maxNodes,
         timeoutMs: 35000, // 35s global timeout
-      });
+      }, generator, evaluator);
 
       return {
         ...result,
@@ -268,13 +268,13 @@ export const totRouter = createRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
-      await initAIEngine(ctx.user.id);
+      const { generator, evaluator } = await initAIEngine(ctx.user.id);
 
       const result = await runTreeOfThoughts(input.problem, {
         strategy: input.strategy,
         breadth: input.breadth,
         maxDepth: input.maxDepth,
-      });
+      }, generator, evaluator);
 
       return {
         levels: flattenTreeLevels(result.tree, result.rootId),

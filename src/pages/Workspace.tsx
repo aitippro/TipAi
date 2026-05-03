@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,18 +28,6 @@ const DOMAIN_COLORS: Record<string, string> = {
   creative: "bg-amber-100 text-amber-700",
 };
 
-const DOMAIN_LABELS: Record<string, string> = {
-  general: "通用",
-  marketing: "营销",
-  technical: "技术",
-  education: "教育",
-  creative: "创意",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "草稿", ready: "就绪", executing: "执行中", completed: "已完成", archived: "已归档",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-100 text-slate-600",
   ready: "bg-emerald-50 text-emerald-600",
@@ -53,11 +42,15 @@ const STATUS_COLORS: Record<string, string> = {
  * 右：选中项目的生命周期概览（或全局统计）
  */
 export default function WorkspacePage() {
+  const { t } = useTranslation()
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+
+  const domainLabel = (key: string) => t(`projects.domain.${key.replace(/-/g, "")}` as unknown as TemplateStringsArray) || key
+  const statusLabel = (key: string) => t(`projects.status.${key}` as unknown as TemplateStringsArray) || key
 
   const { data: projects, isLoading } = trpc.project.list.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils()
@@ -261,7 +254,7 @@ export default function WorkspacePage() {
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-slate-800 text-sm truncate">{project.title}</h3>
                             <Badge variant="outline" className={`text-[10px] rounded-md ${STATUS_COLORS[project.status || "draft"] || ""}`}>
-                              {STATUS_LABELS[project.status || "draft"] || project.status || "草稿"}
+                              {statusLabel(project.status || "draft")}
                             </Badge>
                           </div>
                           {project.description && (
@@ -317,11 +310,11 @@ export default function WorkspacePage() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline" className={`text-xs ${STATUS_COLORS[selectedProject.status || "draft"] || ""}`}>
-                      {STATUS_LABELS[selectedProject.status || "draft"] || selectedProject.status || "草稿"}
+                      {statusLabel(selectedProject.status || "draft")}
                     </Badge>
                     {selectedProject.domain && (
                       <Badge variant="outline" className={`text-xs ${DOMAIN_COLORS[selectedProject.domain || "general"] || ""}`}>
-                        {DOMAIN_LABELS[selectedProject.domain || "general"] || "通用"}
+                        {domainLabel(selectedProject.domain || "general")}
                       </Badge>
                     )}
                   </div>
@@ -359,7 +352,7 @@ export default function WorkspacePage() {
                         <div className={`w-2 h-2 rounded-full ${
                           selectedProject.status === stage ? "bg-apple-blue" : "bg-slate-200"
                         }`} />
-                        {STATUS_LABELS[stage]}
+                        {statusLabel(stage)}
                         {selectedProject.status === stage && (
                           <span className="ml-auto text-[10px]">当前</span>
                         )}

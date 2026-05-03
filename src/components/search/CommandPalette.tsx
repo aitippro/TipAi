@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Sparkles, FileText, Settings, Download, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,10 +10,6 @@ interface CommandItem {
   label: string;
   shortcut?: string;
   action: () => void;
-}
-
-function navigateTo(path: string) {
-  window.location.assign(path);
 }
 
 /**
@@ -26,17 +23,18 @@ export function CommandPalette({
   open: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevOpenRef = useRef(open);
 
   const commands: CommandItem[] = [
-    { id: "new", icon: <Plus className="w-4 h-4" />, label: "新建项目", shortcut: "⌘N", action: () => navigateTo("/") },
-    { id: "optimize", icon: <Sparkles className="w-4 h-4" />, label: "打开优化器", shortcut: "⌘O", action: () => navigateTo("/optimizer") },
-    { id: "export", icon: <Download className="w-4 h-4" />, label: "批量导出", shortcut: "⌘E", action: () => navigateTo("/export") },
-    { id: "library", icon: <FileText className="w-4 h-4" />, label: "提示词库", action: () => navigateTo("/library") },
-    { id: "settings", icon: <Settings className="w-4 h-4" />, label: "设置", action: () => navigateTo("/settings") },
+    { id: "new", icon: <Plus className="w-4 h-4" />, label: "新建项目", shortcut: "⌘N", action: () => navigate("/") },
+    { id: "optimize", icon: <Sparkles className="w-4 h-4" />, label: "打开优化器", shortcut: "⌘O", action: () => navigate("/optimizer") },
+    { id: "export", icon: <Download className="w-4 h-4" />, label: "批量导出", shortcut: "⌘E", action: () => navigate("/export") },
+    { id: "library", icon: <FileText className="w-4 h-4" />, label: "提示词库", action: () => navigate("/library") },
+    { id: "settings", icon: <Settings className="w-4 h-4" />, label: "设置", action: () => navigate("/settings") },
   ];
 
   const filtered = commands.filter((c) =>

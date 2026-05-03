@@ -17,6 +17,8 @@ import {
   Sparkles,
   History,
   BarChart3,
+  FolderOpen,
+  ChevronDown,
 } from "lucide-react";
 
 const DIMENSIONS = [
@@ -39,8 +41,18 @@ export default function FeedbackPage() {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const statsQuery = trpc.feedback.stats.useQuery({});
-  const historyQuery = trpc.feedback.history.useQuery({ limit: 20 });
+  const { data: projects } = trpc.project.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  const statsQuery = trpc.feedback.stats.useQuery({
+    projectId: selectedProjectId ?? undefined,
+  });
+  const historyQuery = trpc.feedback.history.useQuery({
+    projectId: selectedProjectId ?? undefined,
+    limit: 20,
+  });
   const submitMutation = trpc.feedback.submit.useMutation({
     onSuccess: () => {
       setSubmitted(true);
@@ -50,9 +62,9 @@ export default function FeedbackPage() {
   });
 
   const handleSubmit = () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !selectedProjectId) return;
     submitMutation.mutate({
-      projectId: 1, // demo project
+      projectId: selectedProjectId,
       scores: {
         clarity: scores.clarity[0],
         relevance: scores.relevance[0],
@@ -126,6 +138,33 @@ export default function FeedbackPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-5">
+          {/* Project Selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-slate-400" />
+              选择项目
+            </label>
+            {projects && projects.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={selectedProjectId ?? ""}
+                  onChange={(e) => setSelectedProjectId(Number(e.target.value) || null)}
+                  className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none"
+                >
+                  <option value="">请选择要反馈的项目</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">暂无项目，请先创建一个项目</p>
+            )}
+          </div>
+
           {DIMENSIONS.map((dim) => (
             <div key={dim.key}>
               <div className="flex items-center justify-between mb-2">

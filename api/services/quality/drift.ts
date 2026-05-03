@@ -19,6 +19,15 @@ export interface DriftCheck {
   similarityToBaseline: number; // 0-1
 }
 
+interface NativeDriftResult {
+  driftScore: number;
+  hasDrift: boolean;
+  trend: string;
+  warnings: string[];
+  suggestions: string[];
+  checks: { version: string; similarityToBaseline: number }[];
+}
+
 export interface DriftResult {
   baseline: TextVector;
   checks: DriftCheck[];
@@ -88,10 +97,38 @@ export function cosineSimilarity(a: TextVector, b: TextVector): number {
 // Drift 检测
 // ============================================================================
 
+import { native } from "../../lib/native";
+
 export function detectDrift(
   versions: { version: string; text: string }[],
   baselineIndex = 0,
 ): DriftResult {
+  // v2.0: prefer Rust native for performance
+  const texts = versions.map((v) => v.text);
+  if (typeof (native as Record<string, unknown>).detectDrift === "function") {
+    try {
+      const r = (native as Record<string, (v: string[], b?: number) => NativeDriftResult>).detectDrift(
+        texts,
+        baselineIndex,
+      );
+      return {
+        baseline: textToVector(versions[baselineIndex]?.text || ""),
+        checks: r.checks.map((c, i) => ({
+          version: versions[i]?.version || c.version,
+          text: versions[i]?.text || "",
+          vector: textToVector(versions[i]?.text || ""),
+          similarityToBaseline: c.similarityToBaseline,
+        })),
+        hasDrift: r.hasDrift,
+        driftScore: r.driftScore,
+        trend: r.trend as "stable" | "degrading" | "improving",
+        warnings: r.warnings,
+        suggestions: r.suggestions,
+      };
+    } catch {
+      // Fallback to TS implementation
+    }
+  }
   if (versions.length < 2) {
     return {
       baseline: textToVector(versions[0]?.text || ""),
@@ -183,6 +220,20 @@ export function compareVersions(
   a: string,
   b: string,
 ): { similarity: number; commonTokens: string[]; uniqueToA: string[]; uniqueToB: string[] } {
+  // v2.0: prefer Rust native for performance
+  if (typeof (native as Record<string, unknown>).compareVersions === "function") {
+    try {
+      return (native as Record<string, (a: string, b: string) => {
+        similarity: number;
+        commonTokens: string[];
+        uniqueToA: string[];
+        uniqueToB: string[];
+      }>).compareVersions(a, b);
+    } catch {
+      // Fallback to TS implementation
+    }
+  }
+
   const vecA = textToVector(a);
   const vecB = textToVector(b);
   const sim = cosineSimilarity(vecA, vecB);

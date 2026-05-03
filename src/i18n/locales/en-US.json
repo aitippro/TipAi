@@ -261,11 +261,15 @@
     "goGenerate": "Go Generate",
     "turnCount": "{{count}} turns",
     "domain": {
+      "general": "General",
       "contentMarketing": "Content Marketing",
+      "marketing": "Marketing",
       "programming": "Programming",
+      "technical": "Technical",
       "education": "Education",
       "dataAnalysis": "Data Analysis",
       "legal": "Legal",
+      "creative": "Creative",
       "imageGen": "Image Generation",
       "videoGen": "Video Generation"
     },

@@ -107,6 +107,14 @@ export default function ProjectDetail() {
     onError: (e: { message?: string }) => toast.error(e.message || t("projectDetail.generateSummaryError")),
   })
 
+  const saveTurnMutation = trpc.project.saveConversationTurn.useMutation({
+    onSuccess: () => {
+      utils.project.getConversation.invalidate({ id: projectId })
+      setInputValue("")
+    },
+    onError: (e: { message?: string }) => toast.error(e.message || t("projectDetail.sendError")),
+  })
+
   const utils = trpc.useUtils()
 
   if (isLoadingProject) {
@@ -274,11 +282,14 @@ export default function ProjectDetail() {
                         : t("projectDetail.inputPlaceholderDefault")
                   }
                   className="w-full h-10 px-4 pr-10 rounded-full bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all"
-                  disabled={project.status !== "draft"}
+                  disabled={project.status !== "draft" || saveTurnMutation.isPending}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && inputValue.trim()) {
-                      toast.info(t("projectDetail.dialogInDev"))
-                      setInputValue("")
+                      saveTurnMutation.mutate({
+                        projectId,
+                        role: "user",
+                        content: inputValue.trim(),
+                      })
                     }
                   }}
                 />
@@ -286,10 +297,13 @@ export default function ProjectDetail() {
               <Button
                 size="icon"
                 className="rounded-full bg-gradient-to-br from-apple-blue to-apple-purple text-white shadow-md shrink-0"
-                disabled={!inputValue.trim() || project.status !== "draft"}
+                disabled={!inputValue.trim() || project.status !== "draft" || saveTurnMutation.isPending}
                 onClick={() => {
-                  toast.info(t("projectDetail.dialogInDev"))
-                  setInputValue("")
+                  saveTurnMutation.mutate({
+                    projectId,
+                    role: "user",
+                    content: inputValue.trim(),
+                  })
                 }}
               >
                 <Send className="w-4 h-4" />
@@ -350,14 +364,14 @@ export default function ProjectDetail() {
                       <p className="text-sm text-slate-700 leading-relaxed">{summaryData.summary}</p>
                     </div>
 
-                    {summaryData.requirements?.length > 0 && (
+                    {summaryData.requirements && summaryData.requirements.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                           <span className="text-xs font-medium text-slate-700">{t("projectDetail.coreRequirements")}</span>
                         </div>
                         <ul className="space-y-1.5">
-                          {summaryData.requirements.map((req: string, idx: number) => (
+                          {(summaryData.requirements || []).map((req: string, idx: number) => (
                             <li key={idx} className="flex items-start gap-2">
                               <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] flex items-center justify-center shrink-0 font-medium mt-0.5">
                                 {idx + 1}
@@ -369,14 +383,14 @@ export default function ProjectDetail() {
                       </div>
                     )}
 
-                    {summaryData.constraints?.length > 0 && (
+                    {summaryData.constraints && summaryData.constraints.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <AlertCircle className="w-4 h-4 text-amber-500" />
                           <span className="text-xs font-medium text-slate-700">{t("projectDetail.constraints")}</span>
                         </div>
                         <ul className="space-y-1">
-                          {summaryData.constraints.map((c: string, idx: number) => (
+                          {(summaryData.constraints || []).map((c: string, idx: number) => (
                             <li key={idx} className="flex items-center gap-2 text-xs text-slate-600">
                               <span className="w-1 h-1 rounded-full bg-amber-400" />
                               {c}
@@ -386,14 +400,14 @@ export default function ProjectDetail() {
                       </div>
                     )}
 
-                    {summaryData.suggestedFrameworks?.length > 0 && (
+                    {summaryData.suggestedFrameworks && summaryData.suggestedFrameworks.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <BookOpen className="w-4 h-4 text-violet-500" />
                           <span className="text-xs font-medium text-slate-700">{t("projectDetail.suggestedFrameworks")}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {summaryData.suggestedFrameworks.map((fw: string, idx: number) => (
+                          {(summaryData.suggestedFrameworks || []).map((fw: string, idx: number) => (
                             <Badge key={idx} variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-100">
                               {fw}
                             </Badge>

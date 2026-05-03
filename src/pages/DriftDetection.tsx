@@ -40,7 +40,7 @@ export default function DriftDetectionPage() {
 
   const addVersion = () => {
     const nextNum = versions.length + 1;
-    setVersions([...versions, { id: String(nextNum), version: `v${nextNum}`, text: "" }]);
+    setVersions([...versions, { id: `${Date.now()}-${nextNum}`, version: `v${nextNum}`, text: "" }]);
   };
 
   const removeVersion = (id: string) => {

@@ -35,7 +35,7 @@ test.describe('Prompt Generation Workflow', () => {
 
     // Should show some kind of loading/progress indicator
     await expect(
-      page.locator('text=分析中, text=生成中, text=AI 分析, [data-testid="loading"]').first()
+      page.getByText(/分析中|生成中|AI 分析/).first()
     ).toBeVisible({ timeout: 5000 });
   });
 

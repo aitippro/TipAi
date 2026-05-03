@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,14 +41,18 @@ export default function AgentSwarmPage() {
   const rolesQuery = trpc.swarm.roles.useQuery();
   const modesQuery = trpc.swarm.modes.useQuery();
   const runMutation = trpc.swarm.run.useMutation({
-    onMutate: () => {
-      setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
-    },
-    onSettled: () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    },
+    onMutate: () => setElapsed(0),
   });
+
+  useEffect(() => {
+    if (runMutation.isPending) {
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+    }
+    return undefined;
+  }, [runMutation.isPending]);
 
   const toggleRole = (role: string) => {
     setSelectedRoles((prev) =>

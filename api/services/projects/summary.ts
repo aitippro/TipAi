@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * B4: Project Summary Service (Native-only, no Drizzle fallback)
  */
 
 import { TRPCError } from "@trpc/server";
-import { createHash } from "crypto";
 
 import {
   analyzeIntent,
@@ -33,6 +32,15 @@ interface RequirementSummary {
   constraints: string[];
   suggestedFrameworks: string[];
   intentAnalysis: IntentAnalysis;
+}
+
+function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 function buildConversationContext(turns: ConversationTurn[]): string {
@@ -77,8 +85,8 @@ export async function getProjectConversations(projectId: number): Promise<
     role: r.role,
     content: r.content,
     questionId: r.question_id || undefined,
-    questionData: r.question_data ? JSON.parse(r.question_data) : undefined,
-    answerData: r.answer_data ? JSON.parse(r.answer_data) : undefined,
+    questionData: r.question_data ? safeJsonParse<Record<string, string>>(r.question_data) : undefined,
+    answerData: r.answer_data ? safeJsonParse<Record<string, string>>(r.answer_data) : undefined,
     turnNumber: r.turn_number,
     createdAt: r.created_at ? new Date(r.created_at) : new Date(),
   }));
@@ -113,26 +121,6 @@ export async function getProjectSummary(projectId: number): Promise<
   };
 }
 
-export async function generateProjectSummary(
-  _projectId: number,
-  _userId: number,
-): Promise<{
-  summary: string;
-  requirements: string[];
-  constraints: string[];
-  suggestedFrameworks: string[];
-}> {
-  // This is a simplified placeholder - in production, call the AI service
-  const placeholderResponse = {
-    summary: "Placeholder summary",
-    requirements: ["Requirement 1", "Requirement 2"],
-    constraints: ["Constraint 1"],
-    suggestedFrameworks: ["Chain-of-Thought", "Tree-of-Thought"],
-  };
-
-  return placeholderResponse;
-}
-
 export async function upsertProjectSummary(
   projectId: number,
   userId: number,
@@ -164,20 +152,6 @@ export async function upsertProjectSummary(
   };
 }
 
-export async function summarizeConversationContext(
-  conversations: {
-    role: string;
-    content: string;
-  }[],
-): Promise<string> {
-  const hash = createHash("sha256")
-    .update(JSON.stringify(conversations))
-    .digest("hex");
-
-  // Placeholder - in production, call AI service
-  return `Conversation summary (hash: ${hash.slice(0, 8)}...): Placeholder summary of ${conversations.length} messages.`;
-}
-
 export async function generateRequirementSummary(
   userId: number,
   projectId: number,
@@ -204,11 +178,16 @@ export async function generateRequirementSummary(
     answerData: t.answerData ?? null,
   }));
 
-  // Analyze intent
+  // Analyze intent — try each model in sequence, isolating failures
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
-    analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
-    if (analysis) break;
+    try {
+      analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
+      if (analysis) break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[generateRequirementSummary] Model ${model} failed:`, msg);
+    }
   }
   if (!analysis) {
     const fallback: IntentAnalysis = { goal: originalIntent, domain: "general", subDomain: "general", audience: "", tone: "专业", style: "简洁", outputFormat: "详细文字说明", complexity: "simple", constraints: [], language: "zh" };
@@ -341,8 +320,13 @@ export async function generateNextClarificationQuestion(
 
   let analysis: Awaited<ReturnType<typeof analyzeIntent>> | null = null;
   for (const { model, apiKey } of models) {
-    analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
-    if (analysis) break;
+    try {
+      analysis = await analyzeIntent(originalIntent, model, apiKey, decodeStrategy);
+      if (analysis) break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[generateNextClarificationQuestion] Model ${model} failed:`, msg);
+    }
   }
   if (!analysis) {
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "AI 意图分析失败，请检查网络和 API Key 配置" });

@@ -1,4 +1,4 @@
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 
 use crate::{InsertPrompt, ListOpts, PromptEntry};
 
@@ -73,10 +73,41 @@ impl Database {
         Ok(results)
     }
 
+    pub fn prompt_get_by_id(&self, id: i64, user_id: i64) -> DbResult<Option<PromptEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, userId, title, originalIntent, generatedPrompt, framework,
+                    domain, model, rating, tags, useCount, isFavorite,
+                    datetime(createdAt, 'unixepoch') as created_at,
+                    datetime(updatedAt, 'unixepoch') as updated_at
+             FROM prompt_library WHERE id = ?1 AND userId = ?2",
+        )?;
+
+        let result = stmt.query_row(params![id, user_id], |row| {
+            Ok(PromptEntry {
+                id: row.get(0)?,
+                user_id: row.get(1)?,
+                title: row.get(2)?,
+                original_intent: row.get(3)?,
+                generated_prompt: row.get(4)?,
+                framework: row.get(5)?,
+                domain: row.get(6)?,
+                model: row.get(7)?,
+                rating: row.get(8)?,
+                tags: row.get(9)?,
+                use_count: row.get(10)?,
+                is_favorite: row.get(11)?,
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
+            })
+        }).optional()?;
+
+        Ok(result)
+    }
+
     pub fn prompt_create(&self, data: InsertPrompt) -> DbResult<PromptEntry> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs() as i64;
 
         self.conn.execute(
@@ -96,9 +127,7 @@ impl Database {
         )?;
 
         let id = self.conn.last_insert_rowid();
-        self.prompt_list(data.user_id, ListOpts { limit: Some(1), offset: Some(0), ..Default::default() })?
-            .into_iter()
-            .find(|p| p.id == id)
+        self.prompt_get_by_id(id, data.user_id)?
             .ok_or_else(|| super::connection::DbError::Other("Insert failed".to_string()))
     }
 

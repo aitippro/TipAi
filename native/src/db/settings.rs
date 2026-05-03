@@ -27,7 +27,7 @@ impl Database {
         }).optional()?;
 
         if let Some((uid, dm, df, dl, kk, ok, ck, dk)) = row {
-            let _sk = self.secret_key();
+            let _sk = self.secret_key(); // intentionally unused; secret key checked later in update
             let has_kimi = kk.as_ref().map_or(false, |v| !v.is_empty());
             let has_openai = ok.as_ref().map_or(false, |v| !v.is_empty());
             let has_claude = ck.as_ref().map_or(false, |v| !v.is_empty());
@@ -45,10 +45,10 @@ impl Database {
             });
         }
 
-        // No settings found — create defaults
+        // No settings found — create defaults, then read back to handle concurrent inserts
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs() as i64;
 
         self.conn.execute(
@@ -57,6 +57,42 @@ impl Database {
              ON CONFLICT(userId) DO NOTHING",
             params![user_id, now],
         )?;
+
+        // Read back the actual row (handles concurrent DO NOTHING where another thread won the race)
+        let row = self.conn.prepare(
+            "SELECT userId, defaultModel, defaultFramework, defaultLanguage,
+                    kimiApiKey, openaiApiKey, claudeApiKey, deepseekApiKey
+             FROM user_settings WHERE userId = ?1",
+        )?.query_row(params![user_id], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, Option<String>>(4)?,
+                row.get::<_, Option<String>>(5)?,
+                row.get::<_, Option<String>>(6)?,
+                row.get::<_, Option<String>>(7)?,
+            ))
+        }).optional()?;
+
+        if let Some((uid, dm, df, dl, kk, ok, ck, dk)) = row {
+            let has_kimi = kk.as_ref().map_or(false, |v| !v.is_empty());
+            let has_openai = ok.as_ref().map_or(false, |v| !v.is_empty());
+            let has_claude = ck.as_ref().map_or(false, |v| !v.is_empty());
+            let has_deepseek = dk.as_ref().map_or(false, |v| !v.is_empty());
+
+            return Ok(UserSettings {
+                user_id: uid,
+                default_model: dm,
+                default_framework: df,
+                default_language: dl,
+                has_kimi_key: has_kimi,
+                has_openai_key: has_openai,
+                has_claude_key: has_claude,
+                has_deepseek_key: has_deepseek,
+            });
+        }
 
         Ok(UserSettings {
             user_id,
@@ -73,7 +109,7 @@ impl Database {
     pub fn settings_update(&self, user_id: i64, data: UpdateSettings) -> DbResult<()> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs() as i64;
 
         let mut fields: Vec<String> = vec!["updatedAt = ?1".to_string()];

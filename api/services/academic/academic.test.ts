@@ -1,52 +1,29 @@
 import { describe, it, expect } from "vitest";
 import {
-  generateCitations,
+  extractKeywords,
   generateReproducibilityReport,
   reportToMarkdown,
   getCitationFormats,
 } from "./academic";
 
 describe("academic tools", () => {
-  describe("generateCitations", () => {
-    it("should generate APA citations", () => {
-      const result = generateCitations(
-        "大型语言模型的提示词工程研究，优化框架设计",
-        "apa",
-      );
-
-      expect(result.format).toBe("apa");
-      expect(result.citations.length).toBeGreaterThan(0);
-      expect(result.extractedKeywords.length).toBeGreaterThan(0);
-      expect(result.citations[0]).toContain("(");
-      expect(result.citations[0]).toContain(").");
-    });
-
-    it("should generate GB7714 citations", () => {
-      const result = generateCitations("prompt engineering optimization", "gb7714");
-
-      expect(result.format).toBe("gb7714");
-      expect(result.citations[0]).toContain("[1]");
-      expect(result.citations[0]).toContain("[M]");
-    });
-
-    it("should generate IEEE citations", () => {
-      const result = generateCitations("attention mechanism transformer", "ieee");
-
-      expect(result.format).toBe("ieee");
-      expect(result.citations[0]).toContain('"');
-      expect(result.citations[0]).toContain(",");
-    });
-
+  describe("extractKeywords", () => {
     it("should extract keywords from Chinese text", () => {
-      const result = generateCitations("提示词工程的大型语言模型优化方法研究", "apa");
-      expect(result.extractedKeywords.length).toBeGreaterThan(0);
-      expect(result.extractedKeywords).toContain("提示");
+      const result = extractKeywords("提示词工程的大型语言模型优化方法研究");
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain("提示");
     });
 
-    it("should limit to 5 citations", () => {
+    it("should extract keywords from English text", () => {
+      const result = extractKeywords("prompt engineering optimization for large language models");
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain("prompt");
+    });
+
+    it("should limit to 8 keywords", () => {
       const longText = "optimization model data analysis framework prompt llm ai generation".repeat(10);
-      const result = generateCitations(longText, "apa");
-      expect(result.citations.length).toBeLessThanOrEqual(5);
+      const result = extractKeywords(longText);
+      expect(result.length).toBeLessThanOrEqual(8);
     });
   });
 
