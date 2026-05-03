@@ -1,8 +1,5 @@
 import path from "path";
-import { createRequire } from "module";
 import { nativePolyfill } from "./native-polyfill";
-
-const require = createRequire(import.meta.url);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let native: any = null;

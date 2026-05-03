@@ -8,7 +8,6 @@
  * When the Rust binary is compiled and present, native.ts prefers it over this polyfill.
  */
 
-import { createRequire } from "module";
 import path from "path";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +15,6 @@ let db: any = null;
 
 function getDb() {
   if (db) return db;
-  const require = createRequire(import.meta.url);
   const Database = require("better-sqlite3");
 
   const dbUrl = process.env.DATABASE_URL || "";

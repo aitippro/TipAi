@@ -108,3 +108,8 @@ native/target/
 # Local QA test scripts (contain API keys)
 scripts/qa-ai-integration.ts
 scripts/qa-ai-integration-extreme.ts
+
+# Test artifacts
+test-*.log
+test-*.cjs
+test-*.mjs
