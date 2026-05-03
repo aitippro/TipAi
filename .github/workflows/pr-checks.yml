@@ -67,6 +67,7 @@ jobs:
   lockfile-check:
     name: Lockfile
     runs-on: ubuntu-latest
+    if: ${{ contains(github.event.pull_request.changed_files, 'package.json') || contains(github.event.pull_request.changed_files, 'package-lock.json') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

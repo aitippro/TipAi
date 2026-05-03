@@ -2,7 +2,7 @@ name: Nightly Build
 
 on:
   schedule:
-    - cron: '0 2 * * *'      # 每天凌晨 2 点 UTC (北京时间 10 点)
+    - cron: '0 2 * * 6'      # 每周六凌晨 2 点 UTC (北京时间周六 10 点)
   workflow_dispatch:
 
 concurrency:
