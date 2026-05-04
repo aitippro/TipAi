@@ -290,7 +290,7 @@ const GENERAL_DOMAIN: DomainDef = {
  */
 export function classifyIntent(intent: string): ClassificationResult {
   const lower = intent.toLowerCase();
-  const matchedKeywords: string[] = [];
+  const matchedKeywords = new Set<string>();
 
   let bestDomain = "general";
   let bestDomainScore = 0;
@@ -300,11 +300,13 @@ export function classifyIntent(intent: string): ClassificationResult {
   let bestTaskScore = 0;
 
   for (const [domainKey, domainData] of Object.entries(DOMAINS)) {
-    const domainScore = domainData.keywords.filter((keyword) => {
-      const match = lower.includes(keyword.toLowerCase());
-      if (match) matchedKeywords.push(keyword);
-      return match;
-    }).length;
+    let domainScore = 0;
+    for (const keyword of domainData.keywords) {
+      if (lower.includes(keyword.toLowerCase())) {
+        domainScore++;
+        matchedKeywords.add(keyword);
+      }
+    }
 
     if (domainScore > bestDomainScore) {
       bestDomainScore = domainScore;
@@ -313,7 +315,10 @@ export function classifyIntent(intent: string): ClassificationResult {
       // 匹配子领域
       bestSubScore = 0;
       for (const [subKey, subKeywords] of Object.entries(domainData.subDomains)) {
-        const subScore = subKeywords.filter((kw) => lower.includes(kw.toLowerCase())).length;
+        let subScore = 0;
+        for (const kw of subKeywords) {
+          if (lower.includes(kw.toLowerCase())) subScore++;
+        }
         if (subScore > bestSubScore) {
           bestSubScore = subScore;
           bestSubDomain = subKey;
@@ -323,7 +328,10 @@ export function classifyIntent(intent: string): ClassificationResult {
       // 匹配任务类型
       bestTaskScore = 0;
       for (const [taskKey, taskKeywords] of Object.entries(domainData.taskTypes)) {
-        const taskScore = taskKeywords.filter((kw) => lower.includes(kw.toLowerCase())).length;
+        let taskScore = 0;
+        for (const kw of taskKeywords) {
+          if (lower.includes(kw.toLowerCase())) taskScore++;
+        }
         if (taskScore > bestTaskScore) {
           bestTaskScore = taskScore;
           bestTaskType = taskKey;
@@ -340,7 +348,7 @@ export function classifyIntent(intent: string): ClassificationResult {
     subDomain: bestSubDomain,
     taskType: bestTaskType,
     confidence,
-    matchedKeywords: Array.from(new Set(matchedKeywords)),
+    matchedKeywords: Array.from(matchedKeywords),
     suggestedFrameworks: domainDef.suggestedFrameworks,
   };
 }

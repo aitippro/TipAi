@@ -149,20 +149,45 @@ const UPGRADE_PATHS: Array<{ from: string; to: string; reason: string }> = [
   { from: "react", to: "security-audit", reason: "ReAct 行动循环 → 安全审计系统化评估框架" },
 ];
 
+// ── Pre-computed caches (initialised at module load) ──────────
+
+/** Pre-computed Sets for each framework's bestFor field */
+const BEST_FOR_SETS: Record<string, Set<string>> = /* @__PURE__ */ (() => {
+  const sets: Record<string, Set<string>> = {};
+  for (const [key, fw] of Object.entries(FRAMEWORKS)) {
+    sets[key] = new Set(fw.bestFor);
+  }
+  return sets;
+})();
+
+/** Memoised similarity results: "keyA|keyB" → number */
+const SIMILARITY_CACHE = new Map<string, number>();
+
 /**
- * 计算两个框架的 Jaccard 相似度（基于 bestFor）
+ * Compute (or retrieve cached) Jaccard similarity between two frameworks.
  */
 function calculateSimilarity(keyA: string, keyB: string): number {
+  // Check cache first (canonical key order)
+  const cacheKey = keyA < keyB ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
+  const cached = SIMILARITY_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   const fwA = FRAMEWORKS[keyA];
   const fwB = FRAMEWORKS[keyB];
   if (!fwA || !fwB) return 0;
 
-  const setA = new Set(fwA.bestFor);
-  const setB = new Set(fwB.bestFor);
-  const intersection = new Set([...setA].filter((x) => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
+  const setA = BEST_FOR_SETS[keyA];
+  const setB = BEST_FOR_SETS[keyB];
 
-  let jaccard = intersection.size / Math.max(union.size, 1);
+  // Compute intersection using the smaller set
+  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+  let intersectionSize = 0;
+  for (const item of smaller) {
+    if (larger.has(item)) intersectionSize++;
+  }
+
+  const unionSize = setA.size + setB.size - intersectionSize;
+  let jaccard = unionSize === 0 ? 0 : intersectionSize / unionSize;
 
   // 同类加分
   if (CATEGORY_MAP[keyA] === CATEGORY_MAP[keyB]) {
@@ -174,7 +199,9 @@ function calculateSimilarity(keyA: string, keyB: string): number {
     jaccard += 0.1;
   }
 
-  return Math.min(Number(jaccard.toFixed(3)), 1);
+  const result = Math.min(Number(jaccard.toFixed(3)), 1);
+  SIMILARITY_CACHE.set(cacheKey, result);
+  return result;
 }
 
 /**
