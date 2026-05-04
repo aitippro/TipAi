@@ -410,6 +410,10 @@ app.on('web-contents-created', (_e, contents) => {
   });
 });
 process.on('uncaughtException', (err) => {
-  logError('Uncaught', err);
+  logError('UncaughtException', err);
   dialog.showErrorBox('程序错误', `${err.message}\n\n日志: ${LOG_FILE}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logError('UnhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
 });

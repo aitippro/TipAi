@@ -10,6 +10,7 @@
  */
 
 import { callAI, callAIVision } from "../../lib/ai-service-v3/client";
+import type { StyleAnalysis } from "./file-parser";
 
 export type MultimodalMode = "text-to-image" | "image-to-text" | "video-storyboard";
 
@@ -20,6 +21,8 @@ export interface MultimodalPromptResult {
   tips: string[];
   recommendedModel: string;
   usingAI: boolean;
+  fileName?: string;
+  styleAnalysis?: StyleAnalysis;
 }
 
 // Extended to support expression controls (backward-compatible, optional)
@@ -30,15 +33,20 @@ export interface GeneratedPrompt {
   parameters?: Record<string, string | number>;
   purpose: string;
   expressionControls?: import("./types/expression").ExpressionControl;
+  fileName?: string;
 }
 
 // ============================================================================
 // AI Prompt 构建
 // ============================================================================
 
-function buildTextToImagePrompt(request: string): string {
-  return `你是一位专业的 AI 图像生成提示词工程师。请根据用户的描述，生成 4 个不同风格的优化提示词。
+function buildTextToImagePrompt(request: string, styleHint?: string): string {
+  const refSection = styleHint
+    ? `\n参考风格分析：${styleHint}\n请使生成的提示词风格与上述参考风格一致。\n`
+    : "";
 
+  return `你是一位专业的 AI 图像生成提示词工程师。请根据用户的描述，生成 4 个不同风格的优化提示词。
+${refSection}
 用户请求：${request}
 
 请按以下 JSON 数组格式严格输出（不要有任何其他内容）：
@@ -133,7 +141,12 @@ function buildImageToTextVisionPrompt(request: string): string {
 ]`;
 }
 
-function buildVideoStoryboardPrompt(request: string, enableExpression?: boolean): string {
+function buildVideoStoryboardPrompt(
+  request: string,
+  enableExpression?: boolean,
+  fileContent?: string,
+  styleAnalysis?: StyleAnalysis,
+): string {
   const isTalkingScene = /说话|对话|口播|播报|演讲|主播|数字人|avatar|talking|speech|presenter|host/i.test(request);
   const showExpression = enableExpression ?? isTalkingScene;
 
@@ -141,7 +154,17 @@ function buildVideoStoryboardPrompt(request: string, enableExpression?: boolean)
 
 用户请求：${request}
 
-${showExpression ? `重要：这个视频包含人物说话/对话场景。请在分镜脚本中包含表情控制指令。
+${fileContent ? `参考文本内容（节选前2000字）：
+${fileContent.slice(0, 2000)}
+
+` : ""}${styleAnalysis ? `文本风格分析：
+- 主要风格：${styleAnalysis.primaryStyle}
+- 色彩倾向：${styleAnalysis.colorPalette.join("、")}
+- 情绪基调：${styleAnalysis.mood}
+- 题材类型：${styleAnalysis.genre}
+- 叙事节奏：${styleAnalysis.pacing}
+
+` : ""}${showExpression ? `重要：这个视频包含人物说话/对话场景。请在分镜脚本中包含表情控制指令。
 
 表情控制要求：
 - 根据文本中的标点符号（。？！，；…）自动映射到对应的面部动作单元（AU）
@@ -232,17 +255,24 @@ export async function generateMultimodalPromptWithAI(
   apiKey: string,
   imageData?: string,
   enableExpression?: boolean,
+  fileName?: string,
+  fileContent?: string,
+  styleAnalysis?: StyleAnalysis,
 ): Promise<MultimodalPromptResult> {
   let systemPrompt = "你是一位专业的多模态提示词工程师。";
   let userPrompt = "";
   let recommendedModel = "";
 
   switch (mode) {
-    case "text-to-image":
-      userPrompt = buildTextToImagePrompt(request);
+    case "text-to-image": {
+      const styleHint = styleAnalysis
+        ? `风格：${styleAnalysis.primaryStyle}，色彩：${styleAnalysis.colorPalette.join("、")}，情绪：${styleAnalysis.mood}`
+        : undefined;
+      userPrompt = buildTextToImagePrompt(request, styleHint);
       recommendedModel = "DALL-E 3 / Stable Diffusion XL";
       systemPrompt += "你擅长为图像生成模型（DALL-E、Midjourney、Stable Diffusion）撰写高质量的英文提示词。";
       break;
+    }
     case "image-to-text":
       if (imageData) {
         userPrompt = buildImageToTextVisionPrompt(request);
@@ -255,14 +285,14 @@ export async function generateMultimodalPromptWithAI(
       }
       break;
     case "video-storyboard":
-      userPrompt = buildVideoStoryboardPrompt(request, enableExpression);
+      userPrompt = buildVideoStoryboardPrompt(request, enableExpression, fileContent, styleAnalysis);
       recommendedModel = "Runway Gen-3 / Pika Labs / Sora";
       systemPrompt += "你擅长为 AI 视频生成工具撰写专业的分镜脚本和镜头描述。";
       break;
   }
 
   let response: string | null;
-  if (mode === "image-to-text" && imageData) {
+  if ((mode === "image-to-text" || mode === "text-to-image") && imageData) {
     response = await callAIVision(model, apiKey, systemPrompt, userPrompt, imageData, 0.7);
   } else {
     response = await callAI(model, apiKey, systemPrompt, userPrompt, 0.7);
@@ -282,6 +312,8 @@ export async function generateMultimodalPromptWithAI(
       tips: getTips(mode),
       recommendedModel,
       usingAI: true,
+      fileName,
+      styleAnalysis,
     };
   }
 

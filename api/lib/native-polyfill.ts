@@ -1105,8 +1105,39 @@ export const nativePolyfill = {
       db = null;
     }
   },
-  dbMigrate: () => {
-    /* migrations are handled by electron/main.cjs */
+  dbMigrate: (migrationsDir: string) => {
+    const fs = _require("fs");
+    if (!fs.existsSync(migrationsDir)) return;
+
+    const d = getDb();
+
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS __migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL UNIQUE,
+        appliedAt TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+
+    const applied = new Set(
+      d.prepare("SELECT filename FROM __migrations").all().map((r: any) => r.filename)
+    );
+
+    const pending = fs.readdirSync(migrationsDir)
+      .filter((f: string) => f.endsWith(".sql"))
+      .sort()
+      .filter((f: string) => !applied.has(f));
+
+    if (pending.length === 0) return;
+
+    const insert = d.prepare("INSERT INTO __migrations (filename) VALUES (?)");
+    for (const filename of pending) {
+      const sql = fs.readFileSync(path.join(migrationsDir, filename), "utf-8");
+      d.transaction(() => {
+        d.exec(sql);
+        insert.run(filename);
+      })();
+    }
   },
 
   // Crypto

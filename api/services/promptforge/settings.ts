@@ -28,11 +28,11 @@ function inferDefaultModel(settings?: UserSettings): string {
     const key = resolveStoredApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
     if (key) return model;
   }
-  return "kimi"; // ultimate fallback
+  return ""; // no key configured — caller must handle
 }
 
 const DEFAULT_SETTINGS = {
-  defaultModel: "kimi",
+  defaultModel: "",
   defaultFramework: "auto",
   defaultLanguage: "zh",
 } as const;
@@ -124,18 +124,20 @@ function buildSettingsUpdateData(
 /** Get all available models sorted by: preferred model first, then remaining by priority */
 export function getAvailableModels(settings?: UserSettings): { model: string; apiKey: string }[] {
   const result: { model: string; apiKey: string }[] = [];
-  const preferred = settings?.defaultModel || "kimi";
+  const preferred = settings?.defaultModel || "";
 
-  // Try preferred model first
-  const preferredKey = resolveStoredApiKey(preferred, settings) || process.env[`${preferred.toUpperCase()}_API_KEY`] || "";
-  if (preferredKey) {
-    result.push({ model: preferred, apiKey: preferredKey });
+  // Try preferred model first (only if it has a key configured)
+  if (preferred) {
+    const preferredKey = resolveStoredApiKey(preferred, settings) || process.env[`${preferred.toUpperCase()}_API_KEY`] || "";
+    if (preferredKey) {
+      result.push({ model: preferred, apiKey: preferredKey });
+    }
   }
 
   // Then try remaining models in priority order (deepseek first for domestic optimization)
   const remainingOrder = ["deepseek", "kimi", "openai", "claude"];
   for (const model of remainingOrder) {
-    if (model === preferred) continue; // already tried
+    if (model === preferred) continue;
     const key = resolveStoredApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
     if (key) {
       result.push({ model, apiKey: key });
@@ -227,13 +229,16 @@ export async function resolvePromptForgeModelApiKey(
   // Pick model: requested > inferred from keys (always prefer first available)
   let model = requestedModel || inferDefaultModel(settings);
 
-  // Final fallback: if still no key, use first available model
-  let apiKey = resolveStoredApiKey(model, settings);
+  // If the chosen model has no key, try to find an available one
+  let apiKey = model ? resolveStoredApiKey(model, settings) : "";
   if (!apiKey) {
     const available = getAvailableModels(settings);
     if (available.length > 0) {
       model = available[0].model;
       apiKey = available[0].apiKey;
+    } else {
+      model = "";
+      apiKey = "";
     }
   }
 

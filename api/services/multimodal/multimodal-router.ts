@@ -9,6 +9,7 @@ import {
   getMultimodalModes,
 } from "./multimodal-engine";
 import { getAvailableModels } from "../promptforge/settings";
+import { parseTextFile, analyzeStyle } from "./file-parser";
 
 export const multimodalRouter = createRouter({
   /** 生成多模态提示词（需要登录） */
@@ -19,6 +20,16 @@ export const multimodalRouter = createRouter({
         mode: z.enum(["text-to-image", "image-to-text", "video-storyboard"]),
         imageData: z.string().optional(),
         expression: z.boolean().optional(),
+        fileName: z.string().optional(),
+        fileContent: z.string().optional(),
+        fileData: z.string().optional(),
+        styleAnalysis: z.object({
+          primaryStyle: z.string(),
+          colorPalette: z.array(z.string()),
+          mood: z.string(),
+          genre: z.string(),
+          pacing: z.string(),
+        }).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -34,7 +45,28 @@ export const multimodalRouter = createRouter({
       }
 
       const { model, apiKey } = models[0];
-      return generateMultimodalPromptWithAI(input.request, input.mode, model, apiKey, input.imageData, input.expression);
+
+      // Parse file data if provided (base64 encoded .docx/.pdf)
+      let fileContent = input.fileContent;
+      let styleAnalysis = input.styleAnalysis;
+      if (input.fileData && input.fileName) {
+        const buffer = Buffer.from(input.fileData, "base64");
+        const parsed = await parseTextFile(buffer.buffer as ArrayBuffer, input.fileName);
+        fileContent = fileContent ?? parsed.text;
+        styleAnalysis = styleAnalysis ?? analyzeStyle(parsed.text);
+      }
+
+      return generateMultimodalPromptWithAI(
+        input.request,
+        input.mode,
+        model,
+        apiKey,
+        input.imageData,
+        input.expression,
+        input.fileName,
+        fileContent,
+        styleAnalysis,
+      );
     }),
 
   /** 获取所有支持的模式 */

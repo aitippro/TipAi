@@ -75,6 +75,7 @@ export default function TemplateMarket() {
       toast.success("模板已应用")
       utils.template.list.invalidate()
     },
+    onError: (mutationError) => toast.error(mutationError.message),
   })
 
   const rateMutation = trpc.template.rate.useMutation({

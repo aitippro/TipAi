@@ -39,17 +39,24 @@ function loadNativeAddon() {
 
 try {
   native = loadNativeAddon();
+  console.log(`[native] Rust addon loaded: v${native.version()}`);
 } catch (err) {
-  // In test environment, provide an empty object so tests can mock native functions
+  const errMsg = err instanceof Error ? err.message : String(err);
   if (process.env.VITEST || process.env.NODE_ENV === "test") {
     native = {};
+  } else if (process.env.TIPAI_ELECTRON) {
+    // Electron production: surface the error clearly — polyfill is a last resort
+    console.error(
+      `[native] Rust addon load FAILED: ${errMsg}. Falling back to JS polyfill. ` +
+      "Check that native/*.node is included in asarUnpack and the file exists."
+    );
+    native = nativePolyfill;
   } else {
-    // Production: Native binary missing — load polyfill with REAL SQLite implementations.
-    // This is NOT a mock. Every function performs genuine database CRUD.
-    // When the Rust binary is compiled and present, it is preferred over this polyfill.
+    // Dev / CLI: Rust addon not built — polyfill expected
     console.warn(
-      `[native] Rust binary not found (${err instanceof Error ? err.message : String(err)}). ` +
-        "Falling back to native-polyfill (real SQLite, not mock)."
+      `[native] Rust addon not found (${errMsg}). ` +
+      "Falling back to native-polyfill (better-sqlite3, not mock). " +
+      "Run 'npm run native:build' for production-native performance."
     );
     native = nativePolyfill;
   }

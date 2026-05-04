@@ -18,6 +18,8 @@ import {
   Sparkles,
   Upload,
   X,
+  FileText,
+  Palette,
 } from "lucide-react";
 
 const MODE_ICONS = {
@@ -49,8 +51,11 @@ export default function MultimodalPage() {
   });
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [fileData, setFileData] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   const modesQuery = trpc.multimodal.modes.useQuery();
   const generateMutation = trpc.multimodal.generate.useMutation();
@@ -63,10 +68,13 @@ export default function MultimodalPage() {
       mode,
       imageData: imageData || undefined,
       expression,
+      fileName: fileName ?? undefined,
+      fileContent: fileContent ?? undefined,
+      fileData: fileData ?? undefined,
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -80,8 +88,43 @@ export default function MultimodalPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    const reader = new FileReader();
+
+    if (ext === "txt") {
+      reader.onload = () => {
+        setFileContent(reader.result as string);
+        setFileData(null);
+      };
+      reader.readAsText(file);
+    } else if (ext === "docx" || ext === "pdf") {
+      reader.onload = () => {
+        // Base64 encode for server-side parsing
+        const bytes = new Uint8Array(reader.result as ArrayBuffer);
+        const base64 = btoa(String.fromCharCode(...bytes));
+        setFileData(base64);
+        setFileContent(null);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert("请上传 .txt / .docx / .pdf 文件");
+    }
+  };
+
   const handleRemoveImage = () => {
     setImageData(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const handleRemoveFile = () => {
+    setFileName(null);
+    setFileContent(null);
+    setFileData(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -138,15 +181,20 @@ export default function MultimodalPage() {
       {/* Input */}
       <Card className="mb-8 border-0 shadow-sm rounded-2xl bg-white/80">
         <CardContent className="p-5">
-          {mode === "image-to-text" && (
+          {/* Image upload for text-to-image (reference) or image-to-text (analysis target) */}
+          {(mode === "image-to-text" || mode === "text-to-image") && (
             <div className="mb-4">
               {!imageData ? (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => imageInputRef.current?.click()}
                   className="w-full flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-slate-200 hover:border-pink-300 hover:bg-pink-50/30 transition-colors"
                 >
                   <Upload className="w-6 h-6 text-slate-400" />
-                  <span className="text-sm text-slate-500">点击上传图片，AI 将直接分析图片内容</span>
+                  <span className="text-sm text-slate-500">
+                    {mode === "text-to-image"
+                      ? "上传参考图片，AI 将参考其风格生成提示词"
+                      : "点击上传图片，AI 将直接分析图片内容"}
+                  </span>
                   <span className="text-xs text-slate-400">支持 JPG、PNG、GIF、WebP</span>
                 </button>
               ) : (
@@ -165,9 +213,48 @@ export default function MultimodalPage() {
                 </div>
               )}
               <input
-                ref={fileInputRef}
+                ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </div>
+          )}
+
+          {/* File upload for video-storyboard */}
+          {mode === "video-storyboard" && (
+            <div className="mb-4">
+              {!fileName ? (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-slate-200 hover:border-amber-300 hover:bg-amber-50/30 transition-colors"
+                >
+                  <FileText className="w-6 h-6 text-slate-400" />
+                  <span className="text-sm text-slate-500">
+                    上传小说/脚本文件，AI 将分析风格并生成带表情控制的分镜脚本
+                  </span>
+                  <span className="text-xs text-slate-400">支持 .txt / .docx</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <FileText className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm text-amber-800 flex-1">{fileName}</span>
+                  <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600">
+                    {(fileContent ?? fileData) ? "已加载" : "加载中"}
+                  </Badge>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="w-5 h-5 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center hover:bg-amber-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.docx"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -182,7 +269,9 @@ export default function MultimodalPage() {
                   ? imageData
                     ? "补充你的分析需求（可选），例如：重点分析色彩搭配"
                     : "描述你想要分析的图像内容和目的，例如：分析这张产品图的设计亮点"
-                  : "描述你的视频场景，例如：一个程序员在咖啡馆写代码，突然被窗外的流星吸引"
+                  : fileName
+                    ? "补充分镜创意说明（可选），例如：每镜 3-5 秒，主角为女性"
+                    : "描述你的视频场景，例如：一个程序员在咖啡馆写代码，突然被窗外的流星吸引"
             }
             value={request}
             onChange={(e) => setRequest(e.target.value)}
@@ -194,6 +283,18 @@ export default function MultimodalPage() {
                 <Badge variant="outline" className="text-[10px] border-pink-200 text-pink-600">
                   <Sparkles className="w-3 h-3 mr-1" />
                   AI 视觉分析已启用
+                </Badge>
+              )}
+              {mode === "text-to-image" && imageData && (
+                <Badge variant="outline" className="text-[10px] border-pink-200 text-pink-600">
+                  <Palette className="w-3 h-3 mr-1" />
+                  参考图片已上传
+                </Badge>
+              )}
+              {fileName && (
+                <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600">
+                  <FileText className="w-3 h-3 mr-1" />
+                  {fileName}
                 </Badge>
               )}
               <span className="text-xs text-slate-400">
@@ -227,7 +328,52 @@ export default function MultimodalPage() {
             <span className="text-xs text-slate-400">
               推荐模型: {result.recommendedModel}
             </span>
+            {result.fileName && (
+              <span className="text-xs text-slate-400">
+                文件: {result.fileName}
+              </span>
+            )}
           </div>
+
+          {/* Style Analysis Panel */}
+          {result.styleAnalysis && (
+            <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-r from-purple-50/80 to-white ring-1 ring-purple-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-purple-500" />
+                  风格分析
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="p-3 rounded-xl bg-white/80">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">主要风格</span>
+                    <p className="text-xs font-medium text-slate-700 mt-1">{result.styleAnalysis.primaryStyle}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/80">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">色彩倾向</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {result.styleAnalysis.colorPalette.map((c) => (
+                        <Badge key={c} variant="outline" className="text-[10px] border-purple-200 text-purple-700">{c}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/80">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">情绪基调</span>
+                    <p className="text-xs font-medium text-slate-700 mt-1">{result.styleAnalysis.mood}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/80">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">题材类型</span>
+                    <p className="text-xs font-medium text-slate-700 mt-1">{result.styleAnalysis.genre}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/80">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">叙事节奏</span>
+                    <p className="text-xs font-medium text-slate-700 mt-1">{result.styleAnalysis.pacing}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Prompts */}
           <Tabs defaultValue="0" className="space-y-4">
@@ -277,6 +423,49 @@ export default function MultimodalPage() {
                         <div className="p-3 rounded-xl bg-red-50 mt-1.5">
                           <code className="text-[11px] text-red-700">{p.negativePrompt}</code>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Expression Controls Panel */}
+                    {p.expressionControls && (
+                      <div>
+                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                          表情控制面板
+                        </span>
+                        <Card className="mt-1.5 border border-amber-200 rounded-xl bg-amber-50/50">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-3 text-[11px]">
+                              <div>
+                                <span className="text-slate-400">情感权重</span>
+                                <p className="font-medium text-slate-700">{p.expressionControls.sentimentWeight}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">噪声振幅</span>
+                                <p className="font-medium text-slate-700">{p.expressionControls.noiseAmplitude}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">噪声种子</span>
+                                <p className="font-medium text-slate-700 font-mono">{p.expressionControls.noiseSeed}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">导出格式</span>
+                                <p className="font-medium text-slate-700">{p.expressionControls.exportFormats.join(" / ")}</p>
+                              </div>
+                            </div>
+                            {p.expressionControls.punctuationMap.length > 0 && (
+                              <div>
+                                <span className="text-[10px] text-slate-400">标点 → AU 映射</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {p.expressionControls.punctuationMap.map((pm, pi) => (
+                                    <Badge key={pi} variant="outline" className="text-[10px] border-amber-200 text-amber-700">
+                                      {pm.punctuation} → {pm.auCodes.join("+")} ({pm.gazeState})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
                       </div>
                     )}
 

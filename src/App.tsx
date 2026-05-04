@@ -1,4 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from "react"
+import { useState, useEffect, lazy, Suspense } from "react";
+import { logger } from "@/lib/logger";
 import { Routes, Route, useLocation } from "react-router"
 import { AnimatePresence } from "framer-motion"
 import Sidebar from "./components/Sidebar"
@@ -57,6 +58,24 @@ export default function App() {
   const [appReady, setAppReady] = useState(false)
 
   const location = useLocation()
+
+  // Global error capture — log all unhandled frontend errors
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      logger.error("Window:onerror", e.message, e.error?.stack ?? `at ${e.filename}:${e.lineno}:${e.colno}`);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const msg = e.reason instanceof Error ? e.reason.message : String(e.reason);
+      const stack = e.reason instanceof Error ? e.reason.stack : undefined;
+      logger.error(`Window:unhandledrejection`, msg, stack);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
 
   // Apply dark mode from localStorage
   useEffect(() => {
