@@ -198,7 +198,7 @@ complexity判断：simple=单一明确任务(3-4步), medium=多维度任务(5-6
       audience: parsed.audience || "",
       tone: parsed.tone || "专业",
       complexity: ["simple", "medium", "complex"].includes(parsed.complexity) ? parsed.complexity : "medium",
-      estimatedSteps: Math.min(Math.max(parseInt(parsed.estimatedSteps) || 5, 3), 8),
+      estimatedSteps: Math.min(Math.max(parseInt(parsed.estimatedSteps, 10) || 5, 3), 8),
     };
   } catch (_e) {
     throw new Error("意图分析解析失败：AI 返回的结果无法解析为有效 JSON。");
@@ -343,11 +343,11 @@ export async function evaluatePrompt(prompt: string, output: string, domain: str
     const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
     const parsed = JSON.parse(cleaned);
     return {
-      clarity: Math.min(Math.max(parseInt(parsed.clarity) || 7, 1), 10),
-      relevance: Math.min(Math.max(parseInt(parsed.relevance) || 7, 1), 10),
-      completeness: Math.min(Math.max(parseInt(parsed.completeness) || 7, 1), 10),
-      actionability: Math.min(Math.max(parseInt(parsed.actionability) || 7, 1), 10),
-      overall: Math.min(Math.max(parseInt(parsed.overall) || 7, 1), 10),
+      clarity: Math.min(Math.max(Number(parsed.clarity) || 7, 1), 10),
+      relevance: Math.min(Math.max(Number(parsed.relevance) || 7, 1), 10),
+      completeness: Math.min(Math.max(Number(parsed.completeness) || 7, 1), 10),
+      actionability: Math.min(Math.max(Number(parsed.actionability) || 7, 1), 10),
+      overall: Math.min(Math.max(Number(parsed.overall) || 7, 1), 10),
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
     };
   } catch {

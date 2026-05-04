@@ -36,12 +36,15 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 app.use(secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
+    baseUri: ["'self'"],
     scriptSrc: ["'self'"],
+    // TODO: replace 'unsafe-inline' with nonce-based approach for stricter CSP
     styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", "data:", "https:"],
     connectSrc: ["'self'"],
     fontSrc: ["'self'"],
     frameSrc: ["'none'"],
+    frameAncestors: ["'none'"],
     objectSrc: ["'none'"],
   },
   crossOriginEmbedderPolicy: false, // relaxed for SPA compatibility
@@ -171,7 +174,7 @@ if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_ELECTRON) {
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
 
-  const port = parseInt(process.env.PORT || "3000");
+  const port = parseInt(process.env.PORT || "3000", 10);
   serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });

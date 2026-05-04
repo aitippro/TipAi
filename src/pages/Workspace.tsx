@@ -103,7 +103,7 @@ export default function WorkspacePage() {
             <RippleButton
               onClick={() => {
                 if (!isAuthenticated) { toast.error("请先登录"); navigate("/login"); return; }
-                createProject.mutate({ title: "新项目", description: "", intent: "general" });
+                createProject.mutate({ title: "新项目", description: "", intent: "" });
               }}
               className="bg-gradient-to-r from-apple-blue to-apple-purple text-white rounded-xl px-4 py-2 text-sm font-medium shadow-md"
             >
@@ -232,7 +232,7 @@ export default function WorkspacePage() {
                 description="创建你的第一个提示词项目"
                 action={{
                   label: "新建项目",
-                  onClick: () => createProject.mutate({ title: "新项目", description: "", intent: "general" }),
+                  onClick: () => createProject.mutate({ title: "新项目", description: "", intent: "" }),
                 }}
               />
             ) : (
