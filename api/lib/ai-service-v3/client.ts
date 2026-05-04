@@ -67,21 +67,24 @@ async function runSelfConsistencyCallAI(
 
   const req = {
     provider,
-    api_key: apiKey,
-    model_id: config.modelId,
-    base_url: config.baseUrl,
-    system_prompt: systemPrompt,
-    user_message: userMessage,
+    apiKey,
+    modelId: config.modelId,
+    baseUrl: config.baseUrl,
+    systemPrompt,
+    userMessage,
     temperature,
-    max_tokens: 4000,
-    timeout_ms: AI_CALL_TIMEOUT_MS,
+    maxTokens: 4000,
+    timeoutMs: AI_CALL_TIMEOUT_MS,
   };
   const result = await native.aiCallSelfConsistency(req, sampleCount);
-  if (result.error) {
-    console.error(`[callAI SC] ${provider} error: ${result.error}`);
+  // Normalize: Rust returns {content, error}, polyfill returns {results[], count, successfulCount}
+  const content = result.content ?? result.results?.[0]?.content;
+  const error = result.error ?? (result.successfulCount === 0 ? "All self-consistency paths failed" : undefined);
+  if (error) {
+    console.error(`[callAI SC] ${provider} error: ${error}`);
     return null;
   }
-  return result.content || null;
+  return content || null;
 }
 
 /**
@@ -156,14 +159,14 @@ async function callAISingle(
   try {
     const req = {
       provider,
-      api_key: apiKey,
-      model_id: config.modelId,
-      base_url: config.baseUrl,
-      system_prompt: systemPrompt,
-      user_message: userMessage,
+      apiKey,
+      modelId: config.modelId,
+      baseUrl: config.baseUrl,
+      systemPrompt,
+      userMessage,
       temperature,
-      max_tokens: 4000,
-      timeout_ms: AI_CALL_TIMEOUT_MS,
+      maxTokens: 4000,
+      timeoutMs: AI_CALL_TIMEOUT_MS,
     };
     const result = await native.aiCall(req);
     if (result.error) {

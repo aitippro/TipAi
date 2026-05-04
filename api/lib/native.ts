@@ -40,6 +40,14 @@ function loadNativeAddon() {
 try {
   native = loadNativeAddon();
   console.log(`[native] Rust addon loaded: v${native.version()}`);
+  // Fill in any functions missing from the Rust addon with polyfill versions
+  const polyfillFallbacks = ["stepDelete", "domainPackageUpsert"];
+  for (const fn of polyfillFallbacks) {
+    if (typeof native[fn] !== "function" && typeof (nativePolyfill as Record<string, unknown>)[fn] === "function") {
+      (native as Record<string, unknown>)[fn] = (nativePolyfill as Record<string, unknown>)[fn];
+      console.log(`[native] Warning: ${fn} missing from Rust addon — using polyfill`);
+    }
+  }
 } catch (err) {
   const errMsg = err instanceof Error ? err.message : String(err);
   if (process.env.VITEST || process.env.NODE_ENV === "test") {

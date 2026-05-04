@@ -579,6 +579,9 @@ function promptList(userId: number, opts?: Record<string, unknown>) {
 
 function promptCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const userId = data.userId ?? data.user_id;
+  const originalIntent = data.originalIntent ?? data.original_intent ?? null;
+  const generatedPrompt = data.generatedPrompt ?? data.generated_prompt;
   const result = getDb()
     .prepare(
       `INSERT INTO prompt_library
@@ -586,10 +589,10 @@ function promptCreate(data: Record<string, unknown>) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
-      data.user_id,
+      userId,
       data.title,
-      data.original_intent ?? null,
-      data.generated_prompt,
+      originalIntent,
+      generatedPrompt,
       data.framework ?? null,
       data.domain ?? "general",
       data.model ?? "kimi",
@@ -648,6 +651,8 @@ function templateListByUser(userId: number) {
 
 function templateCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const userId = data.userId ?? data.user_id;
+  const isPublic = data.isPublic ?? data.is_public ?? 1;
   const result = getDb()
     .prepare(
       `INSERT INTO templates
@@ -655,14 +660,14 @@ function templateCreate(data: Record<string, unknown>) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
-      data.user_id,
+      userId,
       data.title,
       data.description ?? null,
       data.framework ?? null,
       data.domain ?? "general",
       data.content,
       data.tags ?? null,
-      data.is_public ?? 1,
+      isPublic,
       now,
     );
 

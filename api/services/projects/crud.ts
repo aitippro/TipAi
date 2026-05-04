@@ -160,13 +160,13 @@ export async function getProjectSummary(projectId: number, userId: number) {
     summary: summary.summary,
     requirements: summary.requirements ? safeJsonParse(summary.requirements, []) : [],
     constraints: summary.constraints ? safeJsonParse(summary.constraints, []) : [],
-    suggestedFrameworks: summary.suggested_frameworks
-      ? safeJsonParse(summary.suggested_frameworks, [])
+    suggestedFrameworks: (summary.suggestedFrameworks ?? summary.suggested_frameworks)
+      ? safeJsonParse((summary.suggestedFrameworks ?? summary.suggested_frameworks), [])
       : [],
-    rawContext: summary.raw_context,
-    isFinalized: summary.is_finalized === 1,
-    createdAt: summary.created_at ? new Date(summary.created_at) : new Date(),
-    updatedAt: summary.updated_at ? new Date(summary.updated_at) : new Date(),
+    rawContext: (summary.rawContext ?? summary.raw_context),
+    isFinalized: (summary.isFinalized ?? summary.is_finalized) === 1,
+    createdAt: (summary.createdAt ?? summary.created_at) ? new Date(summary.createdAt ?? summary.created_at) : new Date(),
+    updatedAt: (summary.updatedAt ?? summary.updated_at) ? new Date(summary.updatedAt ?? summary.updated_at) : new Date(),
   };
 }
 
@@ -217,17 +217,17 @@ export async function saveProjectSummary(
 
   return {
     id: result.id,
-    projectId: result.project_id,
-    userId: result.user_id,
+    projectId: result.projectId ?? result.project_id,
+    userId: result.userId ?? result.user_id,
     summary: result.summary,
     requirements: result.requirements ? safeJsonParse(result.requirements, []) : [],
     constraints: result.constraints ? safeJsonParse(result.constraints, []) : [],
-    suggestedFrameworks: result.suggested_frameworks
-      ? safeJsonParse(result.suggested_frameworks, [])
+    suggestedFrameworks: (result.suggestedFrameworks ?? result.suggested_frameworks)
+      ? safeJsonParse((result.suggestedFrameworks ?? result.suggested_frameworks), [])
       : [],
-    rawContext: result.raw_context,
-    isFinalized: result.is_finalized === 1,
-    createdAt: result.created_at ? new Date(result.created_at) : new Date(),
-    updatedAt: result.updated_at ? new Date(result.updated_at) : new Date(),
+    rawContext: result.rawContext ?? result.raw_context,
+    isFinalized: (result.isFinalized ?? result.is_finalized) === 1,
+    createdAt: (result.createdAt ?? result.created_at) ? new Date(result.createdAt ?? result.created_at) : new Date(),
+    updatedAt: (result.updatedAt ?? result.updated_at) ? new Date(result.updatedAt ?? result.updated_at) : new Date(),
   };
 }
