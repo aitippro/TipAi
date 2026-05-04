@@ -6,7 +6,11 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { Context, Next } from "hono";
+import { createRequire } from "module";
 import { matchFrameworks } from "./services/framework";
+
+const _require = createRequire(import.meta.url);
+const PKG_VERSION = (_require("../package.json") as { version: string }).version;
 import { runQualityGate } from "./services/quality/gate";
 import { generateMultimodalPromptWithAI } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";
@@ -101,7 +105,7 @@ rest.use("/academic/citations", authenticateOptional);
 // REST Endpoints
 // ============================================================================
 
-rest.get("/ping", (c) => c.json({ ok: true, version: "1.2.2", timestamp: Date.now() }));
+rest.get("/ping", (c) => c.json({ ok: true, version: PKG_VERSION, timestamp: Date.now() }));
 
 rest.post("/framework/match", async (c) => {
   const body = await c.req.json().catch(() => ({}));
@@ -201,7 +205,7 @@ rest.post("/academic/citations", async (c) => {
 rest.get("/docs", (c) => {
   return c.json({
     name: "TipAi REST API",
-    version: "1.2.2",
+    version: PKG_VERSION,
     baseUrl: "/api/rest",
     endpoints: [
       { method: "GET", path: "/ping", description: "健康检查" },

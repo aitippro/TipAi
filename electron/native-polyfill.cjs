@@ -639,7 +639,10 @@ function compareVersions(a, b) {
 // ============================================================================
 
 module.exports = {
-  version: () => '1.2.2-polyfill-cjs',
+  version: () => {
+    try { return require('../package.json').version + '-polyfill-cjs'; }
+    catch { return '0.0.0-polyfill-cjs'; }
+  },
   dbOpen: (dbPath, secret) => {
     if (db) { db.close(); db = null; }
     if (dbPath) process.env.DATABASE_URL = 'file:' + dbPath;
