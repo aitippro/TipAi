@@ -94,6 +94,7 @@ qa/
 e2e-results/
 qa-*.cjs
 !assets/branding/*.png
+!assets/screenshots/*.png
 !public/*.png
 *.png
 electron-live.err

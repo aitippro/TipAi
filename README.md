@@ -25,19 +25,19 @@
 
 <div align="center">
 
-### 首页 — AI 智能提示词工作台
+**首页 — AI 智能提示词工作台**
+
+![TipAi 首页](assets/screenshots/home.png)
+
+*输入模糊需求 → AI 意图分析 → 多轮澄清 → 框架匹配 → 精准提示词*
+
+**多模态提示词引擎**
+
+![TipAi 多模态](assets/screenshots/multimodal.png)
+
+*文生图 / 图生文 / 视频分镜，上传参考图片或文件，AI 自动分析风格并生成专业提示词*
+
 </div>
-
-> *[截图路径: `assets/screenshots/home.png`]*  
-> 输入模糊需求 → AI 自动分析意图复杂度 → 智能多轮澄清 → 匹配最优框架 → 输出精准提示词
-
-<div align="center">
-
-### 多模态提示词引擎
-</div>
-
-> *[截图路径: `assets/screenshots/multimodal.png`]*  
-> 支持文生图 / 图生文 / 视频分镜三种模式，上传参考图片或小说文件，AI 自动分析风格并生成专业提示词 + 表情控制指令
 
 ---
 
@@ -47,11 +47,11 @@
 
 ### 为什么选择 TipAi？
 
-- 🔒 **完全本地** — 数据永不离开你的电脑，AES-256-GCM 加密存储
-- 🚀 **Rust 原生引擎** — 数据库 + AI 调用 + 加密全部下沉到 Rust，零序列化开销
-- 🎨 **30+ 提示词框架** — 从 RTF 到 ReAct，覆盖简单/中等/复杂全场景
-- 🎭 **TPEMA 表情引擎** — 文本驱动数字人面部微表情，标点→FACS AU 映射
-- 🌐 **多模型支持** — DeepSeek / Kimi / OpenAI / Claude / Ollama / Gemini
+- 🔒 **完全本地** — 数据永不离开你的电脑，AES-256-GCM 加密
+- 🚀 **Rust 原生引擎** — 数据库 + AI 调用 + 加密下沉到 Rust，零序列化开销
+- 🎨 **30+ 提示词框架** — RTF · CO-STAR · Chain-of-Thought · ReAct · LangGPT 等，覆盖全场景
+- 🎭 **TPEMA 表情引擎** — 文本标点→FACS AU 映射，30fps 时间轴，4 种导出格式
+- 🌐 **多模型支持** — DeepSeek / OpenAI / Claude / Ollama / Gemini
 - 🛜 **零端口架构** — 无 HTTP 服务器，Electron 进程内 tRPC + Hono，无网络攻击面
 
 ---
