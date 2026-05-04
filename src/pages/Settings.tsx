@@ -139,6 +139,8 @@ export default function SettingsPage() {
       }
     }
     reader.readAsText(file)
+    // Reset file input value so user can re-select the same file
+    e.target.value = ""
   }
 
   const handleKeyChange = useCallback((modelKey: string, value: string) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import {
   Star,
   Loader2,
@@ -53,13 +54,24 @@ export default function FeedbackPage() {
     projectId: selectedProjectId ?? undefined,
     limit: 20,
   });
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   const submitMutation = trpc.feedback.submit.useMutation({
     onSuccess: () => {
       setSubmitted(true);
       statsQuery.refetch();
       historyQuery.refetch();
+      toast.success("反馈提交成功");
+      // Auto-reset after 3 seconds
+      clearTimeout(submitTimerRef.current);
+      submitTimerRef.current = setTimeout(() => setSubmitted(false), 3000);
     },
   });
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(submitTimerRef.current);
+  }, []);
 
   const handleSubmit = () => {
     if (!isAuthenticated || !selectedProjectId) return;
@@ -195,7 +207,7 @@ export default function FeedbackPage() {
 
           <Button
             onClick={handleSubmit}
-            disabled={submitMutation.isPending || submitted}
+            disabled={submitMutation.isPending || submitted || !selectedProjectId}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {submitMutation.isPending ? (
@@ -205,7 +217,7 @@ export default function FeedbackPage() {
             ) : (
               <MessageSquare className="w-4 h-4 mr-2" />
             )}
-            {submitted ? "已提交" : "提交反馈"}
+            {submitted ? "再次提交" : "提交反馈"}
           </Button>
         </CardContent>
       </Card>
