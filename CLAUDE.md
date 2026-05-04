@@ -5,48 +5,47 @@
 ## Stack
 - **Runtime**: Node.js 22+, Electron 41+
 - **Frontend**: React 19, TypeScript 5.9, Vite 7, Tailwind 3, Radix UI (shadcn/ui)
-- **Backend**: Hono 4 web framework, tRPC 11
-- **Database**: Rust Native Addon (rusqlite) 主驱动, better-sqlite3 回退, 纯 TypeScript 类型定义 (原 Drizzle Schema)
-- **Architecture**: 本地优先桌面应用，无需登录/网络认证
-- **Testing**: Vitest 4
 - **Desktop**: Electron Builder (dmg/nsis/portable)
+- **Backend**: tRPC 11 (in-process, no HTTP server), Hono 4 web framework
+- **Database**: Rust Native Addon (rusqlite) as primary driver, better-sqlite3 as fallback, pure TypeScript type definitions
+- **Architecture**: Local-first desktop app, no login/network auth, IPC-based API calls
+- **Testing**: Vitest 4
 - **Package manager**: npm
 
 ## Project structure
 
 ```
 TipAi/
-├── src/                    # React frontend
+├── src/                    # React frontend (Electron renderer process)
 │   ├── components/
 │   │   ├── ui/             # shadcn/ui components (Radix primitives)
-│   │   ├── clarify/        # F1: 需求澄清组件
-│   │   ├── optimizer/      # F2: 提示词优化器
-│   │   ├── export/         # F3: 批量导出
-│   │   ├── generate/       # 提示词生成
-│   │   ├── home/           # 首页
-│   │   └── template-market/# 模板市场
-│   ├── pages/              # 路由页面（React Router 7）
-│   ├── hooks/              # 自定义 hooks
-│   ├── lib/                # 工具函数
+│   │   ├── clarify/        # F1: requirement clarification
+│   │   ├── optimizer/      # F2: prompt optimizer
+│   │   ├── export/         # F3: batch export
+│   │   ├── generate/       # prompt generation
+│   │   ├── home/           # home page
+│   │   └── template-market/# template marketplace
+│   ├── pages/              # route pages (React Router 7)
+│   ├── hooks/              # custom hooks
+│   ├── lib/                # utility functions
 │   ├── providers/          # React context providers
-│   └── types/              # TypeScript 类型
-├── api/                    # Hono API server
-│   ├── router.ts           # 主路由 + tRPC
-│   ├── boot.ts             # 服务器入口
-│   ├── context.ts          # 请求上下文
-│   ├── middleware.ts       # 中间件
-│   └── services/           # 业务逻辑
+│   └── types/              # TypeScript types
+├── api/                    # tRPC API (in-process, no HTTP server)
+│   ├── router.ts           # main router + tRPC
+│   ├── boot.ts             # app entry point
+│   ├── context.ts          # request context (always local user)
+│   └── services/           # business logic
 ├── db/
-│   ├── schema.ts           # 纯 TypeScript 类型定义（原 Drizzle Schema）
-│   ├── migrate.ts          # 迁移工具
-│   ├── seed.ts             # 种子数据
-│   └── migrations/         # SQL 迁移文件
+│   ├── schema.ts           # pure TypeScript type definitions
+│   ├── seed.ts             # seed data
+│   └── migrations/         # SQL migration files
 ├── electron/
-│   ├── main.js             # Electron 主进程
-│   ├── preload.js          # 预加载脚本
-│   └── updater.js          # 自动更新
-├── contracts/              # 共享类型定义
-├── public/                 # 静态资源
+│   ├── main.cjs            # Electron main process
+│   ├── preload.cjs         # preload script
+│   └── updater.cjs         # auto update
+├── contracts/              # shared type definitions
+├── native/                 # Rust native addon (rusqlite)
+├── public/                 # static assets
 └── package.json
 ```
 
@@ -54,74 +53,66 @@ TipAi/
 
 ```
 [Electron Main Process]
-    └── [BrowserWindow → React SPA (Vite)]
-            └── [tRPC Client → Hono API Server]
-                    ├── [Rust Native Addon (rusqlite)] → [SQLite]
-                    │       (主路径: NAPI-RS, 零序列化, 高性能)
-                    └── [better-sqlite3] → [SQLite]
-                            (回退: JS polyfill, 原生 addon 不可用时)
-                            └── [External AI APIs: OpenAI / Anthropic / DeepSeek / Gemini / Ollama]
+    ├── [Hono app (in-process)] → [tRPC router]
+    │       └── [IPC handler] ←→ [BrowserWindow → React SPA (Vite)]
+    ├── [Rust Native Addon (rusqlite)] → [SQLite]
+    │       (primary: NAPI-RS, zero serialization, high perf)
+    └── [better-sqlite3] → [SQLite]
+            (fallback: JS polyfill when native addon unavailable)
+            └── [External AI APIs: OpenAI / Anthropic / DeepSeek / Gemini / Ollama]
 ```
 
-- React SPA 运行在 Electron BrowserWindow 中
-- tRPC 提供端到端类型安全的 API 通信
-- API Server 内嵌在 Electron 进程中（非独立部署）
-- **Rust Native Addon (rusqlite)** 为数据库操作主路径，NAPI-RS 零序列化直传
-- **better-sqlite3** 作为回退（Rust 原生模块不可用时自动降级），通过 `native-polyfill.ts` 提供完整功能
-- Electron updater 通过 GitHub Releases 自动更新
-- 本地优先设计：无需注册/登录，无需网络认证，所有数据存储在用户本地
+- React SPA runs in Electron BrowserWindow
+- tRPC provides end-to-end type-safe API communication
+- Hono app runs in-process in Electron (no HTTP port for API)
+- **Rust Native Addon (rusqlite)** is the primary database path, NAPI-RS zero serialization
+- **better-sqlite3** is the fallback (auto-downgrade when Rust native module unavailable), via `native-polyfill.ts`
+- Electron updater via GitHub Releases auto update
+- Local-first design: no registration/login, no network auth, all data stored locally
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `npm run dev` | Vite 前端开发（HMR） |
-| `npm run dev:electron` | Electron 桌面开发 |
-| `npm run build` | 生产构建（Vite + API esbuild） |
-| `npm run test` | Vitest 测试 |
-| `npm run check` | TypeScript 类型检查 |
+| `npm run dev` | Vite frontend dev (HMR) |
+| `npm run dev:electron` | Electron desktop dev |
+| `npm run build` | Production build (Vite + API esbuild) |
+| `npm run test` | Vitest tests |
+| `npm run check` | TypeScript type check |
 | `npm run lint` | ESLint |
-| `npm run format` | Prettier 格式化 |
-| `npm run db:push` | Drizzle schema → SQLite |
-| `npm run db:generate` | 生成迁移文件 |
-| `npm run db:migrate` | 执行待处理迁移 |
-| `npm run db:status` | 查看迁移状态 |
-| `npm run db:backup` | 备份数据库 |
-| `npm run db:export-json` | 导出为 JSON |
-| `npm run db:export-sql` | 导出为 SQL |
-| `npm run db:seed` | 种子数据 |
-| `npm run native:build` | 构建 Rust Native Addon (release) |
-| `npm run native:build:debug` | 构建 Rust Native Addon (debug) |
-| `npm run preview` | Vite 构建预览 |
-| `npm run start` | 生产模式启动后端 |
+| `npm run native:build` | Build Rust Native Addon (release) |
+| `npm run native:build:debug` | Build Rust Native Addon (debug) |
+| `npm run db:seed` | Seed data |
+| `npm run db:backup` | Backup database |
+| `npm run db:export-json` | Export as JSON |
+| `npm run db:export-sql` | Export as SQL |
 
 ## Key patterns
 
-- **shadcn/ui**: 组件在 `src/components/ui/`，基于 Radix + Tailwind + class-variance-authority
-- **tRPC**: 路由定义在 `api/*-router.ts`，通过 `api/router.ts` 合并
-- **Drizzle**: Schema 在 `db/schema.ts`，使用 `drizzle-orm/better-sqlite3` 驱动
-- **Auth**: jose (JWT) + bcryptjs，通过 `api/auth-router.ts` + `api/middleware.ts`（本地桌面模式，`isAuthenticated: true` 固定，无需实际登录）
-- **Forms**: react-hook-form + zod 校验
+- **shadcn/ui**: components in `src/components/ui/`, based on Radix + Tailwind + class-variance-authority
+- **tRPC**: routes defined in `api/*-router.ts`, merged via `api/router.ts`
+- **Auth**: local-only desktop app, context always has a user (no login/auth)
+- **Forms**: react-hook-form + zod validation
 - **Styling**: Tailwind 3 + tailwind-merge + clsx
 
 ## Anti-patterns
 
-- 不要在渲染进程中直接访问 Node.js API（通过 preload 桥接）
-- 不要手动编写 SQL（使用 Drizzle ORM）
-- 不要绕过 tRPC 直接 fetch API
-- 不要在组件中直接调用外部 AI API（通过后端服务）
+- Do not access Node.js API directly in renderer process (bridge via preload)
+- Do not bypass tRPC to fetch API directly
+- Do not call external AI APIs directly in components (via backend services)
+- Do not set up HTTP servers or network auth
 
 ## Tests
 
-- 测试框架: Vitest 4
-- 配置文件: `vitest.config.ts`
-- 测试文件应与源文件同目录，以 `.test.ts` 或 `.test.tsx` 结尾
+- Test framework: Vitest 4
+- Config: `vitest.config.ts`
+- Test files should be co-located with source files, suffixed `.test.ts` or `.test.tsx`
 
 ## Installed Plugins (Official Marketplace)
 
 | Plugin | Type | Purpose |
 |--------|------|---------|
-| **typescript-lsp** (v5.1.3) | LSP | TypeScript/TSX 代码智能：跳转定义、查找引用、错误检查 |
-| **frontend-design** | Skill | 高质量 UI/UX 设计，避免通用 AI 风格，配合 Apple 设计系统 |
-| **code-simplifier** | Agent | 代码简化与重构，保持功能不变提升可维护性 |
-| **security-guidance** | Hook | 编辑文件时自动警告命令注入、XSS、不安全代码模式 |
+| **typescript-lsp** (v5.1.3) | LSP | TypeScript/TSX code intelligence |
+| **frontend-design** | Skill | High-quality UI/UX design |
+| **code-simplifier** | Agent | Code simplification and refactoring |
+| **security-guidance** | Hook | Auto-warn about command injection, XSS, insecure patterns |
