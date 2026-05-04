@@ -62,7 +62,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
       - run: npm ci
+      - run: npm run native:build
       - run: npm run build
       - name: Smoke test
         run: |
@@ -87,41 +90,10 @@ jobs:
           prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  # ─── macOS 发布 ───
-  release-macos:
-    name: macOS Release
-    needs: [ci, changelog]
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npm run build
-      - name: Smoke test
-        run: |
-          node dist/boot.js &
-          for i in $(seq 1 15); do
-            sleep 2
-            curl -sf http://localhost:3000/api/health && echo "✅ Backend OK" && break
-          done
-          kill %1 2>/dev/null || true
-      - run: npm run build:desktop:mac -- --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TipAi-macOS
-          path: release/*.dmg
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.dmg
-          body: ${{ needs.changelog.outputs.body }}
-          prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   # ─── 完成报告 ───
   report:
     name: Release Report
-    needs: [release-windows, release-macos]
+    needs: [release-windows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -132,4 +104,3 @@ jobs:
           echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Windows | ${{ needs.release-windows.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | ${{ needs.release-macos.result }} |" >> $GITHUB_STEP_SUMMARY
