@@ -13,6 +13,11 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.VITE_DEV_PORT || "5173", 10),
   },
+  define: {
+    "process.env.USER_DATA_PATH": JSON.stringify(
+      process.env.USER_DATA_PATH || path.resolve(__dirname, "TipAi-data")
+    ),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
