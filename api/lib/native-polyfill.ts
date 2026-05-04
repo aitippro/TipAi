@@ -1120,7 +1120,7 @@ export const nativePolyfill = {
     `);
 
     const applied = new Set(
-      d.prepare("SELECT filename FROM __migrations").all().map((r: any) => r.filename)
+      d.prepare("SELECT filename FROM __migrations").all().map((r: Record<string, unknown>) => r.filename as string)
     );
 
     const pending = fs.readdirSync(migrationsDir)
