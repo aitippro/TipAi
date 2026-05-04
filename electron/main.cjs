@@ -199,10 +199,10 @@ async function startBackend() {
   // Production: load Hono app in-process for IPC-based API calls (no HTTP server)
   process.env.TIPAI_ELECTRON = '1';
 
-  // Ensure database tables exist before starting backend
+  // Production: ensure database tables exist before starting backend
   const migrationsDir = isDev
     ? path.join(__dirname, '../db/migrations')
-    : path.join(path.dirname(app.getPath('exe')), 'resources', 'db', 'migrations');
+    : path.join(process.resourcesPath, 'db', 'migrations');
   runMigrations(dbPath, migrationsDir);
 
   const bootPath = path.join(__dirname, '../dist/boot.js');

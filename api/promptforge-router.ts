@@ -148,7 +148,7 @@ export const promptForgeRouter = createRouter({
   /** AI 分析用户意图复杂度 — 用于自动判断单步骤/分步骤 */
   analyze: authedQuery
     .input(z.object({ intent: z.string().min(1).max(3000) }))
-    .query(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       const { model, apiKey } = await resolvePromptForgeModelApiKey(ctx.user.id);
       const analysis = await analyzeIntent(input.intent, model, apiKey);
       return {
