@@ -5,10 +5,7 @@
  *  - 引用生成：从提示词/论文内容提取引用
  *  - 实验复现报告：记录提示词版本和结果，生成可复现文档
  *
- * 引用生成分为两条路径：
- *  - generateCitationsWithAI(model, apiKey): 真正调用 LLM 生成学术引用（推荐）
- *  - generateCitations(text, format): 基于关键词提取 + 模板填充的规则引擎 fallback
- *    返回的是格式正确但内容虚构的引用，仅用于无 API Key 时的格式演示。
+ * 引用生成通过 LLM 实时生成真实学术引用。
  */
 
 import { callAI } from "../../lib/ai-service-v3/client";

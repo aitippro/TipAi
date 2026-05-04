@@ -6,10 +6,7 @@
  *  - 图生文 (image-to-text): 生成图像分析、描述、OCR 等提示词
  *  - 视频分镜 (video-storyboard): 生成视频分镜脚本和镜头描述
  *
- * 分为两条路径：
- *  - generateMultimodalPromptWithAI(model, apiKey): 真正调用 LLM 生成专业多模态提示词（推荐）
- *  - generateMultimodalPrompt(request, mode): 基于规则模板的 fallback，不做真实 LLM 调用
- *    返回预设的 prompt 模板，仅用于无 API Key 时的快速演示。
+ * 通过 LLM 实时生成专业多模态提示词。
  */
 
 import { callAI, callAIVision } from "../../lib/ai-service-v3/client";
