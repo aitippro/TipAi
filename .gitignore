@@ -10,6 +10,13 @@ CLAUDE.md
 task_plan.md
 findings.md
 progress.md
+# 内部规划文档
+docs/ARCHITECTURE_*.md
+docs/DELEGATION_*.md
+docs/HANDOFF_*.md
+docs/ITERATION_*.md
+docs/QA_TEST_*.md
+docs/TASKS_*.md
 # 调研报告（禁止推送云端）
 RESEARCH_*.md
 research/
