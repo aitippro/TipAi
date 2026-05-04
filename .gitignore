@@ -113,3 +113,4 @@ scripts/qa-ai-integration-extreme.ts
 test-*.log
 test-*.cjs
 test-*.mjs
+docs/tasks/

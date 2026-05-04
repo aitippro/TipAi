@@ -25,12 +25,14 @@ export interface MultimodalPromptResult {
   usingAI: boolean;
 }
 
+// Extended to support expression controls (backward-compatible, optional)
 export interface GeneratedPrompt {
   title: string;
   prompt: string;
   negativePrompt?: string;
   parameters?: Record<string, string | number>;
   purpose: string;
+  expressionControls?: import("./types/expression").ExpressionControl;
 }
 
 // ============================================================================
@@ -38,7 +40,7 @@ export interface GeneratedPrompt {
 // ============================================================================
 
 function buildTextToImagePrompt(request: string): string {
-  return `你是一位专业的 AI 图像生成提示词工程师。请根据用户的描述，生成 3 个不同风格的优化提示词。
+  return `你是一位专业的 AI 图像生成提示词工程师。请根据用户的描述，生成 4 个不同风格的优化提示词。
 
 用户请求：${request}
 
@@ -63,6 +65,23 @@ function buildTextToImagePrompt(request: string): string {
     "prompt": "精简但有效的英文提示词",
     "parameters": { "quality": "standard", "style": "natural" },
     "purpose": "快速验证概念，减少 token 消耗"
+  },
+  {
+    "title": "人像表情控制版 (Portrait w/ FACS)",
+    "prompt": "A highly detailed portrait with precise facial expression control using FACS Action Units. Subject: [${request}]. Facial expression: AU1+2 inner brow raise for gentle surprise, AU12 lip corner pull for subtle smile, AU7 eyelid tightener for focused gaze. Lighting: soft natural lighting, Rembrandt lighting style. Camera: 85mm f/1.4 portrait lens, shallow depth of field, sharp focus on eyes. Background: softly blurred bokeh. Quality: 8k, highly detailed skin texture, realistic pores, subtle freckles. Style: hyper-realistic photography, cinematic color grading",
+    "negativePrompt": "stiff expression, dead eyes, frozen face, bad anatomy, distorted features, unnatural skin, plastic look, over-smoothed, doll-like eyes",
+    "parameters": { "steps": 40, "cfg": 7, "sampler": "DPM++ 2M Karras", "size": "1024x1536" },
+    "purpose": "适合可控人像生成，精确控制微表情和面部细节",
+    "expressionControls": {
+      "punctuationMap": [
+        { "punctuation": "，", "auCodes": ["AU1+2"], "intensity": 0.3, "gazeState": "FOCUS", "duration": 200, "easingCurve": "linear" }
+      ],
+      "sentimentWeight": 0.8,
+      "noiseSeed": "portrait_001",
+      "noiseAmplitude": 0.05,
+      "gazeTransitions": [],
+      "exportFormats": ["json", "prompt-text"]
+    }
   }
 ]`;
 }
@@ -117,10 +136,27 @@ function buildImageToTextVisionPrompt(request: string): string {
 ]`;
 }
 
-function buildVideoStoryboardPrompt(request: string): string {
-  return `你是一位资深视频分镜师。请根据用户的视频创意，生成一份专业的分镜脚本。
+function buildVideoStoryboardPrompt(request: string, enableExpression?: boolean): string {
+  const isTalkingScene = /说话|对话|口播|播报|演讲|主播|数字人|avatar|talking|speech|presenter|host/i.test(request);
+  const showExpression = enableExpression ?? isTalkingScene;
+
+  return `你是一位资深视频分镜师兼 AI 表情控制专家。请根据用户的视频创意，生成一份专业的分镜脚本。
 
 用户请求：${request}
+
+${showExpression ? `重要：这个视频包含人物说话/对话场景。请在分镜脚本中包含表情控制指令。
+
+表情控制要求：
+- 根据文本中的标点符号（。？！，；…）自动映射到对应的面部动作单元（AU）
+- 问号 → 眉毛上抬(AU1+2) + 睁大眼(AU5) + 侧头
+- 感叹号 → 咧嘴(AU20) + 睁大眼(AU5) + 后仰回弹
+- 逗号 → 轻微挑眉(AU1+2) + 点头
+- 句号 → 表情回落 + 眨眼
+- 省略号 → 眼神漂移 + 犹豫表情
+- 提供 sentiment 情绪权重分析
+- 眼神状态（FOCUS/SCAN/RECALL/AVOID/EMPHASIS）跟随标点变化
+
+请在 variants[0] 的 expressionControls 字段中输出完整的标点-AU 映射表。` : ""}
 
 请按以下 JSON 格式严格输出（不要有任何其他内容）：
 {
@@ -131,9 +167,28 @@ function buildVideoStoryboardPrompt(request: string): string {
   ],
   "variants": [
     {
-      "title": "完整分镜脚本",
-      "prompt": "将所有场景组合成完整脚本",
-      "purpose": "完整的视频分镜，可直接用于拍摄或 AI 视频生成"
+      "title": "完整分镜脚本${showExpression ? '（含表情控制）' : ''}",
+      "prompt": "将所有场景组合成完整脚本${showExpression ? '，包含人物表情、语气、眼神控制' : ''}",
+      "purpose": "完整的视频分镜，${showExpression ? '含 AU 控制指令' : '可直接用于拍摄或 AI 视频生成'}"${showExpression ? `,
+      "expressionControls": {
+        "punctuationMap": [
+          {"punctuation":"，", "auCodes":["AU1+2"], "intensity":0.4, "gazeState":"FOCUS", "duration":200, "easingCurve":"linear"},
+          {"punctuation":"。", "auCodes":["AU1+2"], "intensity":0.2, "gazeState":"FOCUS", "duration":300, "easingCurve":"easeInOut"},
+          {"punctuation":"？", "auCodes":["AU1+2","AU5"], "intensity":0.8, "gazeState":"EMPHASIS", "duration":500, "easingCurve":"backOut"},
+          {"punctuation":"！", "auCodes":["AU20","AU5","AU12"], "intensity":0.9, "gazeState":"EMPHASIS", "duration":600, "easingCurve":"elasticOut"},
+          {"punctuation":"…", "auCodes":["AU1+2"], "intensity":0.5, "gazeState":"AVOID", "duration":800, "easingCurve":"sineInOut"},
+          {"punctuation":"；", "auCodes":["AU1+2","AU4"], "intensity":0.6, "gazeState":"SCAN", "duration":400, "easingCurve":"easeInOut"}
+        ],
+        "sentimentWeight": 1.0,
+        "noiseSeed": "speaker_001",
+        "noiseAmplitude": 0.05,
+        "gazeTransitions": [
+          {"trigger":"！","targetState":"EMPHASIS","transitionType":"snap"},
+          {"trigger":"？","targetState":"FOCUS","transitionType":"snap"},
+          {"trigger":"…","targetState":"AVOID","transitionType":"smooth"}
+        ],
+        "exportFormats": ["json", "csv", "facs-xml", "prompt-text"]
+      }` : ""}
     },
     {
       "title": "镜头列表 (Shot List)",
@@ -144,7 +199,7 @@ function buildVideoStoryboardPrompt(request: string): string {
       "title": "AI 视频生成提示词",
       "prompt": "适配 AI 视频工具的提示词",
       "parameters": { "motion": "medium", "camera": "smooth" },
-      "purpose": "适配 Runway、Pika 等 AI 视频生成工具"
+      "purpose": "适配 Runway、Pika、可灵等 AI 视频生成工具"
     }
   ]
 }`;
@@ -179,6 +234,7 @@ export async function generateMultimodalPromptWithAI(
   model: string,
   apiKey: string,
   imageData?: string,
+  enableExpression?: boolean,
 ): Promise<MultimodalPromptResult> {
   let systemPrompt = "你是一位专业的多模态提示词工程师。";
   let userPrompt = "";
@@ -202,7 +258,7 @@ export async function generateMultimodalPromptWithAI(
       }
       break;
     case "video-storyboard":
-      userPrompt = buildVideoStoryboardPrompt(request);
+      userPrompt = buildVideoStoryboardPrompt(request, enableExpression);
       recommendedModel = "Runway Gen-3 / Pika Labs / Sora";
       systemPrompt += "你擅长为 AI 视频生成工具撰写专业的分镜脚本和镜头描述。";
       break;

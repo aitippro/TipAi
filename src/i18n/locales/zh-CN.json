@@ -58,6 +58,8 @@
     "sceneOfficeDesc": "会议纪要 / PPT / 邮件",
     "sceneResearch": "信息检索",
     "sceneResearchDesc": "论文 / 竞品 / 行业分析",
+    "sceneVideoExpression": "视频表情控制",
+    "sceneVideoExpressionDesc": "为口播/对话视频生成带 AU 表情控制的提示词",
     "clarifyTitle": "AI 正在了解你的需求",
     "clarifyBack": "返回修改需求",
     "resultsTitle": "需求澄清完成，正在生成提示词",

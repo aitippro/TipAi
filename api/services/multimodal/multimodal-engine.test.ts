@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { callAI } from "../../lib/ai-service-v3/client";
 import {
   generateMultimodalPromptWithAI,
   getMultimodalModes,
@@ -76,6 +77,37 @@ describe("multimodal-engine", () => {
 
       expect(result.mode).toBe("image-to-text");
       expect(result.usingAI).toBe(true);
+    });
+
+    it("should preserve expressionControls in parsed JSON (T5)", async () => {
+      const jsonWithExpr = JSON.stringify({
+        variants: [{
+          title: "Storyboard",
+          prompt: "Scene 1",
+          purpose: "test",
+          expressionControls: {
+            punctuationMap: [{ punctuation: "！", auCodes: ["AU20"], intensity: 0.9, gazeState: "EMPHASIS", duration: 600, easingCurve: "elasticOut" }],
+            sentimentWeight: 1.0,
+            noiseSeed: "speaker_001",
+            noiseAmplitude: 0.05,
+            gazeTransitions: [],
+            exportFormats: ["json", "csv"],
+          },
+        }],
+      });
+
+      vi.mocked(callAI).mockResolvedValueOnce(jsonWithExpr);
+
+      const result = await generateMultimodalPromptWithAI(
+        "主播介绍产品",
+        "video-storyboard",
+        "gpt-4",
+        "test-key",
+      );
+
+      expect(result.generatedPrompts[0].expressionControls).toBeDefined();
+      expect(result.generatedPrompts[0].expressionControls?.punctuationMap[0].punctuation).toBe("！");
+      expect(result.generatedPrompts[0].expressionControls?.sentimentWeight).toBe(1.0);
     });
   });
 

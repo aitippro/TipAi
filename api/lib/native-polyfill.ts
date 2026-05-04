@@ -15,6 +15,7 @@ let db: any = null;
 
 function getDb() {
   if (db) return db;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Database = require("better-sqlite3");
 
   const dbUrl = process.env.DATABASE_URL || "";

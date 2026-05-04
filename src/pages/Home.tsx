@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
-import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search, Compass } from "lucide-react"
+import { Wand2, Loader2, ArrowRight, Sparkles, MessageSquare, CheckCircle2, FileText, Mail, Palette, Search, Compass, Film } from "lucide-react"
 
 import GenerateModal from "@/components/GenerateModal"
 import { useAuth } from "@/hooks/useAuth"
@@ -33,6 +33,7 @@ const SCENES = [
   { id: "creative", icon: Palette, labelKey: "home.sceneCreative", descKey: "home.sceneCreativeDesc", color: "from-purple-500/20 to-pink-500/20" },
   { id: "office", icon: Mail, labelKey: "home.sceneOffice", descKey: "home.sceneOfficeDesc", color: "from-orange-500/20 to-yellow-500/20" },
   { id: "research", icon: Search, labelKey: "home.sceneResearch", descKey: "home.sceneResearchDesc", color: "from-green-500/20 to-teal-500/20" },
+  { id: "videoExpression", icon: Film, labelKey: "home.sceneVideoExpression", descKey: "home.sceneVideoExpressionDesc", color: "from-rose-500/20 to-amber-500/20", href: "/multimodal?mode=video-storyboard&expression=true" },
 ]
 
 // ── Progress Indicator ───────────────────────────────
@@ -318,7 +319,13 @@ export default function Home() {
               {SCENES.map((scene) => (
                 <TiltCard key={scene.id} maxTilt={8} scale={1.03}>
                   <button
-                    onClick={() => setIntent(t(scene.descKey))}
+                    onClick={() => {
+                      if ("href" in scene && scene.href) {
+                        navigate(scene.href);
+                      } else {
+                        setIntent(t(scene.descKey));
+                      }
+                    }}
                     className={`w-full p-4 rounded-xl bg-gradient-to-br ${scene.color} border border-white/40 backdrop-blur-sm hover:shadow-lg transition-shadow text-left`}
                   >
                     <scene.icon className="w-5 h-5 mb-2 text-slate-600" />

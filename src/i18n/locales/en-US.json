@@ -58,6 +58,8 @@
     "sceneOfficeDesc": "Meeting notes / PPT / Email",
     "sceneResearch": "Research",
     "sceneResearchDesc": "Papers / Competitors / Industry",
+    "sceneVideoExpression": "Video Expression Control",
+    "sceneVideoExpressionDesc": "Generate prompts with AU facial expression control for talking-head videos",
     "clarifyTitle": "AI is understanding your needs",
     "clarifyBack": "Back to edit",
     "resultsTitle": "Clarification done, generating prompt",

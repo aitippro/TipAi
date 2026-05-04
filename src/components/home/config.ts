@@ -26,6 +26,7 @@ export const SLASH_COMMANDS: SlashCommandDefinition[] = [
   { command: "/legal", name: "法律文书", desc: "法律合规提示词", icon: Scale, color: "bg-indigo-500" },
   { command: "/agent", name: "AI Agent", desc: "智能体提示词", icon: Command, color: "bg-cyan-500" },
   { command: "/think", name: "深度推理", desc: "复杂分析提示词", icon: Sparkles, color: "bg-purple-500" },
+  { command: "/video-expr", name: "视频表情控制", desc: "带 AU 控制的视频分镜", icon: Video, color: "bg-amber-600" },
 ]
 
 export const QUICK_EXAMPLES = [

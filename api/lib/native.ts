@@ -4,6 +4,7 @@ import { nativePolyfill } from "./native-polyfill";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let native: any = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   native = require(path.join(process.cwd(), "native"));
 } catch (err) {
   // In test environment, provide an empty object so tests can mock native functions

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useSearchParams } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,18 +39,31 @@ const MODE_LABELS = {
 } as const;
 
 export default function MultimodalPage() {
+  const [searchParams] = useSearchParams();
   const [request, setRequest] = useState("");
-  const [mode, setMode] = useState<"text-to-image" | "image-to-text" | "video-storyboard">("text-to-image");
+  const [mode, setMode] = useState<"text-to-image" | "image-to-text" | "video-storyboard">(() => {
+    const urlMode = new URLSearchParams(window.location.search).get("mode");
+    return (urlMode && ["text-to-image", "image-to-text", "video-storyboard"].includes(urlMode))
+      ? urlMode as "text-to-image" | "image-to-text" | "video-storyboard"
+      : "text-to-image";
+  });
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const modesQuery = trpc.multimodal.modes.useQuery();
   const generateMutation = trpc.multimodal.generate.useMutation();
 
   const handleGenerate = () => {
     if (!request.trim()) return;
-    generateMutation.mutate({ request: request.trim(), mode, imageData: imageData || undefined });
+    const expression = searchParams.get("expression") === "true";
+    generateMutation.mutate({
+      request: request.trim(),
+      mode,
+      imageData: imageData || undefined,
+      expression,
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -18,6 +18,7 @@ export const multimodalRouter = createRouter({
         request: z.string().min(1).max(2000),
         mode: z.enum(["text-to-image", "image-to-text", "video-storyboard"]),
         imageData: z.string().optional(),
+        expression: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -33,7 +34,7 @@ export const multimodalRouter = createRouter({
       }
 
       const { model, apiKey } = models[0];
-      return generateMultimodalPromptWithAI(input.request, input.mode, model, apiKey, input.imageData);
+      return generateMultimodalPromptWithAI(input.request, input.mode, model, apiKey, input.imageData, input.expression);
     }),
 
   /** 获取所有支持的模式 */
