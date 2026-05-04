@@ -12,11 +12,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: (failureCount, error) => {
-        const err = error as { data?: { code?: string } };
-        if (err?.data?.code === "UNAUTHORIZED") return false;
-        return failureCount < 2;
-      },
+      retry: (failureCount) => failureCount < 2,
     },
   },
 });
@@ -56,7 +52,7 @@ const customFetch: typeof globalThis.fetch = async (input, init) => {
 
   // Browser mode
   try {
-    return await globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
+    return await globalThis.fetch(input, init);
   } catch (e) {
     const urlStr = typeof input === 'string' ? input : (input instanceof URL ? input.pathname : (input as Request).url)
     logger.error("tRPC:HTTP", `${method} ${urlStr} 网络错误`, e instanceof Error ? e.message : String(e))

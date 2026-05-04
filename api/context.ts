@@ -3,7 +3,7 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 export type TrpcContext = {
   req: Request;
   resHeaders: Headers;
-  user?: { id: number; name: string; role: string };
+  user: { id: number; name: string; role: string };
 };
 
 /**
