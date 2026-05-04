@@ -26,6 +26,8 @@ export function BottomTabBar() {
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
+              aria-label={tab.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative active:scale-[0.9] transition-transform",
                 isActive ? "text-apple-blue" : "text-muted-foreground"

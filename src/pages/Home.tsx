@@ -268,7 +268,7 @@ export default function Home() {
                     onClick={() => setIntent(ex)}
                     className="text-xs text-slate-400 hover:text-violet-600 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-colors truncate max-w-[280px] text-left"
                   >
-                    {ex.substring(0, 30)}…
+                    {ex.length > 30 ? ex.substring(0, 30) + "..." : ex}
                   </button>
                 ))}
               </div>

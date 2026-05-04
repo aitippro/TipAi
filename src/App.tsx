@@ -60,6 +60,22 @@ export default function App() {
 
   const location = useLocation()
 
+  // Apply dark mode from localStorage
+  useEffect(() => {
+    const applyTheme = () => {
+      const theme = localStorage.getItem("tipai_theme")
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark")
+      } else {
+        document.documentElement.classList.remove("dark")
+      }
+    }
+    applyTheme()
+    // Sync across tabs
+    window.addEventListener("storage", applyTheme)
+    return () => window.removeEventListener("storage", applyTheme)
+  }, [])
+
   // Check API Key status (public query — works even when not logged in)
   const { data: keyStatus, isLoading: keyStatusLoading } =
     trpc.promptForge.apiKeyStatus.useQuery(undefined, {

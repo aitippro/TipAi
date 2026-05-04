@@ -104,12 +104,12 @@ export default function SettingsPage() {
   }
 
   const handleExport = () => {
+    // SECURITY: API keys are intentionally excluded from export
     const data = {
       globalPrompt,
       defaultModel,
       theme,
       cloudSync,
-      keys: Object.fromEntries(MODELS.map((m) => [m.key, keys[m.key] || ""])),
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -139,6 +139,8 @@ export default function SettingsPage() {
       }
     }
     reader.readAsText(file)
+    // Reset file input value so user can re-select the same file
+    e.target.value = ""
   }
 
   const handleKeyChange = useCallback((modelKey: string, value: string) => {

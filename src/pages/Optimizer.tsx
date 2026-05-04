@@ -94,9 +94,14 @@ export default function Optimizer() {
   const [originalPrompt, setOriginalPrompt] = useState("");
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>("static");
   const [selectedStrategy, setSelectedStrategy] = useState<StaticStrategy>("general");
-  const [copied, setCopied] = useState(false);
+  const [copiedDiff, setCopiedDiff] = useState(false);
+  const [copiedAction, setCopiedAction] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(copyTimerRef.current), []);
+  const copyActionTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => {
+    clearTimeout(copyTimerRef.current);
+    clearTimeout(copyActionTimerRef.current);
+  }, []);
   const [showHistory, setShowHistory] = useState(false);
 
   // OPRO config
@@ -153,11 +158,17 @@ export default function Optimizer() {
     }
   };
 
-  const handleCopy = async (text: string) => {
+  const handleCopy = async (text: string, type: "diff" | "action" = "diff") => {
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    clearTimeout(copyTimerRef.current);
-    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    if (type === "diff") {
+      setCopiedDiff(true);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedDiff(false), 2000);
+    } else {
+      setCopiedAction(true);
+      clearTimeout(copyActionTimerRef.current);
+      copyActionTimerRef.current = setTimeout(() => setCopiedAction(false), 2000);
+    }
     toast.success(t("optimizer.toastCopied"));
   };
 
@@ -439,11 +450,12 @@ export default function Optimizer() {
                             handleCopy(
                               (result as { optimizedPrompt?: string; finalPrompt?: string }).optimizedPrompt
                               || (result as { optimizedPrompt?: string; finalPrompt?: string }).finalPrompt
-                              || ""
+                              || "",
+                              "diff"
                             )}
                           className="rounded-lg h-8 px-2"
                         >
-                          {copied ? (
+                          {copiedDiff ? (
                             <Check className="w-4 h-4 text-green-500" />
                           ) : (
                             <Copy className="w-4 h-4" />
@@ -478,10 +490,10 @@ export default function Optimizer() {
                 </Button>
                 <Button
                   onClick={() =>
-                    handleCopy(isOproResult(result) ? result.finalPrompt : (isStaticResult(result) ? result.optimizedPrompt : ""))}
+                    handleCopy(isOproResult(result) ? result.finalPrompt : (isStaticResult(result) ? result.optimizedPrompt : ""), "action")}
                   className="rounded-xl bg-gradient-to-r from-apple-blue to-apple-purple text-white"
                 >
-                  {copied ? (
+                  {copiedAction ? (
                     <>
                       <Check className="w-4 h-4 mr-2" />
                       {t("common.copied")}

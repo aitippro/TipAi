@@ -97,7 +97,10 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    // Only allow http: and https: protocols for security
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+    }
     return { action: 'deny' };
   });
 
@@ -408,7 +411,12 @@ app.on('before-quit', () => {
 });
 app.on('window-all-closed', () => { app.quit(); });
 app.on('web-contents-created', (_e, contents) => {
-  contents.on('new-window', (e, url) => { e.preventDefault(); shell.openExternal(url); });
+  contents.on('new-window', (e, url) => {
+    e.preventDefault();
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+    }
+  });
 });
 process.on('uncaughtException', (err) => {
   logError('Uncaught', err);

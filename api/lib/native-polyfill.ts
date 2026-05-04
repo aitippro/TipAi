@@ -155,6 +155,8 @@ function userFindByUsername(username: string) {
 
 function userUpsert(data: Record<string, unknown>) {
   const now = nowUnix();
+  // Accept camelCase unionId with snake_case fallback
+  const unionId = String(data.unionId || data.union_id || "");
   getDb()
     .prepare(
       `INSERT INTO users (unionId, username, password, name, email, avatar, role, createdAt, updatedAt, lastSignInAt)
@@ -170,7 +172,7 @@ function userUpsert(data: Record<string, unknown>) {
          lastSignInAt = excluded.lastSignInAt`,
     )
     .run(
-      data.union_id,
+      unionId,
       data.username ?? null,
       data.password ?? null,
       data.name ?? null,
@@ -181,7 +183,7 @@ function userUpsert(data: Record<string, unknown>) {
       now,
       now,
     );
-  return userFindByUnionId(String(data.union_id));
+  return userFindByUnionId(unionId);
 }
 
 // ============================================================================
@@ -191,8 +193,8 @@ function userUpsert(data: Record<string, unknown>) {
 function projectList(userId: number) {
   return getDb()
     .prepare(
-      `SELECT id, userId, title, description, domain, status, intent,
-              clarificationStatus, turnCount,
+      `SELECT id, userId as user_id, title, description, domain, status, intent,
+              clarificationStatus as clarification_status, turnCount as turn_count,
               datetime(createdAt, 'unixepoch') as created_at,
               datetime(updatedAt, 'unixepoch') as updated_at
        FROM projects WHERE userId = ?
@@ -233,8 +235,8 @@ function projectDelete(id: number, userId: number) {
 function projectGetById(id: number, userId: number) {
   const row = getDb()
     .prepare(
-      `SELECT id, userId, title, description, domain, status, intent,
-              clarificationStatus, turnCount,
+      `SELECT id, userId as user_id, title, description, domain, status, intent,
+              clarificationStatus as clarification_status, turnCount as turn_count,
               datetime(createdAt, 'unixepoch') as created_at,
               datetime(updatedAt, 'unixepoch') as updated_at
        FROM projects WHERE id = ? AND userId = ?`,
@@ -859,14 +861,14 @@ async function aiCall(req: Record<string, unknown>): Promise<Record<string, unkn
 
 async function aiCallSelfConsistency(req: Record<string, unknown>, sampleCount?: number): Promise<Record<string, unknown>> {
   const count = Math.max(3, Math.min(10, sampleCount ?? 3));
-  const results: Array<Record<string, unknown>> = [];
+  const calls = Array.from({ length: count }, () => aiCall(req));
+  const results = await Promise.all(calls);
 
-  for (let i = 0; i < count; i++) {
-    results.push(await aiCall(req));
-  }
-
-  const successful = results.find((r) => !r.error);
-  return successful || results[results.length - 1];
+  return {
+    results,
+    count: results.length,
+    successfulCount: results.filter((r) => !r.error).length,
+  };
 }
 
 // ============================================================================
@@ -951,15 +953,56 @@ function settingsGet(userId: number): Record<string, unknown> | null {
   if (!row) return null;
 
   return {
-    userId: row.userId,
-    defaultModel: row.defaultModel ?? "kimi",
-    defaultFramework: row.defaultFramework ?? "auto",
-    defaultLanguage: row.defaultLanguage ?? "zh",
+    user_id: row.userId,
+    default_model: row.defaultModel ?? "kimi",
+    default_framework: row.defaultFramework ?? "auto",
+    default_language: row.defaultLanguage ?? "zh",
     hasKimiKey: !!row.kimiApiKey,
     hasOpenaiKey: !!row.openaiApiKey,
     hasClaudeKey: !!row.claudeApiKey,
     hasDeepseekKey: !!row.deepseekApiKey,
   };
+}
+
+function getEncryptionKey(): string {
+  return process.env.APP_SECRET || process.env.API_KEY_SECRET || "";
+}
+
+/** Encrypt an API key value if encryption key is available */
+function maybeEncrypt(value: string): string {
+  const key = getEncryptionKey();
+  if (!key) return value;
+  return encrypt(value, key);
+}
+
+/** Decrypt an API key value if it was encrypted */
+function maybeDecrypt(value: string): string {
+  const key = getEncryptionKey();
+  if (!key) return value;
+  try {
+    return decrypt(value, key);
+  } catch {
+    // Not encrypted or already plaintext
+    return value;
+  }
+}
+
+const API_KEY_FIELDS = new Set(["kimiApiKey", "openaiApiKey", "claudeApiKey", "deepseekApiKey"]);
+// Snake_case versions sent by settings.ts in updatePromptForgeSettings
+const API_KEY_FIELD_SNAKE = new Set(["kimi_api_key", "openai_api_key", "claude_api_key", "deepseek_api_key"]);
+// Map snake_case API key field names to camelCase column names
+const SNAKE_TO_CAMEL: Record<string, string> = {
+  kimi_api_key: "kimiApiKey",
+  openai_api_key: "openaiApiKey",
+  claude_api_key: "claudeApiKey",
+  deepseek_api_key: "deepseekApiKey",
+  default_model: "defaultModel",
+  default_framework: "defaultFramework",
+  default_language: "defaultLanguage",
+};
+
+function resolveFieldName(key: string): string {
+  return SNAKE_TO_CAMEL[key] || key;
 }
 
 function settingsUpdate(userId: number, data: Record<string, unknown>): void {
@@ -980,9 +1023,19 @@ function settingsUpdate(userId: number, data: Record<string, unknown>): void {
     const values: unknown[] = [now];
 
     for (const field of allowedFields) {
-      if (data[field] !== undefined) {
+      // Check both camelCase and snake_case keys
+      let val = data[field];
+      if (val === undefined) {
+        const snakeKey = Object.keys(SNAKE_TO_CAMEL).find(k => SNAKE_TO_CAMEL[k] === field) || "";
+        val = snakeKey ? data[snakeKey] : undefined;
+      }
+      if (val !== undefined) {
+        // Encrypt API key fields before writing
+        if (API_KEY_FIELDS.has(field) && typeof val === "string" && val) {
+          val = maybeEncrypt(val);
+        }
         fields.push(`${field} = ?`);
-        values.push(data[field]);
+        values.push(val);
       }
     }
 
@@ -996,9 +1049,19 @@ function settingsUpdate(userId: number, data: Record<string, unknown>): void {
     const placeholders: string[] = ["?", "?", "?"];
 
     for (const field of allowedFields) {
-      if (data[field] !== undefined) {
+      // Check both camelCase and snake_case keys
+      let val = data[field];
+      if (val === undefined) {
+        const snakeKey = Object.keys(SNAKE_TO_CAMEL).find(k => SNAKE_TO_CAMEL[k] === field) || "";
+        val = snakeKey ? data[snakeKey] : undefined;
+      }
+      if (val !== undefined) {
+        // Encrypt API key fields before writing
+        if (API_KEY_FIELDS.has(field) && typeof val === "string" && val) {
+          val = maybeEncrypt(val);
+        }
         cols.push(field);
-        vals.push(data[field]);
+        vals.push(val);
         placeholders.push("?");
       }
     }
@@ -1027,7 +1090,9 @@ function settingsGetApiKey(userId: number, provider: string): string | undefined
 
   if (!row) return undefined;
   const val = row[column];
-  return val ? String(val) : undefined;
+  if (!val) return undefined;
+  // Decrypt stored API key
+  return maybeDecrypt(String(val));
 }
 // ============================================================================
 // Export polyfill object (snake_case API matching native/index.d.ts)

@@ -7,7 +7,7 @@ interface SplashScreenProps {
   duration?: number;
 }
 
-export function SplashScreen({ onComplete, duration = 200 }: SplashScreenProps) {
+export function SplashScreen({ onComplete, duration = 2000 }: SplashScreenProps) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {

@@ -45,6 +45,9 @@ export const SettingsDataTab = memo(function SettingsDataTab({
               </div>
             </Label>
           </div>
+          <p className="text-xs text-red-500 font-medium">
+            API 密钥不包含在导出中，以确保安全。请重新配置。
+          </p>
         </CardContent>
       </Card>
     </StaggerItem>
