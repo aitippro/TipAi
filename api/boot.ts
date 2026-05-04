@@ -160,5 +160,4 @@ app.use("/api/trpc/*", async (c) => {
 // Health endpoint
 app.get("/api/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
 
-export { serveStaticFiles } from "./lib/vite";
 export default app;
