@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,8 +49,8 @@ export default function WorkspacePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
-  const domainLabel = (key: string) => t(`projects.domain.${key.replace(/-/g, "")}` as unknown as TemplateStringsArray) || key
-  const statusLabel = (key: string) => t(`projects.status.${key}` as unknown as TemplateStringsArray) || key
+  const domainLabel = useCallback((key: string) => t(`projects.domain.${key.replace(/-/g, "")}` as unknown as TemplateStringsArray) || key, [t])
+  const statusLabel = useCallback((key: string) => t(`projects.status.${key}` as unknown as TemplateStringsArray) || key, [t])
 
   const { data: projects, isLoading } = trpc.project.list.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils()
@@ -65,16 +65,16 @@ export default function WorkspacePage() {
 
   const selectedProject = projects?.find((p) => p.id === selectedId);
 
-  const filtered = projects?.filter((p) =>
+  const filtered = useMemo(() => projects?.filter((p) =>
     !search || p.title.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  ) || [], [projects, search]);
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: projects?.length || 0,
     completed: projects?.filter((p) => p.status === "completed").length || 0,
     inProgress: projects?.filter((p) => p.status === "executing").length || 0,
     ready: projects?.filter((p) => p.status === "ready").length || 0,
-  };
+  }), [projects]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
