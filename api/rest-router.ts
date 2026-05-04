@@ -4,14 +4,52 @@
  * 将核心 tRPC 功能暴露为标准 REST API，便于第三方集成。
  */
 import { Hono } from "hono";
+import { getCookie } from "hono/cookie";
+import type { Context, Next } from "hono";
 import { matchFrameworks } from "./services/framework";
 import { runQualityGate } from "./services/quality/gate";
 import { generateMultimodalPromptWithAI } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";
 import { callAI } from "./lib/ai-service-v3/client";
 import { generateCitationsWithAI } from "./services/academic/academic";
+import { verifySessionToken } from "./kimi/session";
+import { findUserByUnionId } from "./queries/users";
+import { Session } from "@contracts/constants";
 
 const rest = new Hono();
+
+// ── Auth Middleware ──────────────────────────────────────────────────────────
+
+async function requireAuth(c: Context, next: Next) {
+  const token = getCookie(c, Session.cookieName);
+  if (!token) return c.json({ error: "Authentication required" }, 401);
+  const claim = await verifySessionToken(token);
+  if (!claim) return c.json({ error: "Invalid or expired session" }, 401);
+  const user = await findUserByUnionId(claim.unionId);
+  if (!user) return c.json({ error: "User not found" }, 401);
+  c.set("user", user);
+  await next();
+}
+
+async function authenticateOptional(c: Context, next: Next) {
+  const body = await c.req.json().catch(() => ({}));
+  if (body.apiKey) {
+    // Caller provides their own API key — skip server-side auth
+    await next();
+    return;
+  }
+  // No external apiKey — require session authentication
+  const token = getCookie(c, Session.cookieName);
+  if (!token) {
+    return c.json({ error: "Authentication required. Provide 'apiKey' in body or authenticate via session." }, 401);
+  }
+  const claim = await verifySessionToken(token);
+  if (!claim) return c.json({ error: "Invalid or expired session" }, 401);
+  const user = await findUserByUnionId(claim.unionId);
+  if (!user) return c.json({ error: "User not found" }, 401);
+  c.set("user", user);
+  await next();
+}
 
 // ToT REST API 使用真实 LLM（需传入 apiKey + model）
 function initTotAIEngine(model: string, apiKey: string) {
@@ -51,6 +89,13 @@ function initTotAIEngine(model: string, apiKey: string) {
     return { value, isTerminal, reason };
   });
 }
+
+// Apply auth middleware
+rest.use("/framework/match", requireAuth);
+rest.use("/quality-gate/check", requireAuth);
+rest.use("/multimodal/generate", authenticateOptional);
+rest.use("/tot/solve", authenticateOptional);
+rest.use("/academic/citations", authenticateOptional);
 
 // ============================================================================
 // REST Endpoints
