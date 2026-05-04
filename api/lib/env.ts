@@ -22,7 +22,15 @@ function getDatabaseUrl(): string {
 
 /**
  * Generate a machine-specific deterministic secret.
- * Avoids hard-coding a weak default that is identical across all installations.
+ * CRITICAL: This is the SOLE source of APP_SECRET. Do NOT add fallback defaults
+ * elsewhere (e.g., in electron/main.cjs) that pre-set process.env.APP_SECRET,
+ * because that would bypass this per-machine random generation and make every
+ * installation share the same key.
+ * The secret is persisted to disk (~/.config/TipAi/.app-secret) so it survives restarts.
+ *
+ * GUARD: If APP_SECRET is already set when this function runs, it must have been
+ * set by a previous call to getMachineSecret() in the same process, not by a
+ * hardcoded default.
  */
 function getMachineSecret(): string {
   if (process.env.APP_SECRET) return process.env.APP_SECRET;

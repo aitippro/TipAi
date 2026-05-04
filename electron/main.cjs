@@ -150,7 +150,6 @@ async function startBackend() {
   process.env.NODE_ENV = isDev ? 'development' : 'production';
   process.env.DATABASE_URL = `file:${dbPath}`;
   process.env.APP_ID = process.env.APP_ID || 'tipai-desktop';
-  process.env.APP_SECRET = process.env.APP_SECRET || 'tipai-desktop-secret';
   process.env.APP_URL = 'http://localhost:0';
 
   // Ensure persistent API_KEY_SECRET so encrypted API keys survive app restarts
