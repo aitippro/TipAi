@@ -6,11 +6,8 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { Context, Next } from "hono";
-import { createRequire } from "module";
 import { matchFrameworks } from "./services/framework";
-
-const _require = createRequire(import.meta.url);
-const PKG_VERSION = (_require("../package.json") as { version: string }).version;
+import { PKG_VERSION } from "../contracts/constants";
 import { runQualityGate } from "./services/quality/gate";
 import { generateMultimodalPromptWithAI } from "./services/multimodal/multimodal-engine";
 import { runTreeOfThoughts, setTotGenerator, setTotEvaluator } from "./services/ai/tree-of-thoughts";

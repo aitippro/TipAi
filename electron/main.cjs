@@ -6,9 +6,9 @@ const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 // Portable mode: all app data lives next to the .exe
-const userDataPath = isDev
-  ? path.join(__dirname, '..', 'TipAi-data')
-  : path.join(path.dirname(process.execPath), 'TipAi-data');
+// PORTABLE_EXECUTABLE_DIR is set by electron-builder portable builds
+const exeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
+const userDataPath = path.join(exeDir, 'TipAi-data');
 process.env.USER_DATA_PATH = userDataPath;
 const dataDir = path.join(userDataPath, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });

@@ -11,11 +11,8 @@
  *    返回的是格式正确但内容虚构的引用，仅用于无 API Key 时的格式演示。
  */
 
-import { createRequire } from "module";
 import { callAI } from "../../lib/ai-service-v3/client";
-
-const _require = createRequire(import.meta.url);
-const PKG_VERSION = (_require("../../../package.json") as { version: string }).version;
+import { PKG_VERSION } from "../../../contracts/constants";
 
 export type CitationFormat = "apa" | "mla" | "gb7714" | "ieee" | "chicago";
 
