@@ -114,3 +114,4 @@ test-*.log
 test-*.cjs
 test-*.mjs
 docs/tasks/
+TipAi-data/

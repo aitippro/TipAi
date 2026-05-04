@@ -1,5 +1,6 @@
 import { createRouter, publicQuery, authedQuery } from "./middleware";
 import { z } from "zod";
+import { native } from "./lib/native";
 import {
   getAllFrameworks,
   getFrameworkCount,
@@ -157,13 +158,33 @@ export const promptForgeRouter = createRouter({
       };
     }),
 
-  /** 检查是否有 API Key 配置（环境变量或用户设置）——用于启动引导判断 */
+  /** 检查是否有 API Key 配置（环境变量、数据库用户设置）——用于启动引导判断 */
   apiKeyStatus: publicQuery.query(() => {
     const envKeys = ["KIMI_API_KEY", "OPENAI_API_KEY", "CLAUDE_API_KEY", "DEEPSEEK_API_KEY"];
     const hasEnvKey = envKeys.some((k) => !!process.env[k]);
+    const envSources = envKeys.filter((k) => !!process.env[k]).map((k) => k.replace("_API_KEY", "").toLowerCase());
+
+    // Also check database for stored API keys (e.g., from previous sessions)
+    let hasDbKey = false;
+    const dbSources: string[] = [];
+    try {
+      if (native?.settingsGetApiKey) {
+        // Check common user IDs (1=admin, 2=demo) for stored keys
+        for (const userId of [1, 2]) {
+          for (const p of ["kimi", "openai", "claude", "deepseek"]) {
+            const key = native.settingsGetApiKey(userId, p);
+            if (key) { hasDbKey = true; dbSources.push(p); }
+          }
+          if (hasDbKey) break;
+        }
+      }
+    } catch {
+      // DB check is best-effort
+    }
+
     return {
-      configured: hasEnvKey,
-      sources: envKeys.filter((k) => !!process.env[k]).map((k) => k.replace("_API_KEY", "").toLowerCase()),
+      configured: hasEnvKey || hasDbKey,
+      sources: [...new Set([...envSources, ...dbSources])],
     };
   }),
 });
