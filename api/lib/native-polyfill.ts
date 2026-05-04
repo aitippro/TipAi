@@ -891,7 +891,7 @@ async function aiCallSelfConsistency(req: Record<string, unknown>, sampleCount?:
 }
 
 // ============================================================================
-// Quality Gate / Drift Detection — stubs (Rust-only v2.0 features)
+// Quality Gate / Drift Detection — polyfill 不支持，返回明确错误
 // ============================================================================
 
 function runQualityGate(
@@ -899,32 +899,15 @@ function runQualityGate(
   _enabledChecks?: string[],
   _threshold?: number,
 ) {
-  return {
-    overallScore: 1.0,
-    passed: true,
-    threshold: _threshold ?? 0.7,
-    checks: [],
-    summary: "Quality gate not available in JS polyfill mode",
-    topIssues: [],
-  };
+  throw new Error("质量门禁需要 Rust Native Addon，当前为 JS polyfill 模式，功能不可用");
 }
 
-function detectDrift(versions: string[], _baselineIndex?: number) {
-  return {
-    driftScore: 0,
-    hasDrift: false,
-    trend: "stable",
-    warnings: [],
-    suggestions: [],
-    checks: (versions || []).map((v) => ({
-      version: v,
-      similarityToBaseline: 1.0,
-    })),
-  };
+function detectDrift(_versions: string[], _baselineIndex?: number) {
+  throw new Error("漂移检测需要 Rust Native Addon，当前为 JS polyfill 模式，功能不可用");
 }
 
 function compareVersions(_a: string, _b: string) {
-  return { similarity: 1.0, commonTokens: [], uniqueToA: [], uniqueToB: [] };
+  throw new Error("版本比较需要 Rust Native Addon，当前为 JS polyfill 模式，功能不可用");
 }
 
 
