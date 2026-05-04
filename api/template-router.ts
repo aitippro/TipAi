@@ -3,7 +3,7 @@
 import { native } from "./lib/native";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createRouter, publicQuery, authedQuery } from "./middleware";
+import { createRouter, publicQuery, authedQuery, authedMutation } from "./middleware";
 
 export const templateRouter = createRouter({
   list: publicQuery.query(async () => {
@@ -21,7 +21,7 @@ export const templateRouter = createRouter({
       return template;
     }),
 
-  create: authedQuery
+  create: authedMutation
     .input(
       z.object({
         title: z.string().min(1).max(255),
@@ -54,7 +54,7 @@ export const templateRouter = createRouter({
       return { success: true };
     }),
 
-  rate: authedQuery
+  rate: authedMutation
     .input(z.object({ id: z.number(), score: z.number().min(1).max(10) }))
     .mutation(async ({ input }) => {
       if (!native) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
