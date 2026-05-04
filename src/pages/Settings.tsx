@@ -1,23 +1,23 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { getDbLanguage, getI18nLanguage } from "@/i18n/utils"
 import { motion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "sonner"
 import {
-  Key, Eye, EyeOff, Shield, Globe, Database, Settings2,
-  Download, Upload, RefreshCw, Sparkles, CheckCircle2, XCircle,
-  Monitor, Moon, Sun, Type, Gauge, Palette, Lock, Unlock
+  Key, Shield, Globe, Database, Settings2,
+  RefreshCw, Sparkles, CheckCircle2, XCircle,
+  Gauge, Palette,
 } from "lucide-react"
 import { ScrollReveal } from "@/components/effects/ScrollReveal"
-import { StaggerContainer, StaggerItem } from "@/components/effects/StaggerContainer"
+import { StaggerContainer } from "@/components/effects/StaggerContainer"
+import { SettingsGeneralTab } from "@/components/settings/SettingsGeneralTab"
+import { SettingsModelCard } from "@/components/settings/SettingsModelCard"
+import { SettingsInterfaceTab } from "@/components/settings/SettingsInterfaceTab"
+import { SettingsDataTab } from "@/components/settings/SettingsDataTab"
+import { SettingsAdvancedTab } from "@/components/settings/SettingsAdvancedTab"
 
 const MODELS = [
   { key: "kimi", name: "Kimi", fullName: "Kimi (Moonshot)", icon: Sparkles, color: "bg-violet-50 text-violet-600 border-violet-200", placeholder: "sk-...", site: "platform.moonshot.cn" },
@@ -34,6 +34,13 @@ const TABS = [
   { id: "data", labelKey: "settings.tabs.data", icon: Database },
   { id: "advanced", labelKey: "settings.tabs.advanced", icon: Gauge },
 ]
+
+const KEY_FIELD_MAP: Partial<Record<string, "hasKimiKey" | "hasOpenAIKey" | "hasClaudeKey" | "hasDeepSeekKey">> = {
+  kimi: "hasKimiKey",
+  openai: "hasOpenAIKey",
+  claude: "hasClaudeKey",
+  deepseek: "hasDeepSeekKey",
+}
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -134,6 +141,18 @@ export default function SettingsPage() {
     reader.readAsText(file)
   }
 
+  const handleKeyChange = useCallback((modelKey: string, value: string) => {
+    setKeys((prev) => ({ ...prev, [modelKey]: value }))
+  }, [])
+
+  const handleToggleShow = useCallback((modelKey: string) => {
+    setShowKeys((prev) => ({ ...prev, [modelKey]: !prev[modelKey] }))
+  }, [])
+
+  const handleDefaultChange = useCallback((modelKey: string) => {
+    setDefaultModel(modelKey)
+  }, [])
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-14">
@@ -175,235 +194,67 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <StaggerContainer className="space-y-6">
-        {/* General Tab */}
         {activeTab === "general" && (
-          <>
-            <StaggerItem>
-              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.language")}</Label>
-                    <p className="text-xs text-slate-400">{t("settings.languageDesc")}</p>
-                    <LanguageSwitcher
-                      value={uiLanguage}
-                      onChange={(code) => setUiLanguage(code)}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.theme")}</Label>
-                    <div className="flex items-center gap-3">
-                      {[
-                        { value: "light", icon: Sun, label: t("settings.themeLight") },
-                        { value: "dark", icon: Moon, label: t("settings.themeDark") },
-                        { value: "system", icon: Monitor, label: t("settings.themeSystem") },
-                      ].map((t) => (
-                        <button
-                          key={t.value}
-                          onClick={() => setTheme(t.value)}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
-                            theme === t.value
-                              ? "border-apple-blue bg-blue-50 text-apple-blue"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                        >
-                          <t.icon className="w-4 h-4" />
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.globalPrompt")}</Label>
-                    <textarea
-                      value={globalPrompt}
-                      onChange={(e) => setGlobalPrompt(e.target.value)}
-                      placeholder={t("settings.globalPromptDesc")}
-                      className="w-full min-h-[100px] p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.advancedDesc")}</Label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {["CO-STAR", "CRISPE", "BROKE", "自定义"].map((f) => (
-                        <button
-                          key={f}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                            f === "CO-STAR"
-                              ? "border-apple-blue bg-blue-50 text-apple-blue"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                        >
-                          {f}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </StaggerItem>
-          </>
+          <SettingsGeneralTab
+            uiLanguage={uiLanguage}
+            theme={theme}
+            globalPrompt={globalPrompt}
+            onLanguageChange={setUiLanguage}
+            onThemeChange={setTheme}
+            onGlobalPromptChange={setGlobalPrompt}
+            t={t}
+          />
         )}
 
-        {/* Models Tab */}
         {activeTab === "models" && (
           <>
             {MODELS.map((model) => {
-              const keyField = `has${model.key === "openai" ? "OpenAI" : model.key === "deepseek" ? "DeepSeek" : model.key === "claude" ? "Claude" : "Kimi"}Key` as const
-              const hasKeyConfigured = settings ? (settings as unknown as Record<string, boolean>)[keyField] : false
+              const keyField = KEY_FIELD_MAP[model.key]
+              const hasKeyConfigured = keyField ? settings?.[keyField] ?? false : false
               return (
-                <StaggerItem key={model.key}>
-                  <Card className={`border-0 shadow-sm rounded-2xl ${model.color} bg-opacity-30 backdrop-blur-sm`}>
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <model.icon className="w-5 h-5" />
-                          <div>
-                            <div className="text-sm font-semibold">{model.fullName}</div>
-                            <div className="text-xs opacity-70">{model.site}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {model.key !== "ollama" && (
-                            <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${hasKeyConfigured ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-slate-50 text-slate-400 border border-slate-200"}`}>
-                              {hasKeyConfigured ? <><Lock className="w-3 h-3" />{t("settings.configured")}</> : <><Unlock className="w-3 h-3" />{t("settings.notConfigured")}</>}
-                            </span>
-                          )}
-                          <Switch
-                            checked={defaultModel === model.key}
-                            onCheckedChange={() => setDefaultModel(model.key)}
-                          />
-                        </div>
-                      </div>
-                      <div className="relative">
-                        <Input
-                          type={showKeys[model.key] ? "text" : "password"}
-                          placeholder={model.key === "ollama" ? model.placeholder : hasKeyConfigured ? t("settings.keyPlaceholderSaved") : model.placeholder}
-                          value={keys[model.key] || ""}
-                          onChange={(e) => setKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
-                          className="pr-10 bg-white/80 rounded-xl"
-                        />
-                        <button
-                          onClick={() => setShowKeys((prev) => ({ ...prev, [model.key]: !prev[model.key] }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {showKeys[model.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
+                <SettingsModelCard
+                  key={model.key}
+                  model={model}
+                  hasKeyConfigured={hasKeyConfigured}
+                  defaultModel={defaultModel}
+                  keyValue={keys[model.key] || ""}
+                  showKey={showKeys[model.key] || false}
+                  onKeyChange={handleKeyChange}
+                  onToggleShow={handleToggleShow}
+                  onDefaultChange={handleDefaultChange}
+                  t={t}
+                />
               )
             })}
           </>
         )}
 
-        {/* Interface Tab */}
         {activeTab === "interface" && (
-          <>
-            <StaggerItem>
-              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium">减少动态效果</Label>
-                      <p className="text-xs text-slate-400">关闭动画，提升可访问性</p>
-                    </div>
-                    <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.fontSize")}</Label>
-                    <div className="flex items-center gap-4">
-                      <Type className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="range"
-                        min="12"
-                        max="18"
-                        value={fontSize}
-                        onChange={(e) => setFontSize(parseInt(e.target.value))}
-                        className="flex-1"
-                      />
-                      <span className="text-sm text-slate-500 w-8">{fontSize}px</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </StaggerItem>
-          </>
+          <SettingsInterfaceTab
+            reducedMotion={reducedMotion}
+            fontSize={fontSize}
+            onReducedMotionChange={setReducedMotion}
+            onFontSizeChange={setFontSize}
+            t={t}
+          />
         )}
 
-        {/* Data Tab */}
         {activeTab === "data" && (
-          <>
-            <StaggerItem>
-              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium">{t("settings.cloudSync")}</Label>
-                      <p className="text-xs text-slate-400">{t("settings.cloudSyncDesc")}</p>
-                    </div>
-                    <Switch checked={cloudSync} onCheckedChange={setCloudSync} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="rounded-xl" onClick={handleExport}>
-                      <Download className="w-4 h-4 mr-2" />{t("settings.exportData")}
-                    </Button>
-                    <Label className="cursor-pointer">
-                      <input type="file" accept=".json" className="hidden" onChange={handleImport} />
-                      <div className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-colors">
-                        <Upload className="w-4 h-4 mr-2" />{t("settings.importData")}
-                      </div>
-                    </Label>
-                  </div>
-                </CardContent>
-              </Card>
-            </StaggerItem>
-          </>
+          <SettingsDataTab
+            cloudSync={cloudSync}
+            onCloudSyncChange={setCloudSync}
+            onExport={handleExport}
+            onImport={handleImport}
+            t={t}
+          />
         )}
 
-        {/* Advanced Tab */}
         {activeTab === "advanced" && (
-          <>
-            <StaggerItem>
-              <Card className="border-0 shadow-sm rounded-2xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium">{t("settings.devMode")}</Label>
-                      <p className="text-xs text-slate-400">{t("settings.devModeDesc")}</p>
-                    </div>
-                    <Switch
-                      checked={devMode}
-                      onCheckedChange={setDevMode}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">{t("settings.shortcuts")}</Label>
-                    <div className="space-y-2 text-sm text-slate-500">
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span>{t("settings.shortcutSearch")}</span>
-                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ K</kbd>
-                      </div>
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span>{t("settings.shortcutNewProject")}</span>
-                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ N</kbd>
-                      </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span>{t("settings.shortcutOptimizer")}</span>
-                        <kbd className="px-2 py-1 bg-slate-100 rounded text-xs">⌘ O</kbd>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </StaggerItem>
-          </>
+          <SettingsAdvancedTab
+            devMode={devMode}
+            onDevModeChange={setDevMode}
+            t={t}
+          />
         )}
       </StaggerContainer>
 
