@@ -20,7 +20,7 @@ function loadNativeAddon() {
   // 2. Try cwd (dev / non-packaged)
   try {
     return _require(path.join(process.cwd(), "native"));
-  } catch (e) {
+  } catch (_e) {
     // Expected in dev without Rust addon built — silently fall through
   }
 

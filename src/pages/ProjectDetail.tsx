@@ -113,6 +113,62 @@ export default function ProjectDetail() {
 
   const utils = trpc.useUtils()
 
+  const renderedTurns = useMemo(() => {
+    if (!conversation) return null
+    const turns: ConversationTurn[] = (conversation as Array<{ id: number; role: "user" | "assistant" | "system"; content: string; turnNumber?: number; createdAt?: string | Date }>).map((turnData) => ({
+      id: turnData.id,
+      role: turnData.role,
+      content: turnData.content,
+      turnNumber: turnData.turnNumber ?? 0,
+      createdAt: turnData.createdAt ? new Date(turnData.createdAt as string | Date) : null,
+    }))
+    return turns.map((turn, i) => (
+      <motion.div
+        key={turn.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={shouldReduceMotion ? { duration: 0 } : { delay: Math.min(i * 0.03, 0.3), type: "tween", ease: "easeOut" }}
+        className={`flex gap-3 ${turn.role === "user" ? "flex-row-reverse" : ""}`}
+      >
+        <div className="shrink-0">
+          {turn.role === "user" ? (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center shadow-md">
+              <User className="w-3.5 h-3.5 text-white" />
+            </div>
+          ) : turn.role === "assistant" ? (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md">
+              <Bot className="w-3.5 h-3.5 text-white" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+              <span className="text-[10px] text-slate-400 font-medium">SYS</span>
+            </div>
+          )}
+        </div>
+        <div className={`flex-1 min-w-0 max-w-[80%] ${turn.role === "user" ? "items-end" : "items-start"}`}>
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className={`
+              px-4 py-3 rounded-2xl text-sm leading-relaxed
+              ${turn.role === "user"
+                ? "bg-gradient-to-br from-apple-blue to-apple-purple text-white rounded-tr-sm shadow-md"
+                : "bg-white/90 backdrop-blur-sm border border-slate-100 text-slate-800 rounded-tl-sm shadow-sm"
+              }
+            `}
+          >
+            <p className="whitespace-pre-wrap break-words">{turn.content}</p>
+          </motion.div>
+          <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 ${turn.role === "user" ? "justify-end" : ""}`}>
+            {turn.turnNumber > 0 && <span>{t("projectDetail.turnLabel", { turnNumber: turn.turnNumber })}</span>}
+            {turn.createdAt && (
+              <span>{new Date(turn.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    ))
+  }, [conversation, shouldReduceMotion, t])
+
   if (isLoadingProject) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-14">
@@ -141,64 +197,6 @@ export default function ProjectDetail() {
       </div>
     )
   }
-
-  const turns: ConversationTurn[] = (conversation || []).map((turnData: { id: number; role: "user" | "assistant" | "system"; content: string; turnNumber?: number; createdAt?: string | Date }) => ({
-    id: turnData.id,
-    role: turnData.role,
-    content: turnData.content,
-    turnNumber: turnData.turnNumber,
-    createdAt: turnData.createdAt,
-  }))
-
-  const renderedTurns = useMemo(() =>
-    turns.map((turn, i) => (
-      <motion.div
-        key={turn.id}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={shouldReduceMotion ? { duration: 0 } : { delay: Math.min(i * 0.03, 0.3), type: "tween", ease: "easeOut" }}
-        className={`flex gap-3 ${turn.role === "user" ? "flex-row-reverse" : ""}`}
-      >
-        <div className="shrink-0">
-          {turn.role === "user" ? (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center shadow-md">
-              <User className="w-3.5 h-3.5 text-white" />
-            </div>
-          ) : turn.role === "assistant" ? (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md">
-              <Bot className="w-3.5 h-3.5 text-white" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-              <span className="text-[10px] text-slate-400 font-medium">SYS</span>
-            </div>
-          )}
-        </div>
-
-        <div className={`flex-1 min-w-0 max-w-[80%] ${turn.role === "user" ? "items-end" : "items-start"}`}>
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-            className={`
-              px-4 py-3 rounded-2xl text-sm leading-relaxed
-              ${turn.role === "user"
-                ? "bg-gradient-to-br from-apple-blue to-apple-purple text-white rounded-tr-sm shadow-md"
-                : "bg-white/90 backdrop-blur-sm border border-slate-100 text-slate-800 rounded-tl-sm shadow-sm"
-              }
-            `}
-          >
-            <p className="whitespace-pre-wrap break-words">{turn.content}</p>
-          </motion.div>
-          <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 ${turn.role === "user" ? "justify-end" : ""}`}>
-            {turn.turnNumber > 0 && <span>{t("projectDetail.turnLabel", { turnNumber: turn.turnNumber })}</span>}
-            {turn.createdAt && (
-              <span>{new Date(turn.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    )),
-    [turns, shouldReduceMotion, t],
-  )
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -256,7 +254,7 @@ export default function ProjectDetail() {
                 <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
                 <p className="text-xs text-slate-400">{t("projectDetail.loadingConversation")}</p>
               </div>
-            ) : turns.length === 0 ? (
+            ) : !renderedTurns ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
                 <MessageSquare className="w-10 h-10 mb-3 text-slate-200" />
                 <p className="text-sm">{t("projectDetail.noConversation")}</p>

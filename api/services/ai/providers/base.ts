@@ -67,12 +67,7 @@ export abstract class OpenAICompatibleProvider implements AIModelProvider {
     const model = options.model || this.config.model || this.opts.defaultModel;
     const url = `${this.config.baseUrl}/v1/chat/completions`;
 
-    // Single-pass: build message array while counting prompt tokens
-    let promptTokens = 0;
-    const msgs = messages.map((m) => {
-      promptTokens += estimateTokens(m.content);
-      return { role: m.role, content: m.content };
-    });
+    const msgs = messages.map((m) => ({ role: m.role, content: m.content }));
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -111,9 +106,9 @@ export abstract class OpenAICompatibleProvider implements AIModelProvider {
 
     const usageData = data.usage as Record<string, number> | undefined;
     this.lastUsage = {
-      promptTokens: usageData?.prompt_tokens ?? promptTokens,
+      promptTokens: usageData?.prompt_tokens ?? 0,
       completionTokens: usageData?.completion_tokens ?? estimateTokens(content),
-      totalTokens: usageData?.total_tokens ?? promptTokens + estimateTokens(content),
+      totalTokens: usageData?.total_tokens ?? estimateTokens(content),
     };
 
     return {
@@ -133,12 +128,7 @@ export abstract class OpenAICompatibleProvider implements AIModelProvider {
     const model = options.model || this.config.model || this.opts.defaultModel;
     const url = `${this.config.baseUrl}/v1/chat/completions`;
 
-    // Single-pass: build message array while counting prompt tokens
-    let promptTokens = 0;
-    const msgs = messages.map((m) => {
-      promptTokens += estimateTokens(m.content);
-      return { role: m.role, content: m.content };
-    });
+    const msgs = messages.map((m) => ({ role: m.role, content: m.content }));
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
