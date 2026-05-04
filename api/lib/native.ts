@@ -25,10 +25,10 @@ function loadNativeAddon() {
   }
 
   // 3. Try Electron resourcesPath (last resort for packaged)
-  // @ts-expect-error resourcesPath is Electron-specific
-  if (process.resourcesPath) {
+  const resourcesPath = (process as unknown as Record<string, string | undefined>).resourcesPath;
+  if (resourcesPath) {
     try {
-      return _require(path.join(process.resourcesPath, "app.asar.unpacked", "native"));
+      return _require(path.join(resourcesPath, "app.asar.unpacked", "native"));
     } catch (e) {
       console.warn(`[native] resourcesPath fallback failed: ${e}`);
     }
