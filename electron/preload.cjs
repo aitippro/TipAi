@@ -24,11 +24,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Database
   getDbPath: () => ipcRenderer.invoke('db:getPath'),
 
-  // ── Native Addon (Rust Core) ───────────────────────────────
+  // ── Native Addon (Rust Core / JS Polyfill) ──────────────────
   nativeVersion: () => ipcRenderer.invoke('native:version'),
 
   // Users
   userFindByUnionId: (unionId) => ipcRenderer.invoke('native:userFindByUnionId', unionId),
+  userFindById: (id) => ipcRenderer.invoke('native:userFindById', id),
+  userFindByUsername: (username) => ipcRenderer.invoke('native:userFindByUsername', username),
   userUpsert: (data) => ipcRenderer.invoke('native:userUpsert', data),
 
   // Settings
@@ -36,25 +38,63 @@ contextBridge.exposeInMainWorld('electronAPI', {
   settingsUpdate: (userId, data) => ipcRenderer.invoke('native:settingsUpdate', userId, data),
   settingsGetApiKey: (userId, provider) => ipcRenderer.invoke('native:settingsGetApiKey', userId, provider),
 
+  // Projects
+  projectList: (userId) => ipcRenderer.invoke('native:projectList', userId),
+  projectCreate: (data) => ipcRenderer.invoke('native:projectCreate', data),
+  projectGetById: (id, userId) => ipcRenderer.invoke('native:projectGetById', id, userId),
+  projectUpdate: (id, userId, data) => ipcRenderer.invoke('native:projectUpdate', id, userId, data),
+  projectDelete: (id, userId) => ipcRenderer.invoke('native:projectDelete', id, userId),
+
+  // Steps
+  stepList: (projectId) => ipcRenderer.invoke('native:stepList', projectId),
+  stepGetById: (id) => ipcRenderer.invoke('native:stepGetById', id),
+  stepCreate: (data) => ipcRenderer.invoke('native:stepCreate', data),
+  stepUpdate: (id, data) => ipcRenderer.invoke('native:stepUpdate', id, data),
+  stepDelete: (id, projectId) => ipcRenderer.invoke('native:stepDelete', id, projectId),
+
+  // Conversations
+  conversationCreate: (data) => ipcRenderer.invoke('native:conversationCreate', data),
+  conversationListByProject: (projectId) => ipcRenderer.invoke('native:conversationListByProject', projectId),
+
+  // Summaries
+  summaryGetByProject: (projectId) => ipcRenderer.invoke('native:summaryGetByProject', projectId),
+  summaryUpsert: (data) => ipcRenderer.invoke('native:summaryUpsert', data),
+
+  // Evaluations
+  evaluationCreate: (data) => ipcRenderer.invoke('native:evaluationCreate', data),
+  evaluationStats: (projectId) => ipcRenderer.invoke('native:evaluationStats', projectId),
+  evaluationList: (projectId, limit) => ipcRenderer.invoke('native:evaluationList', projectId, limit),
+
   // Prompts
   promptList: (userId, opts) => ipcRenderer.invoke('native:promptList', userId, opts),
   promptCreate: (data) => ipcRenderer.invoke('native:promptCreate', data),
+  promptDelete: (id, userId) => ipcRenderer.invoke('native:promptDelete', id, userId),
+  promptUpdateFavorite: (id, userId, isFavorite) => ipcRenderer.invoke('native:promptUpdateFavorite', id, userId, isFavorite),
 
   // Templates
   templateListPublic: () => ipcRenderer.invoke('native:templateListPublic'),
   templateListByUser: (userId) => ipcRenderer.invoke('native:templateListByUser', userId),
+  templateCreate: (data) => ipcRenderer.invoke('native:templateCreate', data),
+  templateDelete: (id, userId) => ipcRenderer.invoke('native:templateDelete', id, userId),
+  templateUse: (id) => ipcRenderer.invoke('native:templateUse', id),
+  templateRate: (id, score) => ipcRenderer.invoke('native:templateRate', id, score),
 
-  // Projects
-  projectList: (userId) => ipcRenderer.invoke('native:projectList', userId),
-  projectCreate: (data) => ipcRenderer.invoke('native:projectCreate', data),
+  // Optimizer
+  optimizerRunCreate: (data) => ipcRenderer.invoke('native:optimizerRunCreate', data),
+  optimizerRunList: (userId, limit) => ipcRenderer.invoke('native:optimizerRunList', userId, limit),
 
-  // Steps
-  stepList: (projectId) => ipcRenderer.invoke('native:stepList', projectId),
-  stepUpdate: (id, data) => ipcRenderer.invoke('native:stepUpdate', id, data),
+  // Crypto
+  encrypt: (plaintext, password) => ipcRenderer.invoke('native:encrypt', plaintext, password),
+  decrypt: (ciphertext, password) => ipcRenderer.invoke('native:decrypt', ciphertext, password),
 
   // AI (async)
   aiCall: (req) => ipcRenderer.invoke('native:aiCall', req),
   aiCallSelfConsistency: (req, sampleCount) => ipcRenderer.invoke('native:aiCallSelfConsistency', req, sampleCount),
+
+  // Quality / Drift
+  runQualityGate: (prompt, checks, threshold) => ipcRenderer.invoke('native:runQualityGate', prompt, checks, threshold),
+  detectDrift: (versions, baselineIndex) => ipcRenderer.invoke('native:detectDrift', versions, baselineIndex),
+  compareVersions: (a, b) => ipcRenderer.invoke('native:compareVersions', a, b),
 
   // Updater
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),

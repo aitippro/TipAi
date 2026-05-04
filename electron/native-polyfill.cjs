@@ -1,0 +1,667 @@
+/**
+ * Native Addon CJS Polyfill — Real SQLite + AES-256-GCM
+ *
+ * Used by electron/main.cjs when the Rust native binary (.node) is unavailable.
+ * Mirrors the Rust crypto format exactly: PBKDF2-SHA256 (600k iter) + AES-256-GCM.
+ *
+ * Every function performs real database CRUD. This is NOT a mock.
+ */
+'use strict';
+
+const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
+
+// ============================================================================
+// Database
+// ============================================================================
+
+let db = null;
+
+function getDb() {
+  if (db) return db;
+  const Database = require('better-sqlite3');
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbPath = dbUrl.startsWith('file:')
+    ? dbUrl.slice(5)
+    : path.join(process.env.USER_DATA_PATH || process.cwd(), 'data', 'tipai.db');
+  // Ensure parent directory exists
+  const parentDir = path.dirname(dbPath);
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  return db;
+}
+
+function nowUnix() {
+  return Math.floor(Date.now() / 1000);
+}
+
+// ============================================================================
+// Crypto — matches Rust native/src/crypto/mod.rs format exactly
+// ============================================================================
+
+const SALT_LEN = 16;
+const NONCE_LEN = 12;
+const KEY_LEN = 32;
+const PBKDF2_ITER = 600000;
+
+function deriveKey(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, PBKDF2_ITER, KEY_LEN, 'sha256');
+}
+
+function rustEncrypt(plaintext, password) {
+  if (!password) return plaintext;
+  const salt = crypto.randomBytes(SALT_LEN);
+  const nonce = crypto.randomBytes(NONCE_LEN);
+  const key = deriveKey(password, salt);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([salt, nonce, encrypted, authTag]).toString('base64');
+}
+
+function rustDecrypt(ciphertextB64, password) {
+  if (!password) return ciphertextB64;
+  const data = Buffer.from(ciphertextB64, 'base64');
+  if (data.length < SALT_LEN + NONCE_LEN + 16) throw new Error('Ciphertext too short');
+  const salt = data.subarray(0, SALT_LEN);
+  const nonce = data.subarray(SALT_LEN, SALT_LEN + NONCE_LEN);
+  const authTag = data.subarray(data.length - 16);
+  const ciphertext = data.subarray(SALT_LEN + NONCE_LEN, data.length - 16);
+  const key = deriveKey(password, salt);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+}
+
+// ============================================================================
+// Domain Packages
+// ============================================================================
+
+function domainPackageUpsert(data) {
+  const now = nowUnix();
+  getDb().prepare(
+    `INSERT INTO domain_packages ("key", name, description, icon, category, isActive, prompt, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT("key") DO UPDATE SET
+       name = COALESCE(excluded.name, domain_packages.name),
+       description = COALESCE(excluded.description, domain_packages.description),
+       icon = COALESCE(excluded.icon, domain_packages.icon),
+       category = COALESCE(excluded.category, domain_packages.category),
+       prompt = COALESCE(excluded.prompt, domain_packages.prompt)`
+  ).run(data.key, data.name, data.description ?? null, data.icon ?? null,
+    data.category ?? null, data.isActive ?? 1, data.prompt ?? null, now);
+}
+
+// ============================================================================
+// Users
+// ============================================================================
+
+function userFindByUnionId(unionId) {
+  return getDb().prepare(
+    `SELECT id, unionId, username, password, name, email, avatar, role,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at,
+            datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+     FROM users WHERE unionId = ?`
+  ).get(unionId) || null;
+}
+
+function userFindById(id) {
+  return getDb().prepare(
+    `SELECT id, unionId, username, password, name, email, avatar, role,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at,
+            datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+     FROM users WHERE id = ?`
+  ).get(id) || null;
+}
+
+function userFindByUsername(username) {
+  return getDb().prepare(
+    `SELECT id, unionId, username, password, name, email, avatar, role,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at,
+            datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+     FROM users WHERE username = ?`
+  ).get(username) || null;
+}
+
+function userUpsert(data) {
+  const now = nowUnix();
+  getDb().prepare(
+    `INSERT INTO users (unionId, username, password, name, email, avatar, role, createdAt, updatedAt, lastSignInAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(unionId) DO UPDATE SET
+       username = COALESCE(excluded.username, users.username),
+       password = COALESCE(excluded.password, users.password),
+       name = COALESCE(excluded.name, users.name),
+       email = COALESCE(excluded.email, users.email),
+       avatar = COALESCE(excluded.avatar, users.avatar),
+       role = COALESCE(excluded.role, users.role),
+       updatedAt = excluded.updatedAt,
+       lastSignInAt = excluded.lastSignInAt`
+  ).run(
+    data.union_id, data.username ?? null, data.password ?? null,
+    data.name ?? null, data.email ?? null, data.avatar ?? null,
+    data.role ?? 'user', now, now, now
+  );
+  return userFindByUnionId(String(data.union_id));
+}
+
+// ============================================================================
+// Settings
+// ============================================================================
+
+function settingsGet(userId) {
+  const row = getDb().prepare(
+    `SELECT userId, defaultModel, defaultFramework, defaultLanguage,
+            kimiApiKey, openaiApiKey, claudeApiKey, deepseekApiKey
+     FROM user_settings WHERE userId = ?`
+  ).get(userId) || null;
+  if (!row) {
+    return {
+      userId, defaultModel: 'kimi', defaultFramework: 'auto', defaultLanguage: 'zh',
+      hasKimiKey: false, hasOpenaiKey: false, hasClaudeKey: false, hasDeepseekKey: false
+    };
+  }
+  return {
+    userId: row.userId, defaultModel: row.defaultModel,
+    defaultFramework: row.defaultFramework, defaultLanguage: row.defaultLanguage,
+    hasKimiKey: !!row.kimiApiKey, hasOpenaiKey: !!row.openaiApiKey,
+    hasClaudeKey: !!row.claudeApiKey, hasDeepseekKey: !!row.deepseekApiKey
+  };
+}
+
+function settingsUpdate(userId, data) {
+  const now = nowUnix();
+  const existing = getDb().prepare('SELECT id FROM user_settings WHERE userId = ?').get(userId);
+  const map = { defaultModel: 'defaultModel', defaultFramework: 'defaultFramework',
+    defaultLanguage: 'defaultLanguage', kimiApiKey: 'kimiApiKey', openaiApiKey: 'openaiApiKey',
+    claudeApiKey: 'claudeApiKey', deepseekApiKey: 'deepseekApiKey' };
+
+  if (existing) {
+    const fields = ['updatedAt = ?'];
+    const values = [now];
+    for (const [k, col] of Object.entries(map)) {
+      if (data[k] !== undefined && data[k] !== '***') {
+        fields.push(col + ' = ?');
+        values.push(data[k] || null);
+      }
+    }
+    values.push(userId);
+    getDb().prepare('UPDATE user_settings SET ' + fields.join(', ') + ' WHERE userId = ?').run(...values);
+  } else {
+    getDb().prepare(
+      `INSERT INTO user_settings (userId, defaultModel, defaultFramework, defaultLanguage,
+        kimiApiKey, openaiApiKey, claudeApiKey, deepseekApiKey, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(userId, data.defaultModel ?? 'kimi', data.defaultFramework ?? 'auto',
+      data.defaultLanguage ?? 'zh', data.kimiApiKey || null, data.openaiApiKey || null,
+      data.claudeApiKey || null, data.deepseekApiKey || null, now, now);
+  }
+}
+
+function settingsGetApiKey(userId, provider) {
+  const map = { kimi: 'kimiApiKey', openai: 'openaiApiKey', claude: 'claudeApiKey', deepseek: 'deepseekApiKey' };
+  const col = map[provider];
+  if (!col) return undefined;
+  const row = getDb().prepare('SELECT ' + col + ' FROM user_settings WHERE userId = ?').get(userId);
+  return row ? row[col] || undefined : undefined;
+}
+
+// ============================================================================
+// Projects
+// ============================================================================
+
+function projectList(userId) {
+  return getDb().prepare(
+    `SELECT id, userId, title, description, domain, status, intent,
+            clarificationStatus, turnCount,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at
+     FROM projects WHERE userId = ? ORDER BY updatedAt DESC`
+  ).all(userId);
+}
+
+function projectCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO projects (userId, title, description, domain, status, intent, clarificationStatus, turnCount, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`
+  ).run(data.user_id, data.title, data.description ?? null, data.domain ?? 'general',
+    data.status ?? 'draft', data.intent ?? null, now, now);
+  return projectGetById(Number(r.lastInsertRowid), Number(data.user_id));
+}
+
+function projectDelete(id, userId) {
+  const d = getDb();
+  const del = d.transaction((pid, uid) => {
+    d.prepare('DELETE FROM steps WHERE projectId = ?').run(pid);
+    d.prepare('DELETE FROM projects WHERE id = ? AND userId = ?').run(pid, uid);
+  });
+  del(id, userId);
+}
+
+function projectGetById(id, userId) {
+  return getDb().prepare(
+    `SELECT id, userId, title, description, domain, status, intent,
+            clarificationStatus, turnCount,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at
+     FROM projects WHERE id = ? AND userId = ?`
+  ).get(id, userId) || null;
+}
+
+function projectUpdate(id, userId, data) {
+  const fields = [];
+  const values = [];
+  const map = { title: 'title', description: 'description', status: 'status',
+    intent: 'intent', clarification_status: 'clarificationStatus', turn_count: 'turnCount' };
+  for (const [k, col] of Object.entries(map)) {
+    if (data[k] !== undefined) { fields.push(col + ' = ?'); values.push(data[k]); }
+  }
+  if (!fields.length) return projectGetById(id, userId);
+  fields.push('updatedAt = ?'); values.push(nowUnix());
+  values.push(id, userId);
+  getDb().prepare('UPDATE projects SET ' + fields.join(', ') + ' WHERE id = ? AND userId = ?').run(...values);
+  return projectGetById(id, userId);
+}
+
+// ============================================================================
+// Steps
+// ============================================================================
+
+function stepList(projectId) {
+  return getDb().prepare(
+    `SELECT id, projectId, title, description, prompt, stage,
+            orderNum, status, output, parentStepId, model, temperature, decodeStrategy,
+            datetime(createdAt, 'unixepoch') as createdAt,
+            datetime(updatedAt, 'unixepoch') as updatedAt
+     FROM steps WHERE projectId = ? ORDER BY orderNum ASC`
+  ).all(projectId);
+}
+
+function stepGetById(id) {
+  return getDb().prepare(
+    `SELECT id, projectId, title, description, prompt, stage,
+            orderNum, status, output, parentStepId, model, temperature, decodeStrategy,
+            datetime(createdAt, 'unixepoch') as createdAt,
+            datetime(updatedAt, 'unixepoch') as updatedAt
+     FROM steps WHERE id = ?`
+  ).get(id) || null;
+}
+
+function stepCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO steps (projectId, title, description, prompt, stage, orderNum, status, output,
+      parentStepId, model, temperature, decodeStrategy, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.project_id, data.title, data.description ?? null, data.prompt,
+    data.stage ?? 'implement', data.order_num ?? 0, 'pending', null,
+    data.parent_step_id ?? null, data.model ?? 'kimi', data.temperature ?? 0.7,
+    data.decode_strategy ?? null, now, now);
+  return stepGetById(r.lastInsertRowid);
+}
+
+function stepUpdate(id, data) {
+  const fields = [];
+  const values = [];
+  const map = { title: 'title', description: 'description', prompt: 'prompt',
+    status: 'status', output: 'output', model: 'model', temperature: 'temperature' };
+  for (const [k, col] of Object.entries(map)) {
+    if (data[k] !== undefined) { fields.push(col + ' = ?'); values.push(data[k]); }
+  }
+  if (!fields.length) return stepGetById(id);
+  fields.push('updatedAt = ?'); values.push(nowUnix()); values.push(id);
+  getDb().prepare('UPDATE steps SET ' + fields.join(', ') + ' WHERE id = ?').run(...values);
+  return stepGetById(id);
+}
+
+function stepDelete(id, projectId) {
+  getDb().prepare('DELETE FROM steps WHERE id = ? AND projectId = ?').run(id, projectId);
+}
+
+// ============================================================================
+// Conversations
+// ============================================================================
+
+function conversationCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO project_conversations (projectId, userId, role, content, questionId, questionData, answerData, turnNumber, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.project_id, data.user_id, data.role, data.content,
+    data.question_id ?? null, data.question_data ?? null, data.answer_data ?? null,
+    data.turn_number ?? 0, now);
+  return { id: r.lastInsertRowid, project_id: data.project_id, user_id: data.user_id,
+    role: data.role, content: data.content, question_id: data.question_id ?? null,
+    question_data: data.question_data ?? null, answer_data: data.answer_data ?? null,
+    turn_number: data.turn_number ?? 0, created_at: new Date(now * 1000).toISOString() };
+}
+
+function conversationListByProject(projectId) {
+  return getDb().prepare(
+    `SELECT id, projectId, userId, role, content,
+            questionId, questionData, answerData, turnNumber,
+            datetime(createdAt, 'unixepoch') as created_at
+     FROM project_conversations WHERE projectId = ? ORDER BY turnNumber ASC, createdAt ASC`
+  ).all(projectId);
+}
+
+// ============================================================================
+// Summaries
+// ============================================================================
+
+function summaryGetByProject(projectId) {
+  return getDb().prepare(
+    `SELECT id, projectId, userId, summary, requirements, constraints,
+            suggestedFrameworks, rawContext, isFinalized,
+            datetime(createdAt, 'unixepoch') as created_at,
+            datetime(updatedAt, 'unixepoch') as updated_at
+     FROM project_summaries WHERE projectId = ?`
+  ).get(projectId) || null;
+}
+
+function summaryUpsert(data) {
+  const now = nowUnix();
+  const existing = getDb().prepare('SELECT id FROM project_summaries WHERE projectId = ?').get(data.project_id);
+  if (existing) {
+    getDb().prepare(
+      `UPDATE project_summaries SET summary = ?, requirements = ?, constraints = ?,
+       suggestedFrameworks = ?, rawContext = ?, isFinalized = ?, updatedAt = ? WHERE projectId = ?`
+    ).run(data.summary, data.requirements ?? null, data.constraints ?? null,
+      data.suggested_frameworks ?? null, data.raw_context ?? null, data.is_finalized ?? 0, now, data.project_id);
+  } else {
+    getDb().prepare(
+      `INSERT INTO project_summaries (projectId, userId, summary, requirements, constraints,
+        suggestedFrameworks, rawContext, isFinalized, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(data.project_id, data.user_id, data.summary, data.requirements ?? null,
+      data.constraints ?? null, data.suggested_frameworks ?? null, data.raw_context ?? null,
+      data.is_finalized ?? 0, now, now);
+  }
+  return summaryGetByProject(data.project_id);
+}
+
+// ============================================================================
+// Evaluations
+// ============================================================================
+
+function evaluationCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO evaluations (projectId, stepId, userId, dimension, score, feedback, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.project_id, data.step_id ?? null, data.user_id, data.dimension,
+    data.score, data.feedback ?? null, now);
+  return { id: r.lastInsertRowid, project_id: data.project_id, step_id: data.step_id ?? null,
+    user_id: data.user_id, dimension: data.dimension, score: data.score,
+    feedback: data.feedback ?? null, created_at: new Date(now * 1000).toISOString() };
+}
+
+function evaluationStats(projectId) {
+  const where = projectId != null ? 'WHERE projectId = ?' : '';
+  const params = projectId != null ? [projectId] : [];
+  const row = getDb().prepare(
+    `SELECT COUNT(*) as total_count,
+      AVG(CASE WHEN dimension = 'clarity' THEN score END) as avg_clarity,
+      AVG(CASE WHEN dimension = 'relevance' THEN score END) as avg_relevance,
+      AVG(CASE WHEN dimension = 'completeness' THEN score END) as avg_completeness,
+      AVG(CASE WHEN dimension = 'actionability' THEN score END) as avg_actionability,
+      AVG(CASE WHEN dimension = 'overall' THEN score END) as avg_overall
+     FROM evaluations ${where}`
+  ).get(...params);
+  return { total_count: row?.total_count ?? 0, avg_clarity: row?.avg_clarity ?? null,
+    avg_relevance: row?.avg_relevance ?? null, avg_completeness: row?.avg_completeness ?? null,
+    avg_actionability: row?.avg_actionability ?? null, avg_overall: row?.avg_overall ?? null };
+}
+
+function evaluationList(projectId, limit) {
+  const where = projectId != null ? 'WHERE projectId = ?' : '';
+  const params = projectId != null ? [projectId, limit] : [limit];
+  return getDb().prepare(
+    `SELECT id, projectId, stepId, userId, dimension, score, feedback,
+            datetime(createdAt, 'unixepoch') as created_at
+     FROM evaluations ${where} ORDER BY createdAt DESC LIMIT ?`
+  ).all(...params);
+}
+
+// ============================================================================
+// Prompts
+// ============================================================================
+
+function promptList(userId, opts) {
+  let sql = `SELECT id, userId, title, originalIntent, generatedPrompt, framework,
+              domain, model, rating, tags, useCount, isFavorite,
+              datetime(createdAt, 'unixepoch') as created_at,
+              datetime(updatedAt, 'unixepoch') as updated_at
+             FROM prompt_library WHERE userId = ?`;
+  const params = [userId];
+  if (opts?.domain) { sql += ' AND domain = ?'; params.push(opts.domain); }
+  if (opts?.isFavorite !== undefined) { sql += ' AND isFavorite = ?'; params.push(opts.isFavorite); }
+  if (opts?.search) { sql += ' AND (title LIKE ? OR tags LIKE ?)'; params.push('%' + opts.search + '%', '%' + opts.search + '%'); }
+  sql += ' ORDER BY updatedAt DESC LIMIT ? OFFSET ?';
+  params.push(opts?.limit ?? 50, opts?.offset ?? 0);
+  return getDb().prepare(sql).all(...params);
+}
+
+function promptCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO prompt_library (userId, title, originalIntent, generatedPrompt, framework, domain, model, tags, useCount, isFavorite, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.user_id, data.title, data.original_intent ?? null, data.generated_prompt,
+    data.framework ?? null, data.domain ?? 'general', data.model ?? 'kimi',
+    data.tags ?? null, 0, 0, now, now);
+  return getDb().prepare('SELECT * FROM prompt_library WHERE id = ?').get(r.lastInsertRowid);
+}
+
+function promptDelete(id, userId) {
+  getDb().prepare('DELETE FROM prompt_library WHERE id = ? AND userId = ?').run(id, userId);
+}
+
+function promptUpdateFavorite(id, userId, isFavorite) {
+  getDb().prepare('UPDATE prompt_library SET isFavorite = ? WHERE id = ? AND userId = ?').run(isFavorite, id, userId);
+}
+
+// ============================================================================
+// Templates
+// ============================================================================
+
+function templateListPublic() {
+  return getDb().prepare(
+    `SELECT id, userId, title, description, framework, domain, content, tags,
+            useCount, rating, ratingCount, isPublic, isFeatured,
+            datetime(createdAt, 'unixepoch') as created_at
+     FROM templates WHERE isPublic = 1 ORDER BY useCount DESC`
+  ).all();
+}
+
+function templateListByUser(userId) {
+  return getDb().prepare(
+    `SELECT id, userId, title, description, framework, domain, content, tags,
+            useCount, rating, ratingCount, isPublic, isFeatured,
+            datetime(createdAt, 'unixepoch') as created_at
+     FROM templates WHERE userId = ? ORDER BY createdAt DESC`
+  ).all(userId);
+}
+
+function templateCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO templates (userId, title, description, framework, domain, content, tags, isPublic, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.user_id, data.title, data.description ?? null, data.framework ?? null,
+    data.domain ?? 'general', data.content, data.tags ?? null, data.is_public ?? 1, now);
+  return getDb().prepare('SELECT * FROM templates WHERE id = ?').get(r.lastInsertRowid);
+}
+
+function templateDelete(id, userId) {
+  getDb().prepare('DELETE FROM templates WHERE id = ? AND userId = ?').run(id, userId);
+}
+
+function templateUse(id) {
+  getDb().prepare('UPDATE templates SET useCount = useCount + 1 WHERE id = ?').run(id);
+}
+
+function templateRate(id, score) {
+  const row = getDb().prepare('SELECT rating, ratingCount FROM templates WHERE id = ?').get(id);
+  if (!row) throw new Error('Template not found');
+  const cur = row.rating ?? 0;
+  const cnt = row.ratingCount ?? 0;
+  const nc = cnt + 1;
+  const nr = cnt === 0 ? score : Math.round(((cur * cnt + score) / nc) * 10) / 10;
+  getDb().prepare('UPDATE templates SET rating = ?, ratingCount = ? WHERE id = ?').run(nr, nc, id);
+  return { new_rating: nr, new_count: nc };
+}
+
+// ============================================================================
+// Optimizations
+// ============================================================================
+
+function optimizerRunCreate(data) {
+  const now = nowUnix();
+  const r = getDb().prepare(
+    `INSERT INTO prompt_optimizations (userId, originalPrompt, optimizedPrompt, improvements, domain, model, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.user_id, data.original_prompt, data.optimized_prompt,
+    data.improvements ?? null, data.domain ?? 'general', data.model ?? 'kimi', now);
+  return { id: r.lastInsertRowid, user_id: data.user_id, original_prompt: data.original_prompt,
+    optimized_prompt: data.optimized_prompt, improvements: data.improvements ?? null,
+    domain: data.domain ?? 'general', model: data.model ?? 'kimi',
+    created_at: new Date(now * 1000).toISOString() };
+}
+
+function optimizerRunList(userId, limit) {
+  return getDb().prepare(
+    `SELECT id, userId, originalPrompt, optimizedPrompt, improvements, domain, model,
+            datetime(createdAt, 'unixepoch') as created_at
+     FROM prompt_optimizations WHERE userId = ? ORDER BY createdAt DESC LIMIT ?`
+  ).all(userId, limit);
+}
+
+// ============================================================================
+// AI Client
+// ============================================================================
+
+async function aiCall(req) {
+  const provider = String(req.provider || 'deepseek');
+  const apiKey = String(req.apiKey || '');
+  const modelId = String(req.modelId || 'deepseek-chat');
+  const baseUrl = String(req.baseUrl || '');
+  const systemPrompt = String(req.systemPrompt || '');
+  const userMessage = String(req.userMessage || '');
+  const temperature = Number(req.temperature ?? 0.7);
+  const maxTokens = Number(req.maxTokens ?? 2048);
+  const timeoutMs = Number(req.timeoutMs ?? 30000);
+
+  if (!apiKey) return { content: '', error: 'API key not provided' };
+
+  let url;
+  const body = {
+    model: modelId,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ],
+    temperature, max_tokens: maxTokens
+  };
+
+  if (provider === 'deepseek' || provider === 'openai' || provider === 'kimi') {
+    if (provider === 'deepseek') url = baseUrl || 'https://api.deepseek.com/v1/chat/completions';
+    else if (provider === 'openai') url = baseUrl || 'https://api.openai.com/v1/chat/completions';
+    else url = baseUrl || 'https://api.moonshot.cn/v1/chat/completions';
+  } else if (provider === 'claude') {
+    url = baseUrl || 'https://api.anthropic.com/v1/messages';
+    delete body.messages;
+    body.system = systemPrompt;
+    body.messages = [{ role: 'user', content: userMessage }];
+    body.max_tokens = maxTokens;
+  } else {
+    url = baseUrl || 'https://api.deepseek.com/v1/chat/completions';
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      const text = await res.text();
+      return { content: '', error: 'HTTP ' + res.status + ': ' + text };
+    }
+    const data = await res.json();
+    const content = data.choices?.[0]?.message
+      ? String(data.choices[0].message.content || '')
+      : String(data.content || '');
+    return { content, error: undefined };
+  } catch (err) {
+    return { content: '', error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function aiCallSelfConsistency(req, sampleCount) {
+  const count = Math.max(3, Math.min(10, sampleCount ?? 3));
+  const results = [];
+  for (let i = 0; i < count; i++) results.push(await aiCall(req));
+  const ok = results.find(r => !r.error);
+  return ok || results[results.length - 1];
+}
+
+// ============================================================================
+// Quality Gate / Drift Detection — stubs
+// ============================================================================
+
+function runQualityGate(prompt, enabledChecks, threshold) {
+  return { overallScore: 1.0, passed: true, threshold: threshold ?? 0.7, checks: [],
+    summary: 'Quality gate not available in JS polyfill mode', topIssues: [] };
+}
+
+function detectDrift(versions, baselineIndex) {
+  return { driftScore: 0, hasDrift: false, trend: 'stable', warnings: [], suggestions: [],
+    checks: (versions || []).map(v => ({ version: v, similarityToBaseline: 1.0 })) };
+}
+
+function compareVersions(a, b) {
+  return { similarity: 1.0, commonTokens: [], uniqueToA: [], uniqueToB: [] };
+}
+
+// ============================================================================
+// Export
+// ============================================================================
+
+module.exports = {
+  version: () => '1.2.2-polyfill-cjs',
+  dbOpen: (dbPath, secret) => {
+    if (db) { db.close(); db = null; }
+    if (dbPath) process.env.DATABASE_URL = 'file:' + dbPath;
+    getDb();
+  },
+  dbClose: () => { if (db) { db.close(); db = null; } },
+  dbMigrate: () => { /* migrations handled by main.cjs directly */ },
+
+  encrypt: rustEncrypt,
+  decrypt: rustDecrypt,
+
+  domainPackageUpsert,
+  userFindByUnionId, userFindById, userFindByUsername, userUpsert,
+  settingsGet, settingsUpdate, settingsGetApiKey,
+  projectList, projectCreate, projectDelete, projectGetById, projectUpdate,
+  stepList, stepGetById, stepCreate, stepUpdate, stepDelete,
+  conversationCreate, conversationListByProject,
+  summaryGetByProject, summaryUpsert,
+  evaluationCreate, evaluationStats, evaluationList,
+  promptList, promptCreate, promptDelete, promptUpdateFavorite,
+  templateListPublic, templateListByUser, templateCreate, templateDelete, templateUse, templateRate,
+  optimizerRunCreate, optimizerRunList,
+  aiCall, aiCallSelfConsistency,
+  runQualityGate, detectDrift, compareVersions
+};

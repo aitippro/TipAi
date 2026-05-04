@@ -3,9 +3,39 @@ import { nativePolyfill } from "./native-polyfill";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let native: any = null;
+
+function loadNativeAddon() {
+  // 1. Electron packaged: main process sets this env var before loading backend
+  if (process.env.TIPAI_NATIVE_PATH) {
+    try {
+      return require(process.env.TIPAI_NATIVE_PATH);
+    } catch (e) {
+      console.warn(`[native] TIPAI_NATIVE_PATH failed: ${e}`);
+    }
+  }
+
+  // 2. Try cwd (dev / non-packaged)
+  try {
+    return require(path.join(process.cwd(), "native"));
+  } catch (e) {
+    console.warn(`[native] cwd fallback failed: ${e}`);
+  }
+
+  // 3. Try Electron resourcesPath (last resort for packaged)
+  // @ts-expect-error resourcesPath is Electron-specific
+  if (process.resourcesPath) {
+    try {
+      return require(path.join(process.resourcesPath, "app.asar.unpacked", "native"));
+    } catch (e) {
+      console.warn(`[native] resourcesPath fallback failed: ${e}`);
+    }
+  }
+
+  throw new Error("Native addon not found in any known location");
+}
+
 try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  native = require(path.join(process.cwd(), "native"));
+  native = loadNativeAddon();
 } catch (err) {
   // In test environment, provide an empty object so tests can mock native functions
   if (process.env.VITEST || process.env.NODE_ENV === "test") {

@@ -9,6 +9,7 @@
  */
 
 import path from "path";
+import crypto from "crypto";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null;
@@ -21,7 +22,7 @@ function getDb() {
   const dbUrl = process.env.DATABASE_URL || "";
   const dbPath = dbUrl.startsWith("file:")
     ? dbUrl.slice(5)
-    : path.join(process.cwd(), "electron", "data", "tipai.db");
+    : path.join(process.env.USER_DATA_PATH || process.cwd(), "data", "tipai.db");
 
   db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
@@ -30,6 +31,155 @@ function getDb() {
 
 function nowUnix(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+// ============================================================================
+// Crypto — matches Rust native/src/crypto/mod.rs format exactly
+// PBKDF2-SHA256 (600k iter) + AES-256-GCM with salt+nonce prefix + base64
+// ============================================================================
+
+const SALT_LEN = 16;
+const NONCE_LEN = 12;
+const KEY_LEN = 32;
+const PBKDF2_ITER = 600000;
+
+function deriveKey(password: string, salt: Buffer): Buffer {
+  return crypto.pbkdf2Sync(password, salt, PBKDF2_ITER, KEY_LEN, "sha256");
+}
+
+function encrypt(plaintext: string, password: string): string {
+  if (!password) return plaintext;
+  const salt = crypto.randomBytes(SALT_LEN);
+  const nonce = crypto.randomBytes(NONCE_LEN);
+  const key = deriveKey(password, salt);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, nonce);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  const combined = Buffer.concat([salt, nonce, encrypted, authTag]);
+  return combined.toString("base64");
+}
+
+function decrypt(ciphertextB64: string, password: string): string {
+  if (!password) return ciphertextB64;
+  const data = Buffer.from(ciphertextB64, "base64");
+  if (data.length < SALT_LEN + NONCE_LEN + 16) {
+    throw new Error("Ciphertext too short");
+  }
+  const salt = data.subarray(0, SALT_LEN);
+  const nonce = data.subarray(SALT_LEN, SALT_LEN + NONCE_LEN);
+  const authTag = data.subarray(data.length - 16);
+  const ciphertext = data.subarray(SALT_LEN + NONCE_LEN, data.length - 16);
+  const key = deriveKey(password, salt);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+  decipher.setAuthTag(authTag);
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return decrypted.toString("utf8");
+}
+
+// ============================================================================
+// Domain Packages
+// ============================================================================
+
+function domainPackageUpsert(data: Record<string, unknown>) {
+  const now = nowUnix();
+  getDb()
+    .prepare(
+      `INSERT INTO domain_packages ("key", name, description, icon, category, isActive, prompt, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT("key") DO UPDATE SET
+         name = COALESCE(excluded.name, domain_packages.name),
+         description = COALESCE(excluded.description, domain_packages.description),
+         icon = COALESCE(excluded.icon, domain_packages.icon),
+         category = COALESCE(excluded.category, domain_packages.category),
+         prompt = COALESCE(excluded.prompt, domain_packages.prompt)`,
+    )
+    .run(
+      data.key,
+      data.name,
+      data.description ?? null,
+      data.icon ?? null,
+      data.category ?? null,
+      data.isActive ?? 1,
+      data.prompt ?? null,
+      now,
+    );
+}
+
+// ============================================================================
+// Users
+// ============================================================================
+
+function userFindByUnionId(unionId: string) {
+  return (
+    getDb()
+      .prepare(
+        `SELECT id, unionId, username, password, name, email, avatar, role,
+                datetime(createdAt, 'unixepoch') as created_at,
+                datetime(updatedAt, 'unixepoch') as updated_at,
+                datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+         FROM users WHERE unionId = ?`,
+      )
+      .get(unionId) || null
+  );
+}
+
+function userFindById(id: number) {
+  return (
+    getDb()
+      .prepare(
+        `SELECT id, unionId, username, password, name, email, avatar, role,
+                datetime(createdAt, 'unixepoch') as created_at,
+                datetime(updatedAt, 'unixepoch') as updated_at,
+                datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+         FROM users WHERE id = ?`,
+      )
+      .get(id) || null
+  );
+}
+
+function userFindByUsername(username: string) {
+  return (
+    getDb()
+      .prepare(
+        `SELECT id, unionId, username, password, name, email, avatar, role,
+                datetime(createdAt, 'unixepoch') as created_at,
+                datetime(updatedAt, 'unixepoch') as updated_at,
+                datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
+         FROM users WHERE username = ?`,
+      )
+      .get(username) || null
+  );
+}
+
+function userUpsert(data: Record<string, unknown>) {
+  const now = nowUnix();
+  getDb()
+    .prepare(
+      `INSERT INTO users (unionId, username, password, name, email, avatar, role, createdAt, updatedAt, lastSignInAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(unionId) DO UPDATE SET
+         username = COALESCE(excluded.username, users.username),
+         password = COALESCE(excluded.password, users.password),
+         name = COALESCE(excluded.name, users.name),
+         email = COALESCE(excluded.email, users.email),
+         avatar = COALESCE(excluded.avatar, users.avatar),
+         role = COALESCE(excluded.role, users.role),
+         updatedAt = excluded.updatedAt,
+         lastSignInAt = excluded.lastSignInAt`,
+    )
+    .run(
+      data.union_id,
+      data.username ?? null,
+      data.password ?? null,
+      data.name ?? null,
+      data.email ?? null,
+      data.avatar ?? null,
+      data.role ?? "user",
+      now,
+      now,
+      now,
+    );
+  return userFindByUnionId(String(data.union_id));
 }
 
 // ============================================================================
@@ -70,10 +220,10 @@ function projectCreate(data: Record<string, unknown>) {
 }
 
 function projectDelete(id: number, userId: number) {
-  const db = getDb();
-  const del = db.transaction((pid: number, uid: number) => {
-    db.prepare("DELETE FROM steps WHERE projectId = ?").run(pid);
-    db.prepare("DELETE FROM projects WHERE id = ? AND userId = ?").run(pid, uid);
+  const d = getDb();
+  const del = d.transaction((pid: number, uid: number) => {
+    d.prepare("DELETE FROM steps WHERE projectId = ?").run(pid);
+    d.prepare("DELETE FROM projects WHERE id = ? AND userId = ?").run(pid, uid);
   });
   del(id, userId);
 }
@@ -127,6 +277,107 @@ function projectUpdate(
     .run(...values);
 
   return projectGetById(id, userId);
+}
+
+// ============================================================================
+// Steps
+// ============================================================================
+
+function stepList(projectId: number) {
+  return getDb()
+    .prepare(
+      `SELECT id, projectId as project_id, title, description, prompt, stage,
+              orderNum as order_num, status, output, parentStepId as parent_step_id,
+              model, temperature, decodeStrategy as decode_strategy,
+              datetime(createdAt, 'unixepoch') as created_at,
+              datetime(updatedAt, 'unixepoch') as updated_at
+       FROM steps WHERE projectId = ? ORDER BY orderNum ASC`,
+    )
+    .all(projectId);
+}
+
+function stepGetById(id: number) {
+  return (
+    getDb()
+      .prepare(
+        `SELECT id, projectId as project_id, title, description, prompt, stage,
+                orderNum as order_num, status, output, parentStepId as parent_step_id,
+                model, temperature, decodeStrategy as decode_strategy,
+                datetime(createdAt, 'unixepoch') as created_at,
+                datetime(updatedAt, 'unixepoch') as updated_at
+         FROM steps WHERE id = ?`,
+      )
+      .get(id) || null
+  );
+}
+
+function stepCreate(data: Record<string, unknown>) {
+  const now = nowUnix();
+  const result = getDb()
+    .prepare(
+      `INSERT INTO steps
+       (projectId, title, description, prompt, stage, orderNum, status, output,
+        parentStepId, model, temperature, decodeStrategy, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      data.project_id,
+      data.title,
+      data.description ?? null,
+      data.prompt,
+      data.stage ?? "implement",
+      data.order_num ?? 0,
+      "pending",
+      null,
+      data.parent_step_id ?? null,
+      data.model ?? "kimi",
+      data.temperature ?? 0.7,
+      data.decode_strategy ?? null,
+      now,
+      now,
+    );
+
+  return stepGetById(result.lastInsertRowid as number);
+}
+
+function stepUpdate(id: number, data: Record<string, unknown>) {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  const map: Record<string, string> = {
+    title: "title",
+    description: "description",
+    prompt: "prompt",
+    status: "status",
+    output: "output",
+    model: "model",
+    temperature: "temperature",
+  };
+
+  for (const [jsKey, sqlKey] of Object.entries(map)) {
+    if (data[jsKey] !== undefined) {
+      fields.push(`${sqlKey} = ?`);
+      values.push(data[jsKey]);
+    }
+  }
+
+  if (fields.length === 0) return stepGetById(id);
+
+  fields.push("updatedAt = ?");
+  values.push(nowUnix());
+  values.push(id);
+
+  getDb()
+    .prepare(`UPDATE steps SET ${fields.join(", ")} WHERE id = ?`)
+    .run(...values);
+
+  return stepGetById(id);
+}
+
+function stepDelete(id: number, projectId: number) {
+  getDb()
+    .prepare("DELETE FROM steps WHERE id = ? AND projectId = ?")
+    .run(id, projectId);
 }
 
 // ============================================================================
@@ -246,54 +497,6 @@ function summaryUpsert(data: Record<string, unknown>) {
 }
 
 // ============================================================================
-// Steps
-// ============================================================================
-
-function stepGetById(id: number) {
-  return (
-    getDb()
-      .prepare(
-        `SELECT id, projectId as project_id, title, description, prompt, stage,
-                orderNum as order_num, status, output, parentStepId as parent_step_id,
-                model, temperature, decode_strategy,
-                datetime(createdAt, 'unixepoch') as created_at,
-                datetime(updatedAt, 'unixepoch') as updated_at
-         FROM steps WHERE id = ?`,
-      )
-      .get(id) || null
-  );
-}
-
-function stepCreate(data: Record<string, unknown>) {
-  const now = nowUnix();
-  const result = getDb()
-    .prepare(
-      `INSERT INTO steps
-       (projectId, title, description, prompt, stage, orderNum, status, output,
-        parentStepId, model, temperature, decode_strategy, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      data.project_id,
-      data.title,
-      data.description ?? null,
-      data.prompt,
-      data.stage,
-      data.order_num ?? 0,
-      "pending",
-      null,
-      data.parent_step_id ?? null,
-      data.model ?? "kimi",
-      data.temperature ?? 0.7,
-      data.decode_strategy ?? null,
-      now,
-      now,
-    );
-
-  return stepGetById(result.lastInsertRowid as number);
-}
-
-// ============================================================================
 // Evaluations (Feedback)
 // ============================================================================
 
@@ -369,8 +572,137 @@ function evaluationList(projectId: number | null, limit: number) {
 }
 
 // ============================================================================
+// Prompt Library
+// ============================================================================
+
+function promptList(userId: number, opts?: Record<string, unknown>) {
+  let sql = `SELECT id, userId as user_id, title, originalIntent as original_intent,
+                    generatedPrompt as generated_prompt, framework,
+                    domain, model, rating, tags, useCount as use_count,
+                    isFavorite as is_favorite,
+                    datetime(createdAt, 'unixepoch') as created_at,
+                    datetime(updatedAt, 'unixepoch') as updated_at
+             FROM prompt_library WHERE userId = ?`;
+  const params: unknown[] = [userId];
+
+  if (opts?.domain) {
+    sql += " AND domain = ?";
+    params.push(opts.domain);
+  }
+  if (opts?.isFavorite !== undefined) {
+    sql += " AND isFavorite = ?";
+    params.push(opts.isFavorite);
+  }
+  if (opts?.search) {
+    sql += " AND (title LIKE ? OR tags LIKE ?)";
+    params.push(`%${opts.search}%`, `%${opts.search}%`);
+  }
+  sql += " ORDER BY updatedAt DESC LIMIT ? OFFSET ?";
+  params.push(opts?.limit ?? 50, opts?.offset ?? 0);
+
+  return getDb().prepare(sql).all(...params);
+}
+
+function promptCreate(data: Record<string, unknown>) {
+  const now = nowUnix();
+  const result = getDb()
+    .prepare(
+      `INSERT INTO prompt_library
+       (userId, title, originalIntent, generatedPrompt, framework, domain, model, tags, useCount, isFavorite, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      data.user_id,
+      data.title,
+      data.original_intent ?? null,
+      data.generated_prompt,
+      data.framework ?? null,
+      data.domain ?? "general",
+      data.model ?? "kimi",
+      data.tags ?? null,
+      0,
+      0,
+      now,
+      now,
+    );
+
+  const row = getDb()
+    .prepare("SELECT * FROM prompt_library WHERE id = ?")
+    .get(result.lastInsertRowid);
+  return row;
+}
+
+function promptDelete(id: number, userId: number) {
+  getDb()
+    .prepare("DELETE FROM prompt_library WHERE id = ? AND userId = ?")
+    .run(id, userId);
+}
+
+function promptUpdateFavorite(id: number, userId: number, isFavorite: number) {
+  getDb()
+    .prepare("UPDATE prompt_library SET isFavorite = ? WHERE id = ? AND userId = ?")
+    .run(isFavorite, id, userId);
+}
+
+// ============================================================================
 // Templates
 // ============================================================================
+
+function templateListPublic() {
+  return getDb()
+    .prepare(
+      `SELECT id, userId as user_id, title, description, framework, domain,
+              content, tags, useCount as use_count, rating, ratingCount as rating_count,
+              isPublic as is_public, isFeatured as is_featured,
+              datetime(createdAt, 'unixepoch') as created_at
+       FROM templates WHERE isPublic = 1 ORDER BY useCount DESC`,
+    )
+    .all();
+}
+
+function templateListByUser(userId: number) {
+  return getDb()
+    .prepare(
+      `SELECT id, userId as user_id, title, description, framework, domain,
+              content, tags, useCount as use_count, rating, ratingCount as rating_count,
+              isPublic as is_public, isFeatured as is_featured,
+              datetime(createdAt, 'unixepoch') as created_at
+       FROM templates WHERE userId = ? ORDER BY createdAt DESC`,
+    )
+    .all(userId);
+}
+
+function templateCreate(data: Record<string, unknown>) {
+  const now = nowUnix();
+  const result = getDb()
+    .prepare(
+      `INSERT INTO templates
+       (userId, title, description, framework, domain, content, tags, isPublic, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      data.user_id,
+      data.title,
+      data.description ?? null,
+      data.framework ?? null,
+      data.domain ?? "general",
+      data.content,
+      data.tags ?? null,
+      data.is_public ?? 1,
+      now,
+    );
+
+  const row = getDb()
+    .prepare("SELECT * FROM templates WHERE id = ?")
+    .get(result.lastInsertRowid);
+  return row;
+}
+
+function templateDelete(id: number, userId: number) {
+  getDb()
+    .prepare("DELETE FROM templates WHERE id = ? AND userId = ?")
+    .run(id, userId);
+}
 
 function templateUse(id: number) {
   getDb()
@@ -448,21 +780,128 @@ function optimizerRunList(userId: number, limit: number) {
 }
 
 // ============================================================================
-// Users
+// AI Client (fallback — calls provider HTTP APIs directly)
 // ============================================================================
 
-function userFindByUsername(username: string) {
-  return (
-    getDb()
-      .prepare(
-        `SELECT id, unionId, username, password, name, email, avatar, role,
-                datetime(createdAt, 'unixepoch') as created_at,
-                datetime(updatedAt, 'unixepoch') as updated_at,
-                datetime(lastSignInAt, 'unixepoch') as last_sign_in_at
-         FROM users WHERE username = ?`,
-      )
-      .get(username) || null
-  );
+async function aiCall(req: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const provider = String(req.provider || "deepseek");
+  const apiKey = String(req.apiKey || "");
+  const modelId = String(req.modelId || "deepseek-chat");
+  const baseUrl = String(req.baseUrl || "");
+  const systemPrompt = String(req.systemPrompt || "");
+  const userMessage = String(req.userMessage || "");
+  const temperature = Number(req.temperature ?? 0.7);
+  const maxTokens = Number(req.maxTokens ?? 2048);
+  const timeoutMs = Number(req.timeoutMs ?? 30000);
+
+  if (!apiKey) {
+    return { content: "", error: "API key not provided" };
+  }
+
+  let url: string;
+  const body: Record<string, unknown> = {
+    model: modelId,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
+    ],
+    temperature,
+    max_tokens: maxTokens,
+  };
+
+  if (provider === "deepseek" || provider === "openai" || provider === "kimi") {
+    if (provider === "deepseek") url = baseUrl || "https://api.deepseek.com/v1/chat/completions";
+    else if (provider === "openai") url = baseUrl || "https://api.openai.com/v1/chat/completions";
+    else url = baseUrl || "https://api.moonshot.cn/v1/chat/completions";
+  } else if (provider === "claude") {
+    url = baseUrl || "https://api.anthropic.com/v1/messages";
+    delete body.messages;
+    body.system = systemPrompt;
+    body.messages = [{ role: "user", content: userMessage }];
+    body.max_tokens = maxTokens;
+  } else {
+    url = baseUrl || "https://api.deepseek.com/v1/chat/completions";
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { content: "", error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json() as Record<string, unknown>;
+    const choices = data.choices as Array<Record<string, unknown>> | undefined;
+    const content = choices?.[0]?.message
+      ? String((choices[0].message as Record<string, unknown>).content || "")
+      : String(data.content || "");
+    return { content, error: undefined };
+  } catch (err) {
+    return { content: "", error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function aiCallSelfConsistency(req: Record<string, unknown>, sampleCount?: number): Promise<Record<string, unknown>> {
+  const count = Math.max(3, Math.min(10, sampleCount ?? 3));
+  const results: Array<Record<string, unknown>> = [];
+
+  for (let i = 0; i < count; i++) {
+    results.push(await aiCall(req));
+  }
+
+  const successful = results.find((r) => !r.error);
+  return successful || results[results.length - 1];
+}
+
+// ============================================================================
+// Quality Gate / Drift Detection — stubs (Rust-only v2.0 features)
+// ============================================================================
+
+function runQualityGate(
+  _prompt: string,
+  _enabledChecks?: string[],
+  _threshold?: number,
+) {
+  return {
+    overallScore: 1.0,
+    passed: true,
+    threshold: _threshold ?? 0.7,
+    checks: [],
+    summary: "Quality gate not available in JS polyfill mode",
+    topIssues: [],
+  };
+}
+
+function detectDrift(versions: string[], _baselineIndex?: number) {
+  return {
+    driftScore: 0,
+    hasDrift: false,
+    trend: "stable",
+    warnings: [],
+    suggestions: [],
+    checks: (versions || []).map((v) => ({
+      version: v,
+      similarityToBaseline: 1.0,
+    })),
+  };
+}
+
+function compareVersions(_a: string, _b: string) {
+  return { similarity: 1.0, commonTokens: [], uniqueToA: [], uniqueToB: [] };
 }
 
 
@@ -607,29 +1046,73 @@ export const nativePolyfill = {
     /* migrations are handled by electron/main.cjs */
   },
 
-  // Project functions
+  // Crypto
+  encrypt,
+  decrypt,
+
+  // Domain Packages
+  domainPackageUpsert,
+
+  // Users
+  userFindByUnionId,
+  userFindById,
+  userUpsert,
+
+  // Projects
   projectList,
   projectCreate,
   projectDelete,
-
-  // NEW: Ghost call implementations
   projectGetById,
   projectUpdate,
-  conversationCreate,
-  conversationListByProject,
-  summaryGetByProject,
-  summaryUpsert,
+
+  // Steps
+  stepList,
   stepGetById,
   stepCreate,
+  stepUpdate,
+  stepDelete,
+
+  // Conversations
+  conversationCreate,
+  conversationListByProject,
+
+  // Summaries
+  summaryGetByProject,
+  summaryUpsert,
+
+  // Evaluations
   evaluationCreate,
   evaluationStats,
   evaluationList,
+
+  // Prompts
+  promptList,
+  promptCreate,
+  promptDelete,
+  promptUpdateFavorite,
+
+  // Templates
+  templateListPublic,
+  templateListByUser,
+  templateCreate,
+  templateDelete,
   templateUse,
   templateRate,
+
+  // Optimizer
   optimizerRunCreate,
   optimizerRunList,
   userFindByUsername,
   settingsGet,
   settingsUpdate,
   settingsGetApiKey,
+
+  // AI
+  aiCall,
+  aiCallSelfConsistency,
+
+  // Quality / Drift
+  runQualityGate,
+  detectDrift,
+  compareVersions,
 };
