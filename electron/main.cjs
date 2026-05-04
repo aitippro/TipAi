@@ -5,9 +5,12 @@ const { pathToFileURL } = require('url');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
-const dataDir = isDev
-  ? path.join(__dirname, 'data')
-  : path.join(app.getPath('userData'), 'data');
+// Portable mode: all app data lives next to the .exe
+const userDataPath = isDev
+  ? path.join(__dirname, '..', 'TipAi-data')
+  : path.join(path.dirname(process.execPath), 'TipAi-data');
+process.env.USER_DATA_PATH = userDataPath;
+const dataDir = path.join(userDataPath, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'tipai.db');
 const LOG_FILE = path.join(dataDir, 'tipai.log');
