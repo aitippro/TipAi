@@ -4,9 +4,9 @@
 
 # ✨ TipAi
 
-**智能提示词工程平台 v2.0**
+**智能提示词工程平台 v1.2.2**
 
-> 从模糊需求到精准提示词，全链路 AI 驱动 · Rust Native Addon 高性能架构
+> 从模糊需求到精准提示词，全链路 AI 驱动 · Rust Native Addon 高性能架构 · 数字人表情控制引擎
 
 <a href="https://github.com/aitippro/TipAi/releases"><img src="https://img.shields.io/github/v/release/aitippro/TipAi?style=flat-square" alt="Release"></a>
 <img src="https://img.shields.io/badge/License-Non--Commercial-red?style=flat-square" alt="License">
@@ -15,6 +15,7 @@
 <img src="https://img.shields.io/badge/Rust-1.85-orange?style=flat-square&logo=rust" alt="Rust">
 <img src="https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron" alt="Electron">
 <img src="https://img.shields.io/badge/Frameworks-30-blue?style=flat-square" alt="Frameworks">
+<img src="https://img.shields.io/badge/Tests-300%20passed-brightgreen?style=flat-square" alt="Tests">
 
 </div>
 
@@ -28,7 +29,7 @@
 
 | 🔥 Rust Native Addon | 🚀 零端口架构 | 🛡️ AES-256-GCM | 🌐 多模型 |
 |:---|:---|:---|:---|
-| 数据库操作 + AI HTTP + 加密全部下沉到 Rust | 无后端服务端口，Electron 直接加载 .node | 本地 AES-256-GCM 加密，密钥隔离存储 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
+| 数据库操作 + AI HTTP + 加密全部下沉到 Rust | 无后端服务端口，Electron 直接加载 `.node` | 本地 AES-256-GCM 加密，密钥隔离存储 | Kimi · OpenAI · Claude · DeepSeek · Gemini · Ollama |
 
 ### 核心亮点
 
@@ -62,6 +63,36 @@
 
 ---
 
+## 🎭 TPEMA v0.2 — 文本驱动人物表情微动画引擎
+
+TPEMA（Text-Prompt Expression Micro-Animation）是 TipAi 内置的**数字人面部表情控制引擎**。它将文本中的标点、情绪权重映射为 FACS 面部动作单元（Action Units），生成 30fps 的可导出时间轴数据，驱动数字人/虚拟主播的自然微表情。
+
+### 五层架构
+
+| 层级 | 模块 | 功能 |
+|:---|:---|:---|
+| **L1 输入层** | 原始文本 + 标点符号 | 用户输入的说话/对话脚本 |
+| **L2 情绪层** | `sentiment/analyzer.ts` | 本地双语三级情绪词典（≥120 词条），贪心整词匹配，零外部依赖 |
+| **L3 时间轴层** | `expression/timeline.ts` | 30fps 逐标点插值，AU 状态 + HeadPose + GazeState |
+| **L4 噪声层** | `expression/perlin.ts` | simplex-noise 确定性微扰动，消除机械感 |
+| **L5 导出层** | `expression/export.ts` | JSON / CSV / FACS-XML / Prompt-Text 四种格式 |
+
+### 核心能力
+
+- **标点 → AU 映射**：`，` → AU1+2（挑眉）；`？` → AU1+2+AU5（惊讶）；`！` → AU20+AU5+AU12（强调）
+- **5 种缓动曲线**：linear / easeInOut / elasticOut / backOut / sineInOut
+- **视线状态机**：FOCUS / SCAN / RECALL / AVOID / EMPHASIS 随标点平滑过渡
+- **情绪加权融合**：`总强度 = min(1.0, 标点权重 + 情绪得分 × 0.3)`
+- **多模态 Prompt 注入**：视频分镜 / 人像文生图自动生成 `expressionControls` JSON 模板
+
+### 使用场景
+
+1. **视频分镜**：输入"数字人主播介绍产品"，自动在分镜脚本中注入表情控制指令
+2. **人像文生图**：选择"Portrait w/ FACS"变体，生成含 AU 描述的精确人像提示词
+3. **表情时间轴导出**：将任意中文/英文说话脚本导出为 30fps FACS 数据，供 Blender/Unity/MetaHuman 使用
+
+---
+
 ## 30 个提示词框架
 
 | 复杂度 | 框架 |
@@ -82,6 +113,7 @@
 | API | tRPC 11 · Hono 4 |
 | 数据库 | **Rust Native Addon** (SQLite 内核) · 纯 TypeScript 类型定义 |
 | 原生层 | **Rust 1.85** · NAPI-RS · AES-256-GCM · 异步 AI HTTP |
+| 表情引擎 | simplex-noise@4.0.3 · FACS Action Units · 30fps 时间轴 |
 | 加密 | AES-256-GCM · jose JWT · bcryptjs |
 | 测试 | Vitest 4 · Playwright E2E |
 | 构建 | Vite · esbuild · electron-builder · napi-rs |
@@ -90,12 +122,13 @@
 ### 架构重建里程碑
 
 ```
-v1.2.2 (原架构)          v2.0.0 (新架构)
-├─ JS 后端 (Hono)         ├─ Rust Native Addon
-├─ better-sqlite3           ├─ SQLite (Rust 层)
-├─ Drizzle ORM              ├─ 纯 TS 类型定义
-├─ 后端服务端口             ├─ 零端口 (Electron IPC)
-└─ 序列化开销               └─ 零序列化 (内存直传)
+v1.2.2 (当前)              v2.0.0 (目标)
+├─ JS 后端 (Hono)           ├─ Rust Native Addon
+├─ better-sqlite3             ├─ SQLite (Rust 层)
+├─ Drizzle ORM                ├─ 纯 TS 类型定义
+├─ 后端服务端口               ├─ 零端口 (Electron IPC)
+├─ 序列化开销                 ├─ 零序列化 (内存直传)
+└─ TPEMA 表情引擎             └─ TPEMA 表情引擎
 ```
 
 ---
@@ -137,7 +170,7 @@ npm run build:desktop:mac  # 构建 macOS 安装包
 ```
 src/                      React 前端
   components/             UI 组件 + 特效组件
-  pages/                  页面路由（11 个功能页面）
+  pages/                  页面路由（12 个功能页面）
   hooks/                  自定义 Hooks（动画/交互）
   lib/animation/          弹簧动画系统
 
@@ -148,7 +181,10 @@ api/                      tRPC 路由 + 服务层
   services/promptforge/   OPRO 引擎 + LLM-as-Judge + 生成服务
   services/framework/     框架知识图谱 + 匹配引擎
   services/agent/         Agent Swarm 协作引擎
-  services/multimodal/    多模态提示词引擎
+  services/multimodal/    多模态提示词引擎 + TPEMA 表情控制
+    types/expression.ts   表情控制核心类型定义
+    sentiment/            本地情绪分析引擎（词典 + 分析器）
+    expression/           表情时间轴引擎（缓动/插值/时间轴/噪声/导出）
   services/quality/       质量门禁 + Drift Detection
   services/academic/      学术引用 + 实验复现报告
   services/projects/      项目 CRUD + 生命周期
@@ -179,6 +215,7 @@ electron/                 Electron 主进程 + preload + IPC
 | 类型检查 | ✅ 通过 |
 | 生产构建 | ✅ 通过 |
 | 框架分类准确率 | **81.8%** (9/11) |
+| 表情引擎测试 | **54** 项通过（easing/interpolator/timeline/perlin/export/sentiment/integration） |
 
 ---
 
@@ -205,6 +242,7 @@ electron/                 Electron 主进程 + preload + IPC
 - [awesome-prompts](https://github.com/ai-boost/awesome-prompts) by AI Boost
 - [awesome-prompt-engineering](https://github.com/tysoncung/awesome-prompt-engineering) by Tyson Cung
 - [prompt-architect](https://github.com/nati112/prompt-architect) by nati112
+- [simplex-noise](https://github.com/joshforisha/simplex-noise) by Josh Forisha — 确定性噪声生成
 
 ### 学术论文
 - [OPRO: Large Language Models as Optimizers](https://arxiv.org/abs/2309.03409) — Yang et al., Google DeepMind, 2023
