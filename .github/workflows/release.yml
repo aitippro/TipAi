@@ -75,7 +75,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - run: npm ci
       - run: npm run native:build
       - run: npm run build
