@@ -94,10 +94,6 @@ jobs:
           }
           Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
       - run: npm run build:desktop:win -- --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TipAi-Windows-Portable
-          path: release/*.exe
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*.exe
