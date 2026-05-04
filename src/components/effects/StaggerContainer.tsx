@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ interface StaggerContainerProps {
  * StaggerContainer — 列表项瀑布入场动画
  * 子元素依次 stagger 入场
  */
-export function StaggerContainer({
+export const StaggerContainer = memo(function StaggerContainer({
   children,
   className,
   staggerDelay = 0.03,
@@ -42,9 +43,9 @@ export function StaggerContainer({
       {children}
     </motion.div>
   );
-}
+});
 
-export function StaggerItem({
+export const StaggerItem = memo(function StaggerItem({
   children,
   className,
 }: {
@@ -74,4 +75,4 @@ export function StaggerItem({
       {children}
     </motion.div>
   );
-}
+});
