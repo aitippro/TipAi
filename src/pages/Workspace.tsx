@@ -127,7 +127,7 @@ export default function WorkspacePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                            <FolderOpen className="w-4.5 h-4.5 text-apple-blue" />
+                            <FolderOpen className="w-5 h-5 text-apple-blue" />
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
@@ -147,7 +147,7 @@ export default function WorkspacePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-                            <FolderCheck className="w-4.5 h-4.5 text-emerald-500" />
+                            <FolderCheck className="w-5 h-5 text-emerald-500" />
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
@@ -167,7 +167,7 @@ export default function WorkspacePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
-                            <Clock className="w-4.5 h-4.5 text-amber-500" />
+                            <Clock className="w-5 h-5 text-amber-500" />
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">
@@ -187,7 +187,7 @@ export default function WorkspacePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-                            <TrendingUp className="w-4.5 h-4.5 text-violet-500" />
+                            <TrendingUp className="w-5 h-5 text-violet-500" />
                           </div>
                           <div>
                             <p className="text-xl font-bold text-slate-800">

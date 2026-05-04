@@ -48,7 +48,7 @@ export default function QualityGatePage() {
   const handleCheck = () => {
     if (!prompt.trim()) return;
     setSubmitted(true);
-    checkQuery.refetch();
+    checkQuery.refetch().catch(() => {});
   };
 
   const result = checkQuery.data;

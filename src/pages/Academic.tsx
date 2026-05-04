@@ -79,7 +79,12 @@ export default function AcademicPage() {
                 {(formatsQuery.data ?? []).map((f) => (
                   <button
                     key={f.value}
-                    onClick={() => setCitationFormat(f.value as typeof citationFormat)}
+                    onClick={() => {
+                      const validFormats = ["apa", "mla", "gb7714", "ieee", "chicago"] as const;
+                      if (validFormats.includes(f.value as typeof validFormats[number])) {
+                        setCitationFormat(f.value as typeof citationFormat);
+                      }
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       citationFormat === f.value
                         ? "border-sky-200 bg-sky-50 text-sky-700"
