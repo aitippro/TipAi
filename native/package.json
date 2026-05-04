@@ -1,6 +1,6 @@
 {
   "name": "tipai-core",
-  "version": "1.2.2",
+  "version": "1.0.0",
   "description": "Native core for TipAi (Rust + napi-rs)",
   "main": "index.js",
   "types": "index.d.ts",

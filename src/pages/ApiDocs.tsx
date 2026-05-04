@@ -20,7 +20,7 @@ const ENDPOINTS = [
     path: "/api/rest/ping",
     desc: "健康检查",
     example: `curl https://api.tipai.com/api/rest/ping`,
-    response: `{\n  "ok": true,\n  "version": "1.2.2",\n  "timestamp": 1714473600000\n}`,
+    response: `{\n  "ok": true,\n  "version": "1.0.0",\n  "timestamp": 1714473600000\n}`,
   },
   {
     method: "POST",

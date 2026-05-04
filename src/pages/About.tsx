@@ -31,7 +31,7 @@ export default function About() {
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
               TipAi
             </h1>
-            <p className="text-sm text-slate-500">智能提示词工程平台 v1.2.2</p>
+            <p className="text-sm text-slate-500">智能提示词工程平台 v1.0.0</p>
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

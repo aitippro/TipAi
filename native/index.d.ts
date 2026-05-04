@@ -1,6 +1,6 @@
 /*
  * TipAi Native Addon — TypeScript Type Definitions
- * Generated from Rust NAPI-RS exports (tipai-core v1.2.2)
+ * Generated from Rust NAPI-RS exports (tipai-core v1.0.0)
  *
  * DO NOT EDIT MANUALLY unless adding new exports.
  * Rebuild: cd native && npm run build
