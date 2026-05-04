@@ -1,6 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { native } from "./lib/native";
+
+/** Escape markdown special characters in user-provided content */
+function escapeMarkdown(text: unknown): string {
+  if (typeof text !== "string") return String(text ?? "");
+  return text
+    .replace(/\|/g, "\\|")
+    .replace(/#/g, "\\#")
+    .replace(/`/g, "\\`")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/>/g, "\\>");
+}
 import { createRouter, authedQuery } from "./middleware";
 import { exportProjectsSchema, exportPromptsSchema } from "./services/export/schemas";
 
@@ -64,20 +78,20 @@ export const exportRouter = createRouter({
       if (input.format === "markdown") {
         let md = "# 项目导出\n\n";
         for (const item of result) {
-          md += `## ${item.title}\n\n`;
+          md += `## ${escapeMarkdown(item.title)}\n\n`;
           md += `- **ID**: ${item.id}\n`;
-          md += `- **领域**: ${item.domain || "通用"}\n`;
-          md += `- **状态**: ${item.status}\n`;
+          md += `- **领域**: ${escapeMarkdown(item.domain) || "通用"}\n`;
+          md += `- **状态**: ${escapeMarkdown(item.status)}\n`;
           md += `- **创建时间**: ${item.createdAt}\n\n`;
-          md += `### 需求意图\n\n${item.intent || "无"}\n\n`;
+          md += `### 需求意图\n\n${escapeMarkdown(item.intent) || "无"}\n\n`;
 
           if (item.summary) {
             const s = item.summary as Record<string, unknown>;
-            md += `### 需求摘要\n\n${s.summary}\n\n`;
+            md += `### 需求摘要\n\n${escapeMarkdown(s.summary)}\n\n`;
             if (s.requirements && Array.isArray(s.requirements)) {
               md += "#### 核心需求\n\n";
               for (const req of s.requirements as string[]) {
-                md += `- ${req}\n`;
+                md += `- ${escapeMarkdown(req)}\n`;
               }
               md += "\n";
             }
@@ -124,13 +138,13 @@ export const exportRouter = createRouter({
       if (input.format === "markdown") {
         let md = "# 提示词库导出\n\n";
         for (const p of result) {
-          md += `## ${p.title}\n\n`;
-          md += `- **框架**: ${p.framework || "通用"}\n`;
-          md += `- **标签**: ${p.tags || "无"}\n`;
+          md += `## ${escapeMarkdown(p.title)}\n\n`;
+          md += `- **框架**: ${escapeMarkdown(p.framework) || "通用"}\n`;
+          md += `- **标签**: ${escapeMarkdown(p.tags) || "无"}\n`;
           md += `- **创建时间**: ${p.createdAt}\n\n`;
           md += `### 提示词内容\n\n\`\`\`\n${p.content}\n\`\`\`\n\n`;
           if (p.description) {
-            md += `### 描述\n\n${p.description}\n\n`;
+            md += `### 描述\n\n${escapeMarkdown(p.description)}\n\n`;
           }
           md += "---\n\n";
         }

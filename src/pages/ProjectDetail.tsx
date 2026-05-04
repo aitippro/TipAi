@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,6 +56,7 @@ export default function ProjectDetail() {
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [inputValue, setInputValue] = useState("")
   const [showGenerate, setShowGenerate] = useState(false)
+  const shouldReduceMotion = useReducedMotion()
 
   const DOMAIN_LABELS: Record<string, string> = {
     "content-marketing": t("projects.domain.contentMarketing"),
@@ -222,7 +223,7 @@ export default function ProjectDetail() {
                   key={turn.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { delay: Math.min(i * 0.03, 0.3), type: "tween", ease: "easeOut" }}
                   className={`flex gap-3 ${turn.role === "user" ? "flex-row-reverse" : ""}`}
                 >
                   <div className="shrink-0">

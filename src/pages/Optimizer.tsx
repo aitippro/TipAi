@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { trpc } from "@/providers/trpc";
@@ -94,6 +94,8 @@ export default function Optimizer() {
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>("static");
   const [selectedStrategy, setSelectedStrategy] = useState<StaticStrategy>("general");
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copyTimerRef.current), []);
   const [showHistory, setShowHistory] = useState(false);
 
   // OPRO config
@@ -153,7 +155,8 @@ export default function Optimizer() {
   const handleCopy = async (text: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     toast.success(t("optimizer.toastCopied"));
   };
 
