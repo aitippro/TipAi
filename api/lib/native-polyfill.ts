@@ -962,6 +962,31 @@ function settingsGet(userId: number): Record<string, unknown> | null {
   };
 }
 
+function getEncryptionKey(): string {
+  return process.env.APP_SECRET || process.env.API_KEY_SECRET || "";
+}
+
+/** Encrypt an API key value if encryption key is available */
+function maybeEncrypt(value: string): string {
+  const key = getEncryptionKey();
+  if (!key) return value;
+  return encrypt(value, key);
+}
+
+/** Decrypt an API key value if it was encrypted */
+function maybeDecrypt(value: string): string {
+  const key = getEncryptionKey();
+  if (!key) return value;
+  try {
+    return decrypt(value, key);
+  } catch {
+    // Not encrypted or already plaintext
+    return value;
+  }
+}
+
+const API_KEY_FIELDS = new Set(["kimiApiKey", "openaiApiKey", "claudeApiKey", "deepseekApiKey"]);
+
 function settingsUpdate(userId: number, data: Record<string, unknown>): void {
   ensureSettingsTable();
   const db = getDb();
@@ -981,8 +1006,13 @@ function settingsUpdate(userId: number, data: Record<string, unknown>): void {
 
     for (const field of allowedFields) {
       if (data[field] !== undefined) {
+        let val = data[field];
+        // Encrypt API key fields before writing
+        if (API_KEY_FIELDS.has(field) && typeof val === "string" && val) {
+          val = maybeEncrypt(val);
+        }
         fields.push(`${field} = ?`);
-        values.push(data[field]);
+        values.push(val);
       }
     }
 
@@ -997,8 +1027,13 @@ function settingsUpdate(userId: number, data: Record<string, unknown>): void {
 
     for (const field of allowedFields) {
       if (data[field] !== undefined) {
+        let val = data[field];
+        // Encrypt API key fields before writing
+        if (API_KEY_FIELDS.has(field) && typeof val === "string" && val) {
+          val = maybeEncrypt(val);
+        }
         cols.push(field);
-        vals.push(data[field]);
+        vals.push(val);
         placeholders.push("?");
       }
     }
@@ -1027,7 +1062,9 @@ function settingsGetApiKey(userId: number, provider: string): string | undefined
 
   if (!row) return undefined;
   const val = row[column];
-  return val ? String(val) : undefined;
+  if (!val) return undefined;
+  // Decrypt stored API key
+  return maybeDecrypt(String(val));
 }
 // ============================================================================
 // Export polyfill object (snake_case API matching native/index.d.ts)
