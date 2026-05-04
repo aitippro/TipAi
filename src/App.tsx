@@ -41,7 +41,6 @@ const Feedback = lazy(() => import("./pages/Feedback"))
 const DriftDetection = lazy(() => import("./pages/DriftDetection"))
 const AgentSwarm = lazy(() => import("./pages/AgentSwarm"))
 const Academic = lazy(() => import("./pages/Academic"))
-const ApiDocs = lazy(() => import("./pages/ApiDocs"))
 
 function PageFallback() {
   return (
@@ -157,7 +156,6 @@ export default function App() {
                       <Route path="/drift" element={<DriftDetection />} />
                       <Route path="/swarm" element={<AgentSwarm />} />
                       <Route path="/academic" element={<Academic />} />
-                      <Route path="/api-docs" element={<ApiDocs />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </PageTransition>

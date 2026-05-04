@@ -4,12 +4,10 @@ import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
-import { rest } from "./rest-router";
 import { native } from "./lib/native";
 
 // ── Initialize native database in non-Electron environments (dev/Vite/server) ──
@@ -30,7 +28,7 @@ if (!process.env.TIPAI_ELECTRON && native.dbOpen) {
   }
 }
 
-const app = new Hono<{ Bindings: HttpBindings }>();
+const app = new Hono();
 
 // Security headers (CSP, X-Frame-Options, etc.)
 app.use(secureHeaders({
@@ -159,23 +157,8 @@ app.use("/api/trpc/*", async (c) => {
   });
 });
 
-// REST API routes
-app.route("/api/rest", rest);
-
+// Health endpoint
 app.get("/api/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
-app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 export { serveStaticFiles } from "./lib/vite";
 export default app;
-
-// Auto-start server in standalone mode (not dev, not Electron-managed)
-if (!process.env.VITE_DEV_SERVER_URL && !process.env.TIPAI_ELECTRON) {
-  const { serve } = await import("@hono/node-server");
-  const { serveStaticFiles } = await import("./lib/vite");
-  serveStaticFiles(app);
-
-  const port = parseInt(process.env.PORT || "3000", 10);
-  serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
-}

@@ -39,7 +39,6 @@ import {
   Activity,
   Users,
   GraduationCap,
-  Globe,
 } from "lucide-react"
 
 // ============================================================================
@@ -76,7 +75,6 @@ const NAV_GROUPS: { title: NavGroupKey; items: { path: string; icon: typeof Spar
       { path: "/drift", icon: Activity, labelKey: "drift" },
       { path: "/swarm", icon: Users, labelKey: "swarm" },
       { path: "/academic", icon: GraduationCap, labelKey: "academic" },
-      { path: "/api-docs", icon: Globe, labelKey: "apiDocs" },
       { path: "/export", icon: Download, labelKey: "export" },
     ],
   },
