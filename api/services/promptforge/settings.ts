@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { UpdatePromptForgeSettingsInput } from "./schemas";
+import { API_KEY_UNCHANGED } from "@contracts/constants";
 
 // ── Native Addon ─────────────────────────────────────────
 import { native } from "../../lib/native";
@@ -89,19 +90,19 @@ function buildSettingsUpdateData(
   let newClaudeKey: string | undefined;
   let newDeepSeekKey: string | undefined;
 
-  if (input.kimiApiKey && input.kimiApiKey.trim().length > 0 && input.kimiApiKey !== "***") {
+  if (input.kimiApiKey && input.kimiApiKey.trim().length > 0 && input.kimiApiKey !== API_KEY_UNCHANGED) {
     newKimiKey = input.kimiApiKey.trim();
     updateData.kimiApiKey = newKimiKey;
   }
-  if (input.openaiApiKey && input.openaiApiKey.trim().length > 0 && input.openaiApiKey !== "***") {
+  if (input.openaiApiKey && input.openaiApiKey.trim().length > 0 && input.openaiApiKey !== API_KEY_UNCHANGED) {
     newOpenAIKey = input.openaiApiKey.trim();
     updateData.openaiApiKey = newOpenAIKey;
   }
-  if (input.claudeApiKey && input.claudeApiKey.trim().length > 0 && input.claudeApiKey !== "***") {
+  if (input.claudeApiKey && input.claudeApiKey.trim().length > 0 && input.claudeApiKey !== API_KEY_UNCHANGED) {
     newClaudeKey = input.claudeApiKey.trim();
     updateData.claudeApiKey = newClaudeKey;
   }
-  if (input.deepseekApiKey && input.deepseekApiKey.trim().length > 0 && input.deepseekApiKey !== "***") {
+  if (input.deepseekApiKey && input.deepseekApiKey.trim().length > 0 && input.deepseekApiKey !== API_KEY_UNCHANGED) {
     newDeepSeekKey = input.deepseekApiKey.trim();
     updateData.deepseekApiKey = newDeepSeekKey;
   }

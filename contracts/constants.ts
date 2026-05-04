@@ -12,3 +12,6 @@ export const Paths = {
   login: "/login",
   oauthCallback: "/api/oauth/callback",
 } as const;
+
+/** Sentinel value indicating the API key was not changed in a settings update */
+export const API_KEY_UNCHANGED = "***__UNCHANGED__***" as const;

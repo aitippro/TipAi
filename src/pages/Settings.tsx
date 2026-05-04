@@ -82,15 +82,15 @@ export default function SettingsPage() {
     const payload: Record<string, string> = { defaultModel, defaultLanguage: getDbLanguage(uiLanguage) }
     MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
 
-    localStorage.setItem("tipai_global_prompt", globalPrompt)
-    localStorage.setItem("tipai_cloud_sync", String(cloudSync))
-    localStorage.setItem("tipai_theme", theme)
-    localStorage.setItem("tipai_reduced_motion", String(reducedMotion))
-    localStorage.setItem("tipai_font_size", String(fontSize))
-    localStorage.setItem("tipai_dev_mode", String(devMode))
-
     try {
       await updateMutation.mutateAsync(payload)
+
+      localStorage.setItem("tipai_global_prompt", globalPrompt)
+      localStorage.setItem("tipai_cloud_sync", String(cloudSync))
+      localStorage.setItem("tipai_theme", theme)
+      localStorage.setItem("tipai_reduced_motion", String(reducedMotion))
+      localStorage.setItem("tipai_font_size", String(fontSize))
+      localStorage.setItem("tipai_dev_mode", String(devMode))
     } finally {
       savingRef.current = false
     }
