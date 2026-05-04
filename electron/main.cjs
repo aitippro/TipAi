@@ -28,16 +28,29 @@ let backendBaseUrl = '';
 
 // Native Addon (Rust core) — replaces better-sqlite3 for DB + AI calls
 let nativeAddon = null;
+let nativePolyfill = null;
+
+function getNative() {
+  return nativeAddon || nativePolyfill;
+}
+
 try {
   if (isDev || !app.isPackaged) {
     nativeAddon = require('../native');
   } else {
-    const nativePath = path.join(path.dirname(process.execPath), 'resources/native/tipai_core.node');
-    nativeAddon = require(nativePath);
+    const nativeDir = path.join(process.resourcesPath, 'app.asar.unpacked', 'native');
+    nativeAddon = require(nativeDir);
+    process.env.TIPAI_NATIVE_PATH = nativeDir;
   }
   log(`Native addon loaded: v${nativeAddon.version()}`);
 } catch (err) {
-  logError('Failed to load native addon, falling back to JS', err);
+  logError('Failed to load native addon, falling back to JS polyfill', err);
+  try {
+    nativePolyfill = require('./native-polyfill.cjs');
+    log('JS polyfill loaded for native operations');
+  } catch (pfErr) {
+    logError('Failed to load JS polyfill', pfErr);
+  }
 }
 
 function log(msg) {
@@ -91,16 +104,17 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// Run SQL migrations — prefer Native Addon, fallback to better-sqlite3
+// Run SQL migrations — prefer Native/Polyfill, fallback to better-sqlite3
 function runMigrations(dbPath, migrationsDir) {
-  if (nativeAddon) {
+  const n = getNative();
+  if (n) {
     try {
-      nativeAddon.dbOpen(dbPath, process.env.API_KEY_SECRET || null);
-      nativeAddon.dbMigrate(migrationsDir);
+      n.dbOpen(dbPath, process.env.API_KEY_SECRET || null);
+      n.dbMigrate(migrationsDir);
       log('Migrations completed via Native Addon');
       return;
     } catch (err) {
-      logError('Native Addon migration failed, falling back to better-sqlite3', err);
+      logError('Native migration failed, falling back to better-sqlite3', err);
     }
   }
 
@@ -166,10 +180,11 @@ async function startBackend() {
     }
   }
 
-  // Open database via Native Addon (dev + prod)
-  if (nativeAddon) {
+  // Open database via Native Addon or polyfill (dev + prod)
+  const n = getNative();
+  if (n) {
     try {
-      nativeAddon.dbOpen(dbPath, process.env.API_KEY_SECRET);
+      n.dbOpen(dbPath, process.env.API_KEY_SECRET);
       log(`Native DB opened: ${dbPath}`);
     } catch (err) {
       logError('Native dbOpen failed', err);
@@ -250,85 +265,83 @@ ipcMain.handle('shell:openExternal', async (_e, url) => shell.openExternal(url))
 ipcMain.handle('db:getPath', () => dbPath);
 
 // ── Native Addon IPC Handlers ───────────────────────────────
-// Expose Rust core functions directly to renderer via IPC
+// Expose native (Rust or JS polyfill) functions to renderer via IPC.
+// When nativeAddon is null, falls back to CJS polyfill (real SQLite).
 
-ipcMain.handle('native:version', () => nativeAddon ? nativeAddon.version() : 'js-only');
-
-ipcMain.handle('native:userFindByUnionId', (_e, unionId) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.userFindByUnionId(unionId);
+ipcMain.handle('native:version', () => {
+  const n = getNative();
+  return n ? n.version() : 'js-only';
 });
 
-ipcMain.handle('native:userUpsert', (_e, data) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.userUpsert(data);
-});
+// ── Users ──
+ipcMain.handle('native:userFindByUnionId', (_e, unionId) => getNative().userFindByUnionId(unionId));
+ipcMain.handle('native:userFindById', (_e, id) => getNative().userFindById(id));
+ipcMain.handle('native:userFindByUsername', (_e, username) => getNative().userFindByUsername(username));
+ipcMain.handle('native:userUpsert', (_e, data) => getNative().userUpsert(data));
 
-ipcMain.handle('native:settingsGet', (_e, userId) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.settingsGet(userId);
-});
+// ── Settings ──
+ipcMain.handle('native:settingsGet', (_e, userId) => getNative().settingsGet(userId));
+ipcMain.handle('native:settingsUpdate', (_e, userId, data) => getNative().settingsUpdate(userId, data));
+ipcMain.handle('native:settingsGetApiKey', (_e, userId, provider) => getNative().settingsGetApiKey(userId, provider));
 
-ipcMain.handle('native:settingsUpdate', (_e, userId, data) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.settingsUpdate(userId, data);
-});
+// ── Projects ──
+ipcMain.handle('native:projectList', (_e, userId) => getNative().projectList(userId));
+ipcMain.handle('native:projectCreate', (_e, data) => getNative().projectCreate(data));
+ipcMain.handle('native:projectGetById', (_e, id, userId) => getNative().projectGetById(id, userId));
+ipcMain.handle('native:projectUpdate', (_e, id, userId, data) => getNative().projectUpdate(id, userId, data));
+ipcMain.handle('native:projectDelete', (_e, id, userId) => { getNative().projectDelete(id, userId); });
 
-ipcMain.handle('native:settingsGetApiKey', (_e, userId, provider) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.settingsGetApiKey(userId, provider);
-});
+// ── Steps ──
+ipcMain.handle('native:stepList', (_e, projectId) => getNative().stepList(projectId));
+ipcMain.handle('native:stepGetById', (_e, id) => getNative().stepGetById(id));
+ipcMain.handle('native:stepCreate', (_e, data) => getNative().stepCreate(data));
+ipcMain.handle('native:stepUpdate', (_e, id, data) => getNative().stepUpdate(id, data));
+ipcMain.handle('native:stepDelete', (_e, id, projectId) => { getNative().stepDelete(id, projectId); });
 
-ipcMain.handle('native:promptList', (_e, userId, opts) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.promptList(userId, opts);
-});
+// ── Conversations ──
+ipcMain.handle('native:conversationCreate', (_e, data) => getNative().conversationCreate(data));
+ipcMain.handle('native:conversationListByProject', (_e, projectId) => getNative().conversationListByProject(projectId));
 
-ipcMain.handle('native:promptCreate', (_e, data) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.promptCreate(data);
-});
+// ── Summaries ──
+ipcMain.handle('native:summaryGetByProject', (_e, projectId) => getNative().summaryGetByProject(projectId));
+ipcMain.handle('native:summaryUpsert', (_e, data) => getNative().summaryUpsert(data));
 
-ipcMain.handle('native:templateListPublic', () => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.templateListPublic();
-});
+// ── Evaluations ──
+ipcMain.handle('native:evaluationCreate', (_e, data) => getNative().evaluationCreate(data));
+ipcMain.handle('native:evaluationStats', (_e, projectId) => getNative().evaluationStats(projectId ?? null));
+ipcMain.handle('native:evaluationList', (_e, projectId, limit) => getNative().evaluationList(projectId ?? null, limit ?? 1000));
 
-ipcMain.handle('native:templateListByUser', (_e, userId) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.templateListByUser(userId);
-});
+// ── Prompts ──
+ipcMain.handle('native:promptList', (_e, userId, opts) => getNative().promptList(userId, opts));
+ipcMain.handle('native:promptCreate', (_e, data) => getNative().promptCreate(data));
+ipcMain.handle('native:promptDelete', (_e, id, userId) => { getNative().promptDelete(id, userId); });
+ipcMain.handle('native:promptUpdateFavorite', (_e, id, userId, isFavorite) => { getNative().promptUpdateFavorite(id, userId, isFavorite); });
 
-ipcMain.handle('native:projectList', (_e, userId) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.projectList(userId);
-});
+// ── Templates ──
+ipcMain.handle('native:templateListPublic', () => getNative().templateListPublic());
+ipcMain.handle('native:templateListByUser', (_e, userId) => getNative().templateListByUser(userId));
+ipcMain.handle('native:templateCreate', (_e, data) => getNative().templateCreate(data));
+ipcMain.handle('native:templateDelete', (_e, id, userId) => { getNative().templateDelete(id, userId); });
+ipcMain.handle('native:templateUse', (_e, id) => { getNative().templateUse(id); });
+ipcMain.handle('native:templateRate', (_e, id, score) => getNative().templateRate(id, score));
 
-ipcMain.handle('native:projectCreate', (_e, data) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.projectCreate(data);
-});
+// ── Optimizer ──
+ipcMain.handle('native:optimizerRunCreate', (_e, data) => getNative().optimizerRunCreate(data));
+ipcMain.handle('native:optimizerRunList', (_e, userId, limit) => getNative().optimizerRunList(userId, limit ?? 50));
 
-ipcMain.handle('native:stepList', (_e, projectId) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.stepList(projectId);
-});
+// ── Crypto ──
+ipcMain.handle('native:encrypt', (_e, plaintext, password) => getNative().encrypt(plaintext, password || ''));
+ipcMain.handle('native:decrypt', (_e, ciphertext, password) => getNative().decrypt(ciphertext, password || ''));
 
-ipcMain.handle('native:stepUpdate', (_e, id, data) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.stepUpdate(id, data);
-});
+// ── AI (async) ──
+ipcMain.handle('native:aiCall', async (_e, req) => getNative().aiCall(req));
+ipcMain.handle('native:aiCallSelfConsistency', async (_e, req, sampleCount) => getNative().aiCallSelfConsistency(req, sampleCount));
 
-// AI calls (async — non-blocking)
-ipcMain.handle('native:aiCall', async (_e, req) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.aiCall(req);
-});
+// ── Quality / Drift (stubs in polyfill mode) ──
+ipcMain.handle('native:runQualityGate', (_e, prompt, checks, threshold) => getNative().runQualityGate(prompt, checks, threshold));
+ipcMain.handle('native:detectDrift', (_e, versions, baselineIndex) => getNative().detectDrift(versions, baselineIndex));
+ipcMain.handle('native:compareVersions', (_e, a, b) => getNative().compareVersions(a, b));
 
-ipcMain.handle('native:aiCallSelfConsistency', async (_e, req, sampleCount) => {
-  if (!nativeAddon) throw new Error('Native addon not loaded');
-  return nativeAddon.aiCallSelfConsistency(req, sampleCount);
-});
 
 function createApplicationMenu() {
   const isMacOS = process.platform === 'darwin';
@@ -389,8 +402,9 @@ app.on('before-quit', () => {
     backendServer.close();
     backendServer = null;
   }
-  if (nativeAddon) {
-    try { nativeAddon.dbClose(); log('Native DB closed'); } catch (e) {}
+  const n = getNative();
+  if (n) {
+    try { n.dbClose(); log('Native DB closed'); } catch (e) {}
   }
 });
 app.on('window-all-closed', () => { app.quit(); });

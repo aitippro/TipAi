@@ -5,13 +5,8 @@
  * Uses Native Addon for seeding (P5 migrated)
  */
 
-// ── Native Addon ─────────────────────────────────────────
-let native: any = null;
-try {
-  native = require("../native");
-} catch {
-  throw new Error("Native addon is required for seeding. Run `npm run native:build` first.");
-}
+// ── Native Addon (with polyfill fallback) ─────────────────
+import { native } from "../api/lib/native";
 
 import { hashPasswordSync } from "../api/lib/password";
 

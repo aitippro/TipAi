@@ -155,7 +155,9 @@
       "output": "release"
     },
     "asarUnpack": [
-      "**/*.node"
+      "**/*.node",
+      "native/index.js",
+      "native/package.json"
     ],
     "files": [
       "dist/**/*",
