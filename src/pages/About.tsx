@@ -1,4 +1,3 @@
-import { motion } from "framer-motion"
 import { Sparkles, Zap, Shield, Github, Heart, ArrowUpRight } from "lucide-react"
 import { AuroraBackground } from "@/components/effects/AuroraBackground"
 import { TiltCard } from "@/components/effects/TiltCard"
@@ -24,12 +23,11 @@ export default function About() {
         {/* Hero */}
         <ScrollReveal>
           <div className="text-center space-y-4 mb-12">
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center mx-auto shadow-xl shadow-blue-200/50 cursor-pointer"
+            <div
+              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center mx-auto shadow-xl shadow-blue-200/50 cursor-pointer hover:scale-[1.05] hover:rotate-[5deg] transition-transform"
             >
               <Sparkles className="w-10 h-10 text-white" />
-            </motion.div>
+            </div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
               TipAi
             </h1>
@@ -84,18 +82,16 @@ export default function About() {
         {/* Links */}
         <ScrollReveal delay={150}>
           <div className="flex items-center justify-center gap-4">
-            <motion.a
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
+            <a
               href="https://github.com/aitippro/TipAi"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm hover:bg-slate-800 transition-colors shadow-md"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm hover:bg-slate-800 transition-all shadow-md hover:scale-[1.05] hover:-translate-y-0.5 active:scale-[0.95]"
             >
               <Github className="w-4 h-4" />
               GitHub
               <ArrowUpRight className="w-3.5 h-3.5" />
-            </motion.a>
+            </a>
           </div>
         </ScrollReveal>
 

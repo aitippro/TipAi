@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from "react-router";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const MOBILE_TABS = [
@@ -12,7 +11,7 @@ const MOBILE_TABS = [
 
 /**
  * BottomTabBar — 移动端底部 Tab Bar
- * 5 个主要入口 + 液态激活态
+ * 5 个主要入口 + 激活态指示器
  */
 export function BottomTabBar() {
   const location = useLocation();
@@ -24,24 +23,22 @@ export function BottomTabBar() {
         {MOBILE_TABS.map((tab) => {
           const isActive = location.pathname === tab.path;
           return (
-            <motion.button
+            <button
               key={tab.path}
-              whileTap={{ scale: 0.9 }}
               onClick={() => navigate(tab.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative",
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative active:scale-[0.9] transition-transform",
                 isActive ? "text-apple-blue" : "text-muted-foreground"
               )}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="bottom-tab-indicator"
-                  className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-apple-blue"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
+              <div
+                className={cn(
+                  "absolute -top-px left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-apple-blue transition-all duration-300",
+                  isActive ? "opacity-100" : "opacity-0"
+                )}
+              />
               <span className="text-[10px] font-medium">{tab.label}</span>
-            </motion.button>
+            </button>
           );
         })}
       </div>

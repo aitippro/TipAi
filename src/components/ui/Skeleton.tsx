@@ -1,5 +1,3 @@
-import { motion } from "framer-motion";
-
 interface SkeletonProps {
   className?: string;
   count?: number;
@@ -18,13 +16,10 @@ export function Skeleton({
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <motion.div
+        <div
           key={i}
           className={`bg-slate-200/60 dark:bg-slate-700/40 rounded-lg animate-pulse ${className}`}
-          style={style}
-          initial={{ opacity: 0.5 }}
-          animate={{ opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+          style={{ ...style, animationDelay: `${i * 0.1}s` }}
         />
       ))}
     </>

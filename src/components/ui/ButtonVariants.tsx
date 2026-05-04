@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { type LucideIcon } from "lucide-react";
 
@@ -30,10 +29,10 @@ export function ButtonVariants({
   const base = "inline-flex items-center justify-center font-medium rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-1";
 
   const variants = {
-    primary: "bg-gradient-to-r from-apple-blue to-apple-purple text-white shadow-md hover:shadow-lg focus:ring-apple-blue/30 active:scale-[0.97]",
-    secondary: "bg-white border border-slate-200 text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-200 active:scale-[0.97]",
+    primary: "bg-gradient-to-r from-apple-blue to-apple-purple text-white shadow-md hover:shadow-lg focus:ring-apple-blue/30 enabled:hover:scale-[1.02] active:scale-[0.97]",
+    secondary: "bg-white border border-slate-200 text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-200 enabled:hover:scale-[1.02] active:scale-[0.97]",
     tertiary: "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 focus:ring-slate-100",
-    danger: "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-md hover:shadow-lg focus:ring-red-300 active:scale-[0.97]",
+    danger: "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-md hover:shadow-lg focus:ring-red-300 enabled:hover:scale-[1.02] active:scale-[0.97]",
   };
 
   const sizes = {
@@ -43,9 +42,7 @@ export function ButtonVariants({
   };
 
   return (
-    <motion.button
-      whileHover={{ scale: disabled ? 1 : 1.02 }}
-      whileTap={{ scale: disabled ? 1 : 0.97 }}
+    <button
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -53,6 +50,6 @@ export function ButtonVariants({
     >
       {Icon && <Icon className={cn("shrink-0", size === "sm" ? "w-3.5 h-3.5" : size === "lg" ? "w-5 h-5" : "w-4 h-4")} />}
       {children}
-    </motion.button>
+    </button>
   );
 }
