@@ -61,6 +61,11 @@ export function GenerativeArt({
     let raf = 0;
     let visible = true;
 
+    // Frame-level reusable objects to avoid GC pressure
+    const CELL_SIZE = 150;
+    const grid = new Map<number, number[]>();
+    const checked = new Set<number>();
+
     const draw = () => {
       if (!visible) { raf = 0; return; }
 
@@ -69,27 +74,28 @@ export function GenerativeArt({
       // 连线（星座效果）— 空间哈希网格优化，将 O(n²) 降至约 O(n·k)
       ctx.strokeStyle = "rgba(148, 163, 184, 0.08)"; // slate-400 @ low opacity
       ctx.lineWidth = 0.5;
-      const CELL_SIZE = 150;
-      const grid = new Map<string, number[]>();
+      grid.clear();
       for (let ni = 0; ni < nodes.length; ni++) {
         const cx = Math.floor(nodes[ni].x / CELL_SIZE);
         const cy = Math.floor(nodes[ni].y / CELL_SIZE);
-        const key = `${cx},${cy}`;
-        if (!grid.has(key)) grid.set(key, []);
-        grid.get(key)!.push(ni);
+        // Use numeric key: cx * G + cy to avoid string allocation
+        const key = cx * 100000 + cy;
+        let bucket = grid.get(key);
+        if (!bucket) { bucket = []; grid.set(key, bucket); }
+        bucket.push(ni);
       }
-      const checked = new Set<string>();
+      checked.clear();
       for (let ni = 0; ni < nodes.length; ni++) {
         const cx = Math.floor(nodes[ni].x / CELL_SIZE);
         const cy = Math.floor(nodes[ni].y / CELL_SIZE);
         for (let ddx = -1; ddx <= 1; ddx++) {
           for (let ddy = -1; ddy <= 1; ddy++) {
-            const neighborKey = `${cx + ddx},${cy + ddy}`;
+            const neighborKey = (cx + ddx) * 100000 + (cy + ddy);
             const neighbors = grid.get(neighborKey);
             if (!neighbors) continue;
             for (const nj of neighbors) {
               if (ni >= nj) continue;
-              const pairKey = `${ni},${nj}`;
+              const pairKey = ni * 100000 + nj;
               if (checked.has(pairKey)) continue;
               checked.add(pairKey);
               const ndx = nodes[ni].x - nodes[nj].x;

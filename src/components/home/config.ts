@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react"
 import {
   Compass,
   FileText,
@@ -13,7 +14,13 @@ import {
   BarChart3,
 } from "lucide-react"
 
-import type { SlashCommandDefinition } from "./types"
+interface SlashCommandDefinition {
+  command: string
+  name: string
+  desc: string
+  icon: LucideIcon
+  color: string
+}
 
 export const SLASH_COMMANDS: SlashCommandDefinition[] = [
   { command: "/text", name: "文本生成", desc: "通用文本提示词", icon: FileText, color: "bg-slate-800" },

@@ -5,9 +5,29 @@
 
 import { LEXICON, INTENSITY_MAP, ALL_LEXICON_ENTRIES } from "./lexicon";
 
-const CHINESE_CHAR_RE = /[\u4e00-\u9fff]/;
+const CHINESE_CHAR_RE = /[一-鿿]/;
 const ENGLISH_TOKEN_CHAR_RE = /[a-zA-Z0-9']/;
 const PUNCTUATION_SKIP_RE = /[\s，。！？、；：“”‘’（）《》【】.,;!?\-—…~]/;
+
+/**
+ * First-character index for ALL_LEXICON_ENTRIES.
+ * Maps each first character to its matching entries (longest-first),
+ * turning an O(n*m) linear scan into an O(n*k) indexed lookup.
+ */
+const FIRST_CHAR_INDEX: Map<string, string[]> = /* @__PURE__ */ (() => {
+  const map = new Map<string, string[]>();
+  for (const entry of ALL_LEXICON_ENTRIES) {
+    const first = entry[0];
+    if (!first) continue;
+    let bucket = map.get(first);
+    if (!bucket) {
+      bucket = [];
+      map.set(first, bucket);
+    }
+    bucket.push(entry);
+  }
+  return map;
+})();
 
 function containsChinese(text: string): boolean {
   return CHINESE_CHAR_RE.test(text);
@@ -49,13 +69,17 @@ export function tokenize(text: string): string[] {
       continue;
     }
 
+    // Indexed first-character lookup
     let matched = false;
-    for (const entry of ALL_LEXICON_ENTRIES) {
-      if (text.startsWith(entry, i)) {
-        tokens.push(entry);
-        i += entry.length;
-        matched = true;
-        break;
+    const candidates = FIRST_CHAR_INDEX.get(ch);
+    if (candidates) {
+      for (const entry of candidates) {
+        if (text.startsWith(entry, i)) {
+          tokens.push(entry);
+          i += entry.length;
+          matched = true;
+          break;
+        }
       }
     }
 

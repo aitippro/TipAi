@@ -3,6 +3,9 @@
  * 集中管理所有模型 Provider 的实例化和注册
  */
 
+export { OpenAICompatibleProvider } from "./base";
+export type { ProviderOptions } from "./base";
+
 export {
   KimiProvider,
   createKimiProvider,

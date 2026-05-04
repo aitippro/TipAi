@@ -199,7 +199,7 @@ export async function runTreeOfThoughts(
 
       const path = getPathToNode(node.id);
       const currentThought = node.id === root.id ? null : node.content;
-      const candidates = await globalGenerator!(problem, currentThought, cfg.breadth);
+      const candidates = await gen(problem, currentThought, cfg.breadth);
       if (isTimedOut()) return;
 
       // 并行评估所有候选
@@ -246,14 +246,24 @@ export async function runTreeOfThoughts(
   const elapsed = Date.now() - start;
   const bestPath = findBestPath(tree, root.id);
 
+  // Single-pass stats computation
+  let totalNodes = 0;
+  let maxDepth = 0;
+  let evaluatedNodes = 0;
+  for (const node of Object.values(tree)) {
+    totalNodes++;
+    if (node.depth > maxDepth) maxDepth = node.depth;
+    if (node.value !== null) evaluatedNodes++;
+  }
+
   return {
     tree,
     rootId: root.id,
     bestPath,
     stats: {
-      totalNodes: Object.keys(tree).length,
-      maxDepth: Math.max(...Object.values(tree).map((n) => n.depth)),
-      evaluatedNodes: Object.values(tree).filter((n) => n.value !== null).length,
+      totalNodes,
+      maxDepth,
+      evaluatedNodes,
       elapsedMs: elapsed,
     },
     config: cfg,
@@ -297,11 +307,13 @@ export function flattenTreeLevels(
   tree: Record<string, ThoughtNode>,
   _rootId: string,
 ): ThoughtNode[][] {
-  const maxDepth = Math.max(0, ...Object.values(tree).map((n) => n.depth));
-  const levels: ThoughtNode[][] = [];
-
-  for (let d = 0; d <= maxDepth; d++) {
-    levels.push(Object.values(tree).filter((n) => n.depth === d));
+  // Single-pass: group nodes by depth, tracking max depth along the way
+  const levelMap: ThoughtNode[][] = [];
+  for (const node of Object.values(tree)) {
+    while (levelMap.length <= node.depth) {
+      levelMap.push([]);
+    }
+    levelMap[node.depth].push(node);
   }
-  return levels;
+  return levelMap;
 }

@@ -116,10 +116,15 @@ export function charJaccardSimilarity(a: string, b: string): number {
   const setA = new Set(a.split(""));
   const setB = new Set(b.split(""));
 
-  const intersection = new Set([...setA].filter((c) => setB.has(c)));
-  const union = new Set([...setA, ...setB]);
+  // Compute intersection count and union size using the smaller set
+  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+  let intersectionSize = 0;
+  for (const c of smaller) {
+    if (larger.has(c)) intersectionSize++;
+  }
+  const unionSize = setA.size + setB.size - intersectionSize;
 
-  return union.size === 0 ? 0 : intersection.size / union.size;
+  return unionSize === 0 ? 0 : intersectionSize / unionSize;
 }
 
 /**

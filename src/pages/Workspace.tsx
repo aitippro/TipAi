@@ -49,8 +49,8 @@ export default function WorkspacePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
-  const domainLabel = useCallback((key: string) => t(`projects.domain.${key.replace(/-/g, "")}` as unknown as TemplateStringsArray) || key, [t])
-  const statusLabel = useCallback((key: string) => t(`projects.status.${key}` as unknown as TemplateStringsArray) || key, [t])
+  const domainLabel = useCallback((key: string) => t(`projects.domain.${key.replace(/-/g, "")}`) || key, [t])
+  const statusLabel = useCallback((key: string) => t(`projects.status.${key}`) || key, [t])
 
   const { data: projects, isLoading } = trpc.project.list.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils()

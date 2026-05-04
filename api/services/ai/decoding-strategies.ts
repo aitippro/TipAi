@@ -71,6 +71,11 @@ const PRICING_TABLE: Record<
   "mistral": { input: 0, output: 0 },
 };
 
+/** Pre-sorted pricing keys by length descending (computed at module load) */
+const SORTED_PRICING_KEYS: string[] = /* @__PURE__ */ (() => {
+  return Object.keys(PRICING_TABLE).sort((a, b) => b.length - a.length);
+})();
+
 /** 默认策略参数 */
 export const DEFAULT_STRATEGY_CONFIG: Record<DecodeStrategyType, Omit<DecodeStrategy, "type">> = {
   greedy: {
@@ -155,12 +160,9 @@ export function estimateCost(
 
   const totalTokens = promptTokens * pathCount + completionTokensPerPath * pathCount;
 
-  // 查找最接近的模型定价（优先匹配更长的、更精确的 key）
+  // 查找最接近的模型定价（使用预排序 key 列表）
   const pricingKey =
-    Object.keys(PRICING_TABLE)
-      .filter((k) => model.includes(k))
-      .sort((a, b) => b.length - a.length)[0] ??
-    "gpt-4o-mini";
+    SORTED_PRICING_KEYS.find((k) => model.includes(k)) ?? "gpt-4o-mini";
   const pricing = PRICING_TABLE[pricingKey] ?? { input: 0.15, output: 0.6 };
 
   const inputCost = (promptTokens * pathCount * pricing.input) / 1_000_000;
