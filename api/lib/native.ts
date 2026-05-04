@@ -1,5 +1,8 @@
 import path from "path";
+import { createRequire } from "module";
 import { nativePolyfill } from "./native-polyfill";
+
+const _require = createRequire(import.meta.url);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let native: any = null;
@@ -8,7 +11,7 @@ function loadNativeAddon() {
   // 1. Electron packaged: main process sets this env var before loading backend
   if (process.env.TIPAI_NATIVE_PATH) {
     try {
-      return require(process.env.TIPAI_NATIVE_PATH);
+      return _require(process.env.TIPAI_NATIVE_PATH);
     } catch (e) {
       console.warn(`[native] TIPAI_NATIVE_PATH failed: ${e}`);
     }
@@ -16,16 +19,16 @@ function loadNativeAddon() {
 
   // 2. Try cwd (dev / non-packaged)
   try {
-    return require(path.join(process.cwd(), "native"));
+    return _require(path.join(process.cwd(), "native"));
   } catch (e) {
-    console.warn(`[native] cwd fallback failed: ${e}`);
+    // Expected in dev without Rust addon built — silently fall through
   }
 
   // 3. Try Electron resourcesPath (last resort for packaged)
   // @ts-expect-error resourcesPath is Electron-specific
   if (process.resourcesPath) {
     try {
-      return require(path.join(process.resourcesPath, "app.asar.unpacked", "native"));
+      return _require(path.join(process.resourcesPath, "app.asar.unpacked", "native"));
     } catch (e) {
       console.warn(`[native] resourcesPath fallback failed: ${e}`);
     }
