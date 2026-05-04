@@ -7,6 +7,13 @@
  *   - Kimi (Moonshot)
  *   - Ollama
  *
+ * NOTE: Claude is NOT OpenAI-compatible — it uses the Anthropic Messages API
+ * with different request body format ({ model, system, messages, max_tokens })
+ * and custom headers (x-api-key instead of Authorization: Bearer).
+ * Claude API calls are handled directly in client.ts (callAISingle / callVisionSingle)
+ * or through the Rust native addon (native/src/ai/client.rs → call_claude()).
+ * To add Claude as a first-class AIModelProvider, create a dedicated AnthropicProvider class.
+ *
  * Subclasses only need to provide configuration and capability detection.
  * Token estimation is inlined into the single message-build pass.
  */
