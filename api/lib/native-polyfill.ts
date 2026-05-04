@@ -1093,7 +1093,14 @@ function settingsGetApiKey(userId: number, provider: string): string | undefined
 // ============================================================================
 
 export const nativePolyfill = {
-  version: () => "1.2.2-polyfill",
+  version: () => {
+    try {
+      const pkg = _require("../../package.json");
+      return `${pkg.version}-polyfill`;
+    } catch {
+      return "0.0.0-polyfill";
+    }
+  },
   dbOpen: () => {
     /* no-op: polyfill opens DB on first use */
   },
