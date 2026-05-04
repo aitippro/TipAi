@@ -80,10 +80,10 @@ export const exportRouter = createRouter({
         for (const item of result) {
           md += `## ${escapeMarkdown(item.title)}\n\n`;
           md += `- **ID**: ${item.id}\n`;
-          md += `- **领域**: ${escapeMarkdown(item.domain) || "通用"}\n`;
+          md += `- **领域**: ${escapeMarkdown(item.domain ?? '通用')}\n`;
           md += `- **状态**: ${escapeMarkdown(item.status)}\n`;
           md += `- **创建时间**: ${item.createdAt}\n\n`;
-          md += `### 需求意图\n\n${escapeMarkdown(item.intent) || "无"}\n\n`;
+          md += `### 需求意图\n\n${escapeMarkdown(item.intent ?? '无')}\n\n`;
 
           if (item.summary) {
             const s = item.summary as Record<string, unknown>;
@@ -139,8 +139,8 @@ export const exportRouter = createRouter({
         let md = "# 提示词库导出\n\n";
         for (const p of result) {
           md += `## ${escapeMarkdown(p.title)}\n\n`;
-          md += `- **框架**: ${escapeMarkdown(p.framework) || "通用"}\n`;
-          md += `- **标签**: ${escapeMarkdown(p.tags) || "无"}\n`;
+          md += `- **框架**: ${escapeMarkdown(p.framework ?? '通用')}\n`;
+          md += `- **标签**: ${escapeMarkdown(p.tags ?? '无')}\n`;
           md += `- **创建时间**: ${p.createdAt}\n\n`;
           md += `### 提示词内容\n\n\`\`\`\n${p.content}\n\`\`\`\n\n`;
           if (p.description) {

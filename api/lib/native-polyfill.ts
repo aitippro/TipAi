@@ -258,8 +258,8 @@ function projectUpdate(
     description: "description",
     status: "status",
     intent: "intent",
-    clarification_status: "clarificationStatus",
-    turn_count: "turnCount",
+    clarificationStatus: "clarificationStatus",
+    turnCount: "turnCount",
   };
 
   for (const [jsKey, sqlKey] of Object.entries(map)) {

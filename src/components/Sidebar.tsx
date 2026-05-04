@@ -19,7 +19,6 @@ import {
 import {
   Sparkles,
   BookOpen,
-  User,
   Wand2,
   Settings,
   Menu,
@@ -106,7 +105,6 @@ interface SidebarContentProps {
   isMacOS: boolean
   location: Location
   user: UserInfo | null
-  isAuthenticated: boolean
   setMobileOpen?: (open: boolean) => void
 }
 
@@ -116,7 +114,6 @@ function SidebarContent({
   isMacOS,
   location,
   user,
-  isAuthenticated,
   setMobileOpen,
 }: SidebarContentProps) {
   const { t } = useTranslation()
@@ -196,57 +193,40 @@ function SidebarContent({
 
       {/* 底部用户 */}
       <div className="p-3 border-t border-border/50">
-        {isAuthenticated ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`
-                  w-full h-auto p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5
-                  ${collapsed ? "justify-center px-0" : "justify-start gap-3"}
-                `}
-              >
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700 text-xs font-semibold">
-                    {user?.name?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                {!collapsed && (
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-                      {user?.name || t('common.user')}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                      {user?.email || ""}
-                    </span>
-                  </div>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side={collapsed ? "right" : "top"}
-              className="w-48 rounded-xl shadow-xl border-border/50"
-            >
-              <DropdownMenuItem className="text-slate-400 cursor-default rounded-lg mx-1 my-1">
-                {t('sidebar.localMode')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Link to="/login" className={collapsed ? "flex justify-center" : ""}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               className={`
-                rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-sm
-                ${collapsed ? "px-2" : "w-full justify-start gap-2"}
+                w-full h-auto p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5
+                ${collapsed ? "justify-center px-0" : "justify-start gap-3"}
               `}
             >
-              <User className="w-4 h-4" />
-              {!collapsed && t('common.login')}
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback className="bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700 text-xs font-semibold">
+                  {user?.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {!collapsed && (
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                    {user?.name || t('common.user')}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[120px]"> </span>
+                </div>
+              )}
             </Button>
-          </Link>
-        )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            side={collapsed ? "right" : "top"}
+            className="w-48 rounded-xl shadow-xl border-border/50"
+          >
+            <DropdownMenuItem className="text-slate-400 cursor-default rounded-lg mx-1 my-1">
+              {t('sidebar.localMode')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -254,7 +234,7 @@ function SidebarContent({
 
 export default memo(function Sidebar() {
   const { t } = useTranslation()
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [platform] = useState(() => getPlatform())
@@ -275,7 +255,6 @@ export default memo(function Sidebar() {
           isMacOS={isMacOS}
           location={location}
           user={user}
-          isAuthenticated={isAuthenticated}
         />
 
         {/* 折叠按钮 */}
@@ -322,7 +301,6 @@ export default memo(function Sidebar() {
                 isMacOS={isMacOS}
                 location={location}
                 user={user}
-                isAuthenticated={isAuthenticated}
                 setMobileOpen={setMobileOpen}
               />
             </SheetContent>

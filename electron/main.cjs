@@ -18,9 +18,6 @@ const EXPORT_DIR = path.join(dataDir, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
 let mainWindow;
-let backendPort = 0;
-let backendReady = false;
-let backendServer = null;
 
 // IPC mode: API calls go through IPC, NOT HTTP port
 let honoApp = null;
@@ -196,17 +193,16 @@ async function startBackend() {
   if (isDev) {
     backendBaseUrl = 'http://localhost:5173';
     process.env.VITE_DEV_SERVER_URL = backendBaseUrl;
-    backendReady = true;
     return;
   }
 
   // Production: load Hono app in-process for IPC-based API calls (no HTTP server)
   process.env.TIPAI_ELECTRON = '1';
 
-  // Ensure database tables exist before starting backend
+  // Production: ensure database tables exist before starting backend
   const migrationsDir = isDev
     ? path.join(__dirname, '../db/migrations')
-    : path.join(path.dirname(app.getPath('exe')), 'resources', 'db', 'migrations');
+    : path.join(process.resourcesPath, 'db', 'migrations');
   runMigrations(dbPath, migrationsDir);
 
   const bootPath = path.join(__dirname, '../dist/boot.js');
@@ -215,7 +211,6 @@ async function startBackend() {
   const mod = await import(bootUrl);
 
   honoApp = mod.default;
-  backendReady = true;
   log('Backend loaded in-process (IPC mode, no HTTP port)');
 }
 
@@ -398,12 +393,8 @@ if (!gotLock) {
   });
 }
 
-// Clean shutdown — close backend server + native DB on quit
+// Clean shutdown — close native DB on quit
 app.on('before-quit', () => {
-  if (backendServer?.close) {
-    backendServer.close();
-    backendServer = null;
-  }
   const n = getNative();
   if (n) {
     try { n.dbClose(); log('Native DB closed'); } catch (e) {}

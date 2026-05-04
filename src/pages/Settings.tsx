@@ -49,7 +49,6 @@ export default function SettingsPage() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [defaultModel, setDefaultModel] = useState("kimi")
   const [globalPrompt, setGlobalPrompt] = useState(() => localStorage.getItem("tipai_global_prompt") || "")
-  const [cloudSync, setCloudSync] = useState(() => localStorage.getItem("tipai_cloud_sync") === "true")
   const [theme, setTheme] = useState(() => localStorage.getItem("tipai_theme") || "light")
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("tipai_reduced_motion") === "true")
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem("tipai_font_size") || "14"))
@@ -93,7 +92,6 @@ export default function SettingsPage() {
       await updateMutation.mutateAsync(payload)
 
       localStorage.setItem("tipai_global_prompt", globalPrompt)
-      localStorage.setItem("tipai_cloud_sync", String(cloudSync))
       localStorage.setItem("tipai_theme", theme)
       localStorage.setItem("tipai_reduced_motion", String(reducedMotion))
       localStorage.setItem("tipai_font_size", String(fontSize))
@@ -109,7 +107,6 @@ export default function SettingsPage() {
       globalPrompt,
       defaultModel,
       theme,
-      cloudSync,
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -131,7 +128,6 @@ export default function SettingsPage() {
         if (data.globalPrompt) setGlobalPrompt(data.globalPrompt)
         if (data.defaultModel) setDefaultModel(data.defaultModel)
         if (data.theme) setTheme(data.theme)
-        if (data.cloudSync !== undefined) setCloudSync(data.cloudSync)
         if (data.keys) setKeys(data.keys)
         toast.success(t("settings.importSuccess"))
       } catch {
@@ -243,8 +239,6 @@ export default function SettingsPage() {
 
         {activeTab === "data" && (
           <SettingsDataTab
-            cloudSync={cloudSync}
-            onCloudSyncChange={setCloudSync}
             onExport={handleExport}
             onImport={handleImport}
             t={t}

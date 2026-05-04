@@ -36,7 +36,7 @@ vi.mock("@/providers/trpc", () => ({
     promptForge: {
       generate: { useMutation: () => ({ mutateAsync: vi.fn() }) },
       clarify: { useMutation: () => ({ mutateAsync: vi.fn() }) },
-      analyze: { useQuery: () => ({ data: null, isFetching: false }) },
+      analyze: { useMutation: () => ({ mutate: vi.fn(), data: null, isPending: false }) },
     },
     useUtils: () => ({
       template: { list: { invalidate: vi.fn() } },

@@ -1,5 +1,3 @@
- 
-
 import { native } from "../lib/native";
 import type { InsertUser } from "@db/schema";
 
@@ -15,9 +13,5 @@ export async function findUserByUsername(username: string) {
 
 export async function upsertUser(data: InsertUser) {
   if (!native) throw new Error("Native addon not available");
-  const values = { ...data };
-  if (values.role === undefined && values.unionId) {
-    values.role = "user";
-  }
-  return native.userUpsert(values);
+  return native.userUpsert(data);
 }

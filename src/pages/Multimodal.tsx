@@ -42,7 +42,7 @@ export default function MultimodalPage() {
   const [searchParams] = useSearchParams();
   const [request, setRequest] = useState("");
   const [mode, setMode] = useState<"text-to-image" | "image-to-text" | "video-storyboard">(() => {
-    const urlMode = new URLSearchParams(window.location.search).get("mode");
+    const urlMode = searchParams.get("mode");
     return (urlMode && ["text-to-image", "image-to-text", "video-storyboard"].includes(urlMode))
       ? urlMode as "text-to-image" | "image-to-text" | "video-storyboard"
       : "text-to-image";

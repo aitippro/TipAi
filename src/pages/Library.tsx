@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/Skeleton"
 import { TiltCard } from "@/components/effects/TiltCard"
 import {
   BookOpen, Search, Trash2, Copy, Clock,
-  ChevronDown, ChevronUp, Sparkles,
+  ChevronDown, ChevronUp,
 } from "lucide-react"
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -129,7 +129,7 @@ export default function Library() {
                           onClick={() => handleCopy(item.generatedPrompt, item.id)}
                         >
                           {copiedId === item.id ? (
-                            <Sparkles className="w-4 h-4 text-emerald-500" />
+                            <Copy className="w-4 h-4 text-emerald-500" />
                           ) : (
                             <Copy className="w-4 h-4 text-slate-400" />
                           )}

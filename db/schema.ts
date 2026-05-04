@@ -7,11 +7,9 @@ export interface User {
   id: number;
   unionId: string;
   username?: string | null;
-  password?: string | null;
   name?: string | null;
   email?: string | null;
   avatar?: string | null;
-  role: "user" | "admin";
   createdAt?: Date | string;
   updatedAt?: Date | string;
   lastSignInAt?: Date | string;
@@ -20,11 +18,9 @@ export interface User {
 export interface InsertUser {
   unionId: string;
   username?: string;
-  password?: string;
   name?: string;
   email?: string;
   avatar?: string;
-  role?: "user" | "admin";
   lastSignInAt?: Date | string;
 }
 
@@ -205,16 +201,6 @@ export interface ProjectSummary {
   projectId: number;
   summaryType: string;
   content: string;
-  createdAt?: Date | string;
-}
-
-export interface CloudSync {
-  id: number;
-  userId: number;
-  entityType: string;
-  entityId: number;
-  syncStatus: string;
-  lastSyncedAt?: Date | string;
   createdAt?: Date | string;
 }
 

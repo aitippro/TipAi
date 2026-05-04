@@ -106,13 +106,20 @@ export default function Home() {
   const [detectedComplexity, setDetectedComplexity] = useState<"simple" | "medium" | "complex" | null>(null)
   const userToggledRef = useRef(false)
 
-  const { data: analyzeData, isFetching: isAnalyzing } = trpc.promptForge.analyze.useQuery(
-    { intent: intent.trim() },
-    {
-      enabled: intent.trim().length >= 10,
-      staleTime: 30000,
+  const analyzeMutation = trpc.promptForge.analyze.useMutation()
+  const analyzeData = analyzeMutation.data
+  const isAnalyzing = analyzeMutation.isPending
+
+  // Trigger analysis when intent changes
+  useEffect(() => {
+    const trimmed = intent.trim()
+    if (trimmed.length >= 10) {
+      const timer = setTimeout(() => {
+        analyzeMutation.mutate({ intent: trimmed })
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  )
+  }, [intent])
 
   // Auto-detect complexity based on AI analysis result
   // Does NOT override if user has manually toggled stepMode
@@ -223,8 +230,7 @@ export default function Home() {
     setIntent("")
     setDetectedComplexity(null)
     userToggledRef.current = false
-    const timer = setTimeout(() => textareaRef.current?.focus(), 100)
-    return () => clearTimeout(timer)
+    setTimeout(() => textareaRef.current?.focus(), 100)
   }, [])
 
   return (

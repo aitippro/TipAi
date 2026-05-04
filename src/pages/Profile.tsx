@@ -47,7 +47,7 @@ export default function Profile() {
                   <h2 className="text-lg font-semibold text-slate-900">{user?.name || "用户"}</h2>
                   <p className="text-sm text-slate-500 flex items-center gap-1">
                     <Mail className="w-3.5 h-3.5" />
-                    {user?.email || "未设置邮箱"}
+                    本地用户
                   </p>
                 </div>
                 <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">

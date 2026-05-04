@@ -8,26 +8,7 @@
 // ── Native Addon (with polyfill fallback) ─────────────────
 import { native } from "../api/lib/native";
 
-import { hashPasswordSync } from "../api/lib/password";
-
 export function seed() {
-  // Seed admin user (for dev/test environments only)
-  if (process.env.NODE_ENV !== "production") {
-    const adminPassword = hashPasswordSync("admin");
-    const existingAdmin = native.userFindByUsername("admin");
-
-    if (!existingAdmin) {
-      native.userUpsert({
-        union_id: "local:admin",
-        username: "admin",
-        password: adminPassword,
-        name: "Administrator",
-        role: "admin",
-      });
-    }
-    console.log("✅ Seeded admin user (admin/admin)");
-  }
-
   // Seed domain packages
   const domains = [
     {
