@@ -7,6 +7,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +17,18 @@ jobs:
   # ─── CI 验证 ───
   ci:
     name: CI Check
-    uses: ./.github/workflows/ci.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
 
   # ─── 生成 Changelog ───
   changelog:
