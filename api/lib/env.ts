@@ -38,6 +38,11 @@ function getMachineSecret(): string {
     return fs.readFileSync(secretFile, "utf-8").trim();
   }
 
+  // Ensure directory exists before writing secret
+  if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+  }
+
   // Generate a new cryptographically secure random secret
   const secret = crypto.randomBytes(32).toString("hex");
   fs.writeFileSync(secretFile, secret, { mode: 0o600 }); // user-read/write only
