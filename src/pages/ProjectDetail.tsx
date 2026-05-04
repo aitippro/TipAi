@@ -83,26 +83,21 @@ export default function ProjectDetail() {
     completed: t("projects.clarificationStatus.completed"),
   }
 
-  const { data: project, isLoading: isLoadingProject } = trpc.project.get.useQuery(
-    { id: projectId },
-    { enabled: projectId > 0 }
-  )
-
-  const { data: conversation, isLoading: isLoadingConversation } =
-    trpc.project.getConversation.useQuery(
+  const { data: fullDetail, isLoading: isLoadingProject } =
+    trpc.project.getFullDetail.useQuery(
       { id: projectId },
       { enabled: projectId > 0 }
     )
 
-  const { data: summaryData, isLoading: isLoadingSummary } =
-    trpc.project.getSummary.useQuery(
-      { id: projectId },
-      { enabled: projectId > 0 }
-    )
+  const project = fullDetail?.project ?? null
+  const conversation = fullDetail?.conversation ?? null
+  const summaryData = fullDetail?.summary ?? null
+  const isLoadingConversation = isLoadingProject
+  const isLoadingSummary = isLoadingProject
 
   const generateSummaryMutation = trpc.project.generateSummary.useMutation({
     onSuccess: () => {
-      utils.project.getSummary.invalidate({ id: projectId })
+      utils.project.getFullDetail.invalidate({ id: projectId })
       toast.success(t("projectDetail.generateSummarySuccess"))
     },
     onError: (e: { message?: string }) => toast.error(e.message || t("projectDetail.generateSummaryError")),
@@ -110,7 +105,7 @@ export default function ProjectDetail() {
 
   const saveTurnMutation = trpc.project.saveConversationTurn.useMutation({
     onSuccess: () => {
-      utils.project.getConversation.invalidate({ id: projectId })
+      utils.project.getFullDetail.invalidate({ id: projectId })
       setInputValue("")
     },
     onError: (e: { message?: string }) => toast.error(e.message || t("projectDetail.sendError")),

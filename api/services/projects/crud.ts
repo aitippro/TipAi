@@ -170,6 +170,26 @@ export async function getProjectSummary(projectId: number, userId: number) {
   };
 }
 
+/**
+ * getFullDetail — single query that returns project + conversation + summary.
+ * Merges 3 network/DB queries into 1 for the ProjectDetail page.
+ */
+export async function getFullDetail(userId: number, id: number) {
+  const project = await getProjectById(userId, id);
+  if (!project) return null;
+
+  const [conversation, summary] = await Promise.all([
+    getProjectConversation(id, userId),
+    getProjectSummary(id, userId),
+  ]);
+
+  return {
+    project,
+    conversation,
+    summary,
+  };
+}
+
 export async function saveProjectSummary(
   userId: number,
   projectId: number,

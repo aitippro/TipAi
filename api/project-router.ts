@@ -9,6 +9,7 @@ import {
   getProjectConversation,
   getProjectSummary,
   saveProjectSummary,
+  getFullDetail,
 } from "./services/projects/crud";
 import {
   generateRequirementSummary,
@@ -39,6 +40,11 @@ export const projectRouter = createRouter({
   get: authedQuery
     .input(getProjectSchema)
     .query(({ input, ctx }) => getProjectById(ctx.user.id, input.id)),
+
+  // Merged endpoint: project + conversation + summary in one query
+  getFullDetail: authedQuery
+    .input(getProjectSchema)
+    .query(({ input, ctx }) => getFullDetail(ctx.user.id, input.id)),
 
   // Get project conversation history
   getConversation: authedQuery
