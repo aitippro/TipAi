@@ -112,9 +112,9 @@ export async function submitFeedback(input: FeedbackSubmission): Promise<number[
   for (const [dimension, score] of Object.entries(input.scores)) {
     try {
       const entry = native.evaluationCreate({
-        project_id: input.projectId,
-        step_id: input.stepId ?? null,
-        user_id: input.userId,
+        projectId: input.projectId,
+        stepId: input.stepId ?? null,
+        userId: input.userId,
         dimension: dimension as FeedbackDimension,
         score: Math.max(1, Math.min(10, score)),
         feedback: input.comment ?? null,

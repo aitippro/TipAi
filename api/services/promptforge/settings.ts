@@ -156,11 +156,14 @@ export function resolveStoredApiKey(model: string, settings?: UserSettings): str
 }
 
 function mapNativeSettings(userId: number, s: any): UserSettings {
+  // NAPI-RS converts Rust snake_case to JS camelCase (s.userId, s.defaultModel, ...)
+  // Polyfill may return either snake_case or camelCase — handle both
+  const get = (camel: string, snake: string) => s[camel] ?? s[snake];
   return {
-    userId: s.user_id,
-    defaultModel: s.default_model,
-    defaultFramework: s.default_framework,
-    defaultLanguage: s.default_language,
+    userId: get("userId", "user_id") ?? userId,
+    defaultModel: get("defaultModel", "default_model") ?? "",
+    defaultFramework: get("defaultFramework", "default_framework") ?? "auto",
+    defaultLanguage: get("defaultLanguage", "default_language") ?? "zh",
     kimiApiKey: native.settingsGetApiKey(userId, "kimi"),
     openaiApiKey: native.settingsGetApiKey(userId, "openai"),
     claudeApiKey: native.settingsGetApiKey(userId, "claude"),
@@ -206,15 +209,16 @@ export async function updatePromptForgeSettings(
   const existing = await getPromptForgeSettingsRecord(userId);
   const updateData = buildSettingsUpdateData(input, existing);
 
-  // Convert camelCase to snake_case for native
+  // NAPI-RS expects camelCase (rust struct snake_case → JS camelCase auto-convert)
+  // Polyfill handles both camelCase and snake_case via SNAKE_TO_CAMEL mapping
   const nativeUpdate: Record<string, any> = {};
-  if (updateData.defaultModel !== undefined) nativeUpdate.default_model = updateData.defaultModel;
-  if (updateData.defaultFramework !== undefined) nativeUpdate.default_framework = updateData.defaultFramework;
-  if (updateData.defaultLanguage !== undefined) nativeUpdate.default_language = updateData.defaultLanguage;
-  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimi_api_key = String(updateData.kimiApiKey);
-  if (updateData.openaiApiKey !== undefined) nativeUpdate.openai_api_key = String(updateData.openaiApiKey);
-  if (updateData.claudeApiKey !== undefined) nativeUpdate.claude_api_key = String(updateData.claudeApiKey);
-  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseek_api_key = String(updateData.deepseekApiKey);
+  if (updateData.defaultModel !== undefined) nativeUpdate.defaultModel = updateData.defaultModel;
+  if (updateData.defaultFramework !== undefined) nativeUpdate.defaultFramework = updateData.defaultFramework;
+  if (updateData.defaultLanguage !== undefined) nativeUpdate.defaultLanguage = updateData.defaultLanguage;
+  if (updateData.kimiApiKey !== undefined) nativeUpdate.kimiApiKey = String(updateData.kimiApiKey);
+  if (updateData.openaiApiKey !== undefined) nativeUpdate.openaiApiKey = String(updateData.openaiApiKey);
+  if (updateData.claudeApiKey !== undefined) nativeUpdate.claudeApiKey = String(updateData.claudeApiKey);
+  if (updateData.deepseekApiKey !== undefined) nativeUpdate.deepseekApiKey = String(updateData.deepseekApiKey);
 
   native.settingsUpdate(userId, nativeUpdate);
   return { success: true };

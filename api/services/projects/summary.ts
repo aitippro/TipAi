@@ -113,11 +113,11 @@ export async function getProjectSummary(projectId: number): Promise<
     summary: row.summary,
     requirements: row.requirements || undefined,
     constraints: row.constraints || undefined,
-    suggestedFrameworks: row.suggested_frameworks || undefined,
-    rawContext: row.raw_context || undefined,
-    isFinalized: row.is_finalized === 1,
-    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
-    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+    suggestedFrameworks: (row.suggestedFrameworks ?? row.suggested_frameworks) || undefined,
+    rawContext: (row.rawContext ?? row.raw_context) || undefined,
+    isFinalized: (row.isFinalized ?? row.is_finalized) === 1,
+    createdAt: row.createdAt ? new Date(row.createdAt) : row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.updated_at ? new Date(row.updated_at) : new Date(),
   };
 }
 
@@ -134,13 +134,13 @@ export async function upsertProjectSummary(
   },
 ): Promise<{ id: number; summary: string; createdAt: Date; updatedAt: Date }> {
   const row = native.summaryUpsert({
-    project_id: projectId,
-    user_id: userId,
+    projectId,
+    userId,
     summary: data.summary,
     requirements: data.requirements ? JSON.stringify(data.requirements) : undefined,
     constraints: data.constraints ? JSON.stringify(data.constraints) : undefined,
-    suggested_frameworks: data.suggestedFrameworks ? JSON.stringify(data.suggestedFrameworks) : undefined,
-    raw_context: data.rawContext || undefined,
+    suggestedFrameworks: data.suggestedFrameworks ? JSON.stringify(data.suggestedFrameworks) : undefined,
+    rawContext: data.rawContext || undefined,
     is_finalized: data.isFinalized ? 1 : 0,
   });
 

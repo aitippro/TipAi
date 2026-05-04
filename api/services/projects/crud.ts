@@ -19,21 +19,21 @@ function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | u
   }
 }
 
-/** Map native snake_case ProjectEntry → Drizzle-compatible camelCase */
+/** Map native ProjectEntry (Rust camelCase or polyfill snake_case) → Project */
 function mapNativeProject(entry: any): Project | null {
   if (!entry) return null;
   return {
     id: entry.id,
-    userId: entry.user_id,
+    userId: entry.userId ?? entry.user_id,
     title: entry.title,
     description: entry.description,
     domain: entry.domain,
     status: entry.status,
     intent: entry.intent,
-    clarificationStatus: entry.clarification_status,
-    turnCount: entry.turn_count,
-    createdAt: entry.created_at ? new Date(entry.created_at) : new Date(),
-    updatedAt: entry.updated_at ? new Date(entry.updated_at) : new Date(),
+    clarificationStatus: entry.clarificationStatus ?? entry.clarification_status,
+    turnCount: entry.turnCount ?? entry.turn_count,
+    createdAt: entry.createdAt ? new Date(entry.createdAt) : entry.created_at ? new Date(entry.created_at) : new Date(),
+    updatedAt: entry.updatedAt ? new Date(entry.updatedAt) : entry.updated_at ? new Date(entry.updated_at) : new Date(),
   } as unknown as Project;
 }
 
@@ -42,7 +42,7 @@ export async function createProject(
   input: CreateProjectInput,
 ): Promise<Project> {
   const result = native.projectCreate({
-    user_id: userId,
+    userId,
     title: input.title,
     description: input.description,
     intent: input.intent,
@@ -97,14 +97,14 @@ export async function saveConversationTurn(
   }
 
   const turn = native.conversationCreate({
-    project_id: input.projectId,
-    user_id: userId,
+    projectId: input.projectId,
+    userId,
     role: input.role,
     content: input.content,
-    question_id: input.questionId || undefined,
-    question_data: input.questionData ? JSON.stringify(input.questionData) : undefined,
-    answer_data: input.answerData ? JSON.stringify(input.answerData) : undefined,
-    turn_number: input.turnNumber ?? 0,
+    questionId: input.questionId || undefined,
+    questionData: input.questionData ? JSON.stringify(input.questionData) : undefined,
+    answerData: input.answerData ? JSON.stringify(input.answerData) : undefined,
+    turnNumber: input.turnNumber ?? 0,
   });
 
   // Update project turn count
@@ -118,11 +118,11 @@ export async function saveConversationTurn(
     userId: turn.user_id,
     role: turn.role,
     content: turn.content,
-    questionId: turn.question_id,
-    questionData: turn.question_data ? safeJsonParse(turn.question_data) : null,
-    answerData: turn.answer_data ? safeJsonParse(turn.answer_data) : null,
-    turnNumber: turn.turn_number,
-    createdAt: turn.created_at ? new Date(turn.created_at) : new Date(),
+    questionId: turn.questionId ?? turn.question_id,
+    questionData: turn.questionData ? safeJsonParse(turn.questionData) : turn.question_data ? safeJsonParse(turn.question_data) : null,
+    answerData: turn.answerData ? safeJsonParse(turn.answerData) : turn.answer_data ? safeJsonParse(turn.answer_data) : null,
+    turnNumber: turn.turnNumber ?? turn.turn_number,
+    createdAt: turn.createdAt ? new Date(turn.createdAt) : turn.created_at ? new Date(turn.created_at) : new Date(),
   };
 }
 
@@ -134,15 +134,15 @@ export async function getProjectConversation(projectId: number, userId: number) 
 
   return turns.map((turn: any) => ({
     id: turn.id,
-    projectId: turn.project_id,
-    userId: turn.user_id,
+    projectId: turn.projectId ?? turn.project_id,
+    userId: turn.userId ?? turn.user_id,
     role: turn.role,
     content: turn.content,
-    questionId: turn.question_id,
-    questionData: turn.question_data ? safeJsonParse(turn.question_data) : null,
-    answerData: turn.answer_data ? safeJsonParse(turn.answer_data) : null,
-    turnNumber: turn.turn_number,
-    createdAt: turn.created_at ? new Date(turn.created_at) : new Date(),
+    questionId: turn.questionId ?? turn.question_id,
+    questionData: turn.questionData ? safeJsonParse(turn.questionData) : turn.question_data ? safeJsonParse(turn.question_data) : null,
+    answerData: turn.answerData ? safeJsonParse(turn.answerData) : turn.answer_data ? safeJsonParse(turn.answer_data) : null,
+    turnNumber: turn.turnNumber ?? turn.turn_number,
+    createdAt: turn.createdAt ? new Date(turn.createdAt) : turn.created_at ? new Date(turn.created_at) : new Date(),
   }));
 }
 
@@ -155,8 +155,8 @@ export async function getProjectSummary(projectId: number, userId: number) {
 
   return {
     id: summary.id,
-    projectId: summary.project_id,
-    userId: summary.user_id,
+    projectId: summary.projectId ?? summary.project_id,
+    userId: summary.userId ?? summary.user_id,
     summary: summary.summary,
     requirements: summary.requirements ? safeJsonParse(summary.requirements, []) : [],
     constraints: summary.constraints ? safeJsonParse(summary.constraints, []) : [],
@@ -205,14 +205,14 @@ export async function saveProjectSummary(
   }
 
   const result = native.summaryUpsert({
-    project_id: projectId,
-    user_id: userId,
+    projectId,
+    userId,
     summary,
     requirements: requirements ? JSON.stringify(requirements) : undefined,
     constraints: constraints ? JSON.stringify(constraints) : undefined,
-    suggested_frameworks: suggestedFrameworks ? JSON.stringify(suggestedFrameworks) : undefined,
-    raw_context: rawContext || undefined,
-    is_finalized: 1,
+    suggestedFrameworks: suggestedFrameworks ? JSON.stringify(suggestedFrameworks) : undefined,
+    rawContext: rawContext || undefined,
+    isFinalized: 1,
   });
 
   return {

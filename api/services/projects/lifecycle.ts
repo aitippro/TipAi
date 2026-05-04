@@ -22,22 +22,23 @@ function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | u
 }
 
 function mapNativeStep(entry: any) {
+  const ds = entry.decodeStrategy ?? entry.decode_strategy;
   return {
     id: entry.id,
-    projectId: entry.project_id,
+    projectId: entry.projectId ?? entry.project_id,
     title: entry.title,
     description: entry.description,
     prompt: entry.prompt,
     stage: entry.stage,
-    orderNum: entry.order_num,
+    orderNum: entry.orderNum ?? entry.order_num,
     status: entry.status,
     output: entry.output,
-    parentStepId: entry.parent_step_id,
+    parentStepId: entry.parentStepId ?? entry.parent_step_id,
     model: entry.model,
     temperature: entry.temperature,
-    decodeStrategy: safeJsonParse<Record<string, unknown>>(entry.decode_strategy),
-    createdAt: entry.created_at ? new Date(entry.created_at) : new Date(),
-    updatedAt: entry.updated_at ? new Date(entry.updated_at) : new Date(),
+    decodeStrategy: ds ? safeJsonParse<Record<string, unknown>>(typeof ds === "string" ? ds : JSON.stringify(ds)) : undefined,
+    createdAt: entry.createdAt ? new Date(entry.createdAt) : entry.created_at ? new Date(entry.created_at) : new Date(),
+    updatedAt: entry.updatedAt ? new Date(entry.updatedAt) : entry.updated_at ? new Date(entry.updated_at) : new Date(),
   };
 }
 
@@ -72,7 +73,7 @@ export async function moveStepStage(userId: number, stepId: number, toStage: Lif
   if (!step) throw new Error("Step not found");
 
   // Ownership validation
-  const project = native.projectGetById(step.project_id, userId);
+  const project = native.projectGetById((step.projectId ?? step.project_id), userId);
   if (!project) throw new Error("Project not found or access denied");
 
   const fromStage = step.stage as LifecycleStage;
@@ -91,7 +92,7 @@ export async function linkParentStep(userId: number, stepId: number, parentStepI
   if (!child || !parent) throw new Error("Step not found");
 
   // Ownership validation
-  const childProject = native.projectGetById(child.project_id, userId);
+  const childProject = native.projectGetById((child.projectId ?? child.project_id), userId);
   if (!childProject) throw new Error("Project not found or access denied");
 
   const stageOrder = ["clarify", "design", "implement", "test", "deploy", "maintain"];
@@ -99,7 +100,7 @@ export async function linkParentStep(userId: number, stepId: number, parentStepI
     throw new Error("Parent step must be in an earlier stage than child step");
   }
 
-  native.stepUpdate(stepId, { parent_step_id: parentStepId });
+  native.stepUpdate(stepId, { parentStepId });
 }
 
 export async function getChildSteps(userId: number, stepId: number) {
@@ -107,10 +108,10 @@ export async function getChildSteps(userId: number, stepId: number) {
   if (!parent) return [];
 
   // Ownership validation
-  const project = native.projectGetById(parent.project_id, userId);
+  const project = native.projectGetById((parent.projectId ?? parent.project_id), userId);
   if (!project) return [];
-  const children = (native.stepList(parent.project_id) || [])
-    .filter((s: any) => s.parent_step_id === stepId)
+  const children = (native.stepList((parent.projectId ?? parent.project_id)) || [])
+    .filter((s: any) => (s.parentStepId ?? s.parent_step_id) === stepId)
     .sort((a: any, b: any) => (a.order_num || 0) - (b.order_num || 0))
     .map(mapNativeStep);
   return children;
@@ -137,17 +138,17 @@ export async function createLifecycleStep(
   const allSteps = (native.stepList(input.projectId) || []);
   const stageSteps = allSteps.filter((s: any) => s.stage === input.stage);
   const nextOrder = (stageSteps.length > 0
-    ? Math.max(...stageSteps.map((s: any) => s.order_num || 0))
+    ? Math.max(...stageSteps.map((s: any) => (s.orderNum ?? s.order_num ?? 0)))
     : 0) + 1;
 
   const inserted = native.stepCreate({
-    project_id: input.projectId,
+    projectId: input.projectId,
     title: input.title,
     description: input.description || undefined,
     prompt: input.prompt,
     stage: input.stage,
-    order_num: nextOrder,
-    parent_step_id: input.parentStepId || undefined,
+    orderNum: nextOrder,
+    parentStepId: input.parentStepId || undefined,
     model: input.model || "kimi",
     temperature: input.temperature ?? 0.7,
     decode_strategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : undefined,

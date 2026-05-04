@@ -31,9 +31,9 @@ export const optimizerRouter = createRouter({
       const result = await optimizePrompt(input.prompt, input.domain, input.strategy);
 
       native.optimizerRunCreate({
-        user_id: ctx.user.id,
-        original_prompt: input.prompt,
-        optimized_prompt: result.optimizedPrompt,
+        userId: ctx.user.id,
+        originalPrompt: input.prompt,
+        optimizedPrompt: result.optimizedPrompt,
         improvements: JSON.stringify(result.improvements),
         domain: input.domain,
         model: "kimi",
@@ -104,9 +104,9 @@ export const optimizerRouter = createRouter({
 
       // 保存到历史
       native.optimizerRunCreate({
-        user_id: ctx.user.id,
-        original_prompt: input.prompt,
-        optimized_prompt: result.finalPrompt,
+        userId: ctx.user.id,
+        originalPrompt: input.prompt,
+        optimizedPrompt: result.finalPrompt,
         improvements: JSON.stringify({
           opro: true,
           iterations: result.actualIterations,

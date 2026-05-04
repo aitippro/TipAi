@@ -205,13 +205,14 @@ function projectList(userId: number) {
 
 function projectCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const userId = data.userId ?? data.user_id;
   const result = getDb()
     .prepare(
       `INSERT INTO projects (userId, title, description, domain, status, intent, clarificationStatus, turnCount, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
     )
     .run(
-      data.user_id,
+      userId,
       data.title,
       data.description ?? null,
       data.domain ?? "general",
@@ -220,7 +221,7 @@ function projectCreate(data: Record<string, unknown>) {
       now,
       now,
     );
-  return projectGetById(Number(result.lastInsertRowid), Number(data.user_id));
+  return projectGetById(Number(result.lastInsertRowid), Number(userId));
 }
 
 function projectDelete(id: number, userId: number) {
@@ -317,6 +318,10 @@ function stepGetById(id: number) {
 
 function stepCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const projectId = data.projectId ?? data.project_id;
+  const orderNum = data.orderNum ?? data.order_num ?? 0;
+  const parentStepId = data.parentStepId ?? data.parent_step_id ?? null;
+  const decodeStrategy = data.decodeStrategy ?? data.decode_strategy ?? null;
   const result = getDb()
     .prepare(
       `INSERT INTO steps
@@ -324,22 +329,7 @@ function stepCreate(data: Record<string, unknown>) {
         parentStepId, model, temperature, decodeStrategy, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(
-      data.project_id,
-      data.title,
-      data.description ?? null,
-      data.prompt,
-      data.stage ?? "implement",
-      data.order_num ?? 0,
-      "pending",
-      null,
-      data.parent_step_id ?? null,
-      data.model ?? "kimi",
-      data.temperature ?? 0.7,
-      data.decode_strategy ?? null,
-      now,
-      now,
-    );
+    .run(projectId, data.title, data.description ?? null, data.prompt, data.stage ?? "implement", orderNum, "pending", null, parentStepId, data.model ?? "kimi", data.temperature ?? 0.7, decodeStrategy, now, now);
 
   return stepGetById(result.lastInsertRowid as number);
 }
@@ -356,6 +346,8 @@ function stepUpdate(id: number, data: Record<string, unknown>) {
     output: "output",
     model: "model",
     temperature: "temperature",
+    // Handle both camelCase and snake_case for parentStepId
+    parentStepId: "parentStepId",
   };
 
   for (const [jsKey, sqlKey] of Object.entries(map)) {
@@ -390,34 +382,32 @@ function stepDelete(id: number, projectId: number) {
 
 function conversationCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const projectId = data.projectId ?? data.project_id;
+  const userId = data.userId ?? data.user_id;
+  const role = data.role;
+  const content = data.content;
+  const questionId = data.questionId ?? data.question_id ?? null;
+  const questionData = data.questionData ?? data.question_data ?? null;
+  const answerData = data.answerData ?? data.answer_data ?? null;
+  const turnNumber = data.turnNumber ?? data.turn_number ?? 0;
   const result = getDb()
     .prepare(
       `INSERT INTO project_conversations
        (projectId, userId, role, content, questionId, questionData, answerData, turnNumber, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(
-      data.project_id,
-      data.user_id,
-      data.role,
-      data.content,
-      data.question_id ?? null,
-      data.question_data ?? null,
-      data.answer_data ?? null,
-      data.turn_number ?? 0,
-      now,
-    );
+    .run(projectId, userId, role, content, questionId, questionData, answerData, turnNumber, now);
 
   return {
     id: result.lastInsertRowid,
-    project_id: data.project_id,
-    user_id: data.user_id,
-    role: data.role,
-    content: data.content,
-    question_id: data.question_id ?? null,
-    question_data: data.question_data ?? null,
-    answer_data: data.answer_data ?? null,
-    turn_number: data.turn_number ?? 0,
+    project_id: projectId,
+    user_id: userId,
+    role,
+    content,
+    question_id: questionId,
+    question_data: questionData,
+    answer_data: answerData,
+    turn_number: turnNumber,
     created_at: new Date(now * 1000).toISOString(),
   };
 }
@@ -454,9 +444,14 @@ function summaryGetByProject(projectId: number) {
 
 function summaryUpsert(data: Record<string, unknown>) {
   const now = nowUnix();
+  const projectId = data.projectId ?? data.project_id;
+  const userId = data.userId ?? data.user_id;
+  const suggestedFrameworks = data.suggestedFrameworks ?? data.suggested_frameworks ?? null;
+  const rawContext = data.rawContext ?? data.raw_context ?? null;
+  const isFinalized = data.isFinalized ?? data.is_finalized ?? 0;
   const existing = getDb()
     .prepare("SELECT id FROM project_summaries WHERE projectId = ?")
-    .get(data.project_id);
+    .get(projectId);
 
   if (existing) {
     getDb()
@@ -466,16 +461,7 @@ function summaryUpsert(data: Record<string, unknown>) {
          suggestedFrameworks = ?, rawContext = ?, isFinalized = ?, updatedAt = ?
          WHERE projectId = ?`,
       )
-      .run(
-        data.summary,
-        data.requirements ?? null,
-        data.constraints ?? null,
-        data.suggested_frameworks ?? null,
-        data.raw_context ?? null,
-        data.is_finalized ?? 0,
-        now,
-        data.project_id,
-      );
+      .run(data.summary, data.requirements ?? null, data.constraints ?? null, suggestedFrameworks, rawContext, isFinalized, now, projectId);
   } else {
     getDb()
       .prepare(
@@ -483,21 +469,10 @@ function summaryUpsert(data: Record<string, unknown>) {
          (projectId, userId, summary, requirements, constraints, suggestedFrameworks, rawContext, isFinalized, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(
-        data.project_id,
-        data.user_id,
-        data.summary,
-        data.requirements ?? null,
-        data.constraints ?? null,
-        data.suggested_frameworks ?? null,
-        data.raw_context ?? null,
-        data.is_finalized ?? 0,
-        now,
-        now,
-      );
+      .run(projectId, userId, data.summary, data.requirements ?? null, data.constraints ?? null, suggestedFrameworks, rawContext, isFinalized, now, now);
   }
 
-  return summaryGetByProject(data.project_id as number);
+  return summaryGetByProject(projectId as number);
 }
 
 // ============================================================================
@@ -506,27 +481,22 @@ function summaryUpsert(data: Record<string, unknown>) {
 
 function evaluationCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const projectId = data.projectId ?? data.project_id;
+  const stepId = data.stepId ?? data.step_id ?? null;
+  const userId = data.userId ?? data.user_id;
   const result = getDb()
     .prepare(
       `INSERT INTO evaluations
        (projectId, stepId, userId, dimension, score, feedback, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(
-      data.project_id,
-      data.step_id ?? null,
-      data.user_id,
-      data.dimension,
-      data.score,
-      data.feedback ?? null,
-      now,
-    );
+    .run(projectId, stepId, userId, data.dimension, data.score, data.feedback ?? null, now);
 
   return {
     id: result.lastInsertRowid,
-    project_id: data.project_id,
-    step_id: data.step_id ?? null,
-    user_id: data.user_id,
+    project_id: projectId,
+    step_id: stepId,
+    user_id: userId,
     dimension: data.dimension,
     score: data.score,
     feedback: data.feedback ?? null,
@@ -743,27 +713,22 @@ function templateRate(id: number, score: number) {
 
 function optimizerRunCreate(data: Record<string, unknown>) {
   const now = nowUnix();
+  const userId = data.userId ?? data.user_id;
+  const originalPrompt = data.originalPrompt ?? data.original_prompt;
+  const optimizedPrompt = data.optimizedPrompt ?? data.optimized_prompt;
   const result = getDb()
     .prepare(
       `INSERT INTO prompt_optimizations
        (userId, originalPrompt, optimizedPrompt, improvements, domain, model, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(
-      data.user_id,
-      data.original_prompt,
-      data.optimized_prompt,
-      data.improvements ?? null,
-      data.domain ?? "general",
-      data.model ?? "kimi",
-      now,
-    );
+    .run(userId, originalPrompt, optimizedPrompt, data.improvements ?? null, data.domain ?? "general", data.model ?? "kimi", now);
 
   return {
     id: result.lastInsertRowid,
-    user_id: data.user_id,
-    original_prompt: data.original_prompt,
-    optimized_prompt: data.optimized_prompt,
+    user_id: userId,
+    original_prompt: originalPrompt,
+    optimized_prompt: optimizedPrompt,
     improvements: data.improvements ?? null,
     domain: data.domain ?? "general",
     model: data.model ?? "kimi",
