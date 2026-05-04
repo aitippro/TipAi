@@ -57,23 +57,24 @@ function isOproResult(r: unknown): r is OptimizationResult {
 
 export type OptimizeMode = "static" | "opro";
 export type StaticStrategy = "general" | "structured" | "concise";
+const STATIC_STRATEGIES: StaticStrategy[] = ["general", "structured", "concise"];
 export type DecodeType = "greedy" | "sampling" | "self-consistency";
 
-const staticStrategies = [
+const staticStrategies: { value: StaticStrategy; labelKey: string; descKey: string; icon: typeof Zap }[] = [
   {
-    value: "general" as StaticStrategy,
+    value: "general",
     labelKey: "optimizer.strategyGeneral",
     descKey: "optimizer.strategyGeneralDesc",
     icon: Zap,
   },
   {
-    value: "structured" as StaticStrategy,
+    value: "structured",
     labelKey: "optimizer.strategyStructured",
     descKey: "optimizer.strategyStructuredDesc",
     icon: Layers,
   },
   {
-    value: "concise" as StaticStrategy,
+    value: "concise",
     labelKey: "optimizer.strategyConcise",
     descKey: "optimizer.strategyConciseDesc",
     icon: Minimize2,
@@ -162,7 +163,7 @@ export default function Optimizer() {
 
   const loadFromHistory = (item: PromptOptimization) => {
     setOriginalPrompt(item.originalPrompt || "");
-    if (item.strategy && ["general", "structured", "concise"].includes(item.strategy)) {
+    if (item.strategy && STATIC_STRATEGIES.includes(item.strategy as StaticStrategy)) {
       setSelectedStrategy(item.strategy as StaticStrategy);
     }
     setShowHistory(false);
