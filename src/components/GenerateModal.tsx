@@ -82,6 +82,8 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
 
   const mutateRef = useRef(generateMutation.mutate)
   useEffect(() => { mutateRef.current = generateMutation.mutate }, [generateMutation.mutate])
+  const generateMutationRef = useRef(generateMutation)
+  useEffect(() => { generateMutationRef.current = generateMutation }, [generateMutation])
 
   useEffect(() => {
     if (hasStartedRef.current) return
@@ -173,7 +175,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       setActiveTab(0)
       setSavedIds(() => new Set())
     })
-    generateMutation.reset()
+    generateMutationRef.current.reset()
     setIsGenerating(true)
     mutateRef.current({ intent: intent.trim(), answers: answersRef.current, stepMode: stepModeRef.current })
      
