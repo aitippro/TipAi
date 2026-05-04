@@ -47,7 +47,7 @@ export default defineConfig({
           ],
           "vendor-trpc": ["@trpc/client", "@trpc/server", "@trpc/react-query", "@tanstack/react-query"],
           "vendor-i18n": ["i18next", "react-i18next"],
-          "vendor-form": ["react-hook-form", "@hookform/resolvers", "zod"],
+          "vendor-form": ["react-hook-form", "zod"],
         },
       },
     },
