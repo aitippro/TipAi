@@ -988,8 +988,6 @@ function maybeDecrypt(value: string): string {
 }
 
 const API_KEY_FIELDS = new Set(["kimiApiKey", "openaiApiKey", "claudeApiKey", "deepseekApiKey"]);
-// Snake_case versions sent by settings.ts in updatePromptForgeSettings
-const API_KEY_FIELD_SNAKE = new Set(["kimi_api_key", "openai_api_key", "claude_api_key", "deepseek_api_key"]);
 // Map snake_case API key field names to camelCase column names
 const SNAKE_TO_CAMEL: Record<string, string> = {
   kimi_api_key: "kimiApiKey",
@@ -1000,10 +998,6 @@ const SNAKE_TO_CAMEL: Record<string, string> = {
   default_framework: "defaultFramework",
   default_language: "defaultLanguage",
 };
-
-function resolveFieldName(key: string): string {
-  return SNAKE_TO_CAMEL[key] || key;
-}
 
 function settingsUpdate(userId: number, data: Record<string, unknown>): void {
   ensureSettingsTable();
