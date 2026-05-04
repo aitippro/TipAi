@@ -24,7 +24,6 @@ const Home = lazy(() => import("./pages/Home"))
 const Settings = lazy(() => import("./pages/Settings"))
 const Library = lazy(() => import("./pages/Library"))
 const TemplateMarket = lazy(() => import("./pages/TemplateMarket"))
-const Login = lazy(() => import("./pages/Login"))
 const NotFound = lazy(() => import("./pages/NotFound"))
 const Optimizer = lazy(() => import("./pages/Optimizer"))
 const About = lazy(() => import("./pages/About"))
@@ -147,7 +146,6 @@ export default function App() {
                       <Route path="/projects" element={<Workspace />} />
                       <Route path="/projects/:id" element={<ProjectDetail />} />
                       <Route path="/export" element={<Export />} />
-                      <Route path="/login" element={<Login />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logs" element={<Logs />} />

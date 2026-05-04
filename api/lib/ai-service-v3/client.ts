@@ -87,6 +87,10 @@ async function runSelfConsistencyCallAI(
 /**
  * 单次 AI 调用（原 callAI 的核心逻辑）
  */
+/**
+ * Single AI call with provider-specific request format.
+ * Claude uses Anthropic API format; all others use OpenAI-compatible format.
+ */
 async function callAISingle(
   provider: string,
   apiKey: string,
@@ -106,6 +110,49 @@ async function callAISingle(
     return null;
   }
 
+  // Claude uses Anthropic Messages API — different body & headers from OpenAI format
+  if (provider === "claude") {
+    try {
+      const response = await fetchWithTimeout(config.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: config.modelId,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+          max_tokens: 4000,
+          temperature,
+        }),
+      }, AI_CALL_TIMEOUT_MS);
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        console.error(`Claude error ${response.status}: ${errText}`);
+        return null;
+      }
+
+      const data = (await response.json()) as Record<string, unknown>;
+      const contentArr = data.content as Array<Record<string, unknown>> | undefined;
+      return (contentArr?.[0]?.text as string) || null;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(JSON.stringify({
+        level: "error",
+        component: "ai-service-v3",
+        operation: "callAISingle",
+        provider,
+        error: msg,
+        timestamp: new Date().toISOString(),
+      }));
+      return null;
+    }
+  }
+
+  // OpenAI-compatible providers: openai, kimi, deepseek, gemini, ollama
   try {
     const req = {
       provider,

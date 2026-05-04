@@ -334,6 +334,8 @@ Please generate a perfect English prompt using the ${frameworkConfig.nameEn || f
 
 /**
  * Stage 3: Translate the English prompt to Chinese and provide structured breakdown.
+ * Note: qualityCheck (AI self-evaluation) is intentionally excluded — LLMs
+ * cannot reliably self-score their own output.
  */
 async function generateChineseBreakdown(
   englishPrompt: GeneratedPrompt,
@@ -347,7 +349,6 @@ async function generateChineseBreakdown(
 ## 规则
 1. 翻译要准确、自然，保留原文的专业性和完整性
 2. 结构化解析要提取提示词的关键组件
-3. 质量自检要诚实评估提示词的覆盖度、清晰度和具体性
 
 ## 输出格式（JSON）
 {
@@ -358,16 +359,8 @@ async function generateChineseBreakdown(
     "format": "输出格式要求",
     "constraints": ["约束1", "约束2"],
     "examples": "示例说明（如有）"
-  },
-  "qualityCheck": {
-    "coversAllRequirements": true,
-    "clarityScore": 8.5,
-    "specificityScore": 8.0,
-    "reasoning": "质量评估理由"
   }
-}
-
-clarityScore 和 specificityScore 范围 0-10，保留一位小数。`;
+}`;
 
   const userMessage = `## 英文提示词
 ${englishPrompt.prompt}

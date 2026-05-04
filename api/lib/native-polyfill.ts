@@ -831,12 +831,21 @@ async function aiCall(req: Record<string, unknown>): Promise<Record<string, unkn
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Claude uses x-api-key + anthropic-version; others use Authorization: Bearer
+    if (provider === "claude") {
+      headers["x-api-key"] = apiKey;
+      headers["anthropic-version"] = "2023-06-01";
+    } else {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -849,10 +858,20 @@ async function aiCall(req: Record<string, unknown>): Promise<Record<string, unkn
     }
 
     const data = await response.json() as Record<string, unknown>;
-    const choices = data.choices as Array<Record<string, unknown>> | undefined;
-    const content = choices?.[0]?.message
-      ? String((choices[0].message as Record<string, unknown>).content || "")
-      : String(data.content || "");
+
+    let content = "";
+    if (provider === "claude") {
+      // Anthropic response: { content: [{ type: "text", text: "..." }] }
+      const contentArr = data.content as Array<Record<string, unknown>> | undefined;
+      content = String(contentArr?.[0]?.text || "");
+    } else {
+      // OpenAI-compatible response: { choices: [{ message: { content: "..." } }] }
+      const choices = data.choices as Array<Record<string, unknown>> | undefined;
+      content = String(choices?.[0]?.message
+        ? (choices[0].message as Record<string, unknown>).content || ""
+        : "");
+    }
+
     return { content, error: undefined };
   } catch (err) {
     return { content: "", error: err instanceof Error ? err.message : String(err) };

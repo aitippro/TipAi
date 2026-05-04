@@ -258,22 +258,8 @@ export function GenerateResultState({
                   </div>
                 )}
 
-                {activeResult.qualityCheck && (
-                  <div className="p-4 rounded-2xl bg-emerald-50/30 border border-emerald-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm font-medium text-slate-700">{t("prompt.qualityCheck")}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                      <span>{t("prompt.coversAllRequirements")}: {activeResult.qualityCheck.coversAllRequirements ? "✅" : "❌"}</span>
-                      <span>{t("prompt.clarityScore")}: {activeResult.qualityCheck.clarityScore.toFixed(1)}</span>
-                      <span>{t("prompt.specificityScore")}: {activeResult.qualityCheck.specificityScore.toFixed(1)}</span>
-                    </div>
-                    {activeResult.qualityCheck.reasoning && (
-                      <p className="text-xs text-slate-400 mt-1.5">{activeResult.qualityCheck.reasoning}</p>
-                    )}
-                  </div>
-                )}
+                {/* Note: qualityCheck (AI self-evaluation) intentionally excluded —
+                    LLMs cannot reliably self-score their own output */}
               </div>
             )}
 
