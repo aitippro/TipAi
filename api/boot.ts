@@ -50,6 +50,16 @@ app.use("/api/*", bodyLimit({ maxSize: 5 * 1024 * 1024 }));
 // Rate limiting middleware (in-memory, per IP)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+// Periodic cleanup to prevent unbounded Map growth from stale entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 5 * 60 * 1000).unref();
+
 function getRateLimitKey(c: Context): string {
   // Prefer the direct connection IP; fall back to x-forwarded-for only in trusted proxy setups
   const directIp = c.req.header("x-real-ip") || c.req.header("x-client-ip");

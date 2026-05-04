@@ -1,5 +1,4 @@
 import { useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -148,261 +147,220 @@ export function ExportPanel() {
       </ScrollReveal>
 
       {/* Step Content */}
-      <AnimatePresence mode="wait">
-        {step === 1 && (
-          <motion.div
-            key="step1"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-4"
-          >
-            <ScrollReveal>
-              <p className="text-sm text-slate-500 mb-4">选择要导出的数据源</p>
-            </ScrollReveal>
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StaggerItem>
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setTarget("projects")}
-                  className={`w-full p-5 rounded-2xl border text-left transition-all ${
-                    target === "projects"
-                      ? "border-apple-blue bg-blue-50/50 shadow-md"
-                      : "border-slate-200 hover:border-slate-300 bg-white/80"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      target === "projects" ? "bg-blue-100 text-apple-blue" : "bg-slate-100 text-slate-400"
-                    }`}>
-                      <FolderOpen className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className={`font-semibold ${target === "projects" ? "text-apple-blue" : "text-slate-700"}`}>项目</p>
-                      <p className="text-xs text-slate-400">包含对话记录和摘要</p>
-                    </div>
-                    {target === "projects" && <CheckCircle2 className="w-5 h-5 text-apple-blue" />}
+      {step === 1 && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300" key="step1">
+          <ScrollReveal>
+            <p className="text-sm text-slate-500 mb-4">选择要导出的数据源</p>
+          </ScrollReveal>
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <StaggerItem>
+              <button
+                onClick={() => setTarget("projects")}
+                className={`w-full p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
+                  target === "projects"
+                    ? "border-apple-blue bg-blue-50/50 shadow-md"
+                    : "border-slate-200 hover:border-slate-300 bg-white/80"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    target === "projects" ? "bg-blue-100 text-apple-blue" : "bg-slate-100 text-slate-400"
+                  }`}>
+                    <FolderOpen className="w-5 h-5" />
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {projects?.length || 0} 个项目
-                    </Badge>
+                  <div className="flex-1">
+                    <p className={`font-semibold ${target === "projects" ? "text-apple-blue" : "text-slate-700"}`}>项目</p>
+                    <p className="text-xs text-slate-400">包含对话记录和摘要</p>
                   </div>
-                </motion.button>
-              </StaggerItem>
+                  {target === "projects" && <CheckCircle2 className="w-5 h-5 text-apple-blue" />}
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <Badge variant="secondary" className="text-xs">
+                    {projects?.length || 0} 个项目
+                  </Badge>
+                </div>
+              </button>
+            </StaggerItem>
 
-              <StaggerItem>
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setTarget("prompts")}
-                  className={`w-full p-5 rounded-2xl border text-left transition-all ${
-                    target === "prompts"
-                      ? "border-emerald-400 bg-emerald-50/50 shadow-md"
-                      : "border-slate-200 hover:border-slate-300 bg-white/80"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      target === "prompts" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
-                    }`}>
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className={`font-semibold ${target === "prompts" ? "text-emerald-600" : "text-slate-700"}`}>提示词库</p>
-                      <p className="text-xs text-slate-400">包含元数据和领域信息</p>
-                    </div>
-                    {target === "prompts" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+            <StaggerItem>
+              <button
+                onClick={() => setTarget("prompts")}
+                className={`w-full p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
+                  target === "prompts"
+                    ? "border-emerald-400 bg-emerald-50/50 shadow-md"
+                    : "border-slate-200 hover:border-slate-300 bg-white/80"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    target === "prompts" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
+                  }`}>
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {prompts?.length || 0} 个提示词
-                    </Badge>
+                  <div className="flex-1">
+                    <p className={`font-semibold ${target === "prompts" ? "text-emerald-600" : "text-slate-700"}`}>提示词库</p>
+                    <p className="text-xs text-slate-400">包含元数据和领域信息</p>
                   </div>
-                </motion.button>
-              </StaggerItem>
-            </StaggerContainer>
-          </motion.div>
-        )}
+                  {target === "prompts" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <Badge variant="secondary" className="text-xs">
+                    {prompts?.length || 0} 个提示词
+                  </Badge>
+                </div>
+              </button>
+            </StaggerItem>
+          </StaggerContainer>
+        </div>
+      )}
 
-        {step === 2 && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
-            <ScrollReveal>
-              <p className="text-sm text-slate-500 mb-4">选择导出格式和包含的内容</p>
-            </ScrollReveal>
+      {step === 2 && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300" key="step2">
+          <ScrollReveal>
+            <p className="text-sm text-slate-500 mb-4">选择导出格式和包含的内容</p>
+          </ScrollReveal>
 
-            {/* Format Selection */}
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StaggerItem>
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setFormat("json")}
-                  className={`w-full p-5 rounded-2xl border text-left transition-all ${
-                    format === "json"
-                      ? "border-blue-200 bg-blue-50/50 shadow-md"
-                      : "border-slate-200 hover:border-slate-300 bg-white/80"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileJson className={`w-8 h-8 ${format === "json" ? "text-blue-500" : "text-slate-400"}`} />
-                    <div className="flex-1">
-                      <p className={`font-semibold ${format === "json" ? "text-blue-700" : "text-slate-700"}`}>JSON</p>
-                      <p className="text-xs text-slate-400">结构化数据，适合程序处理</p>
-                    </div>
-                    {format === "json" && <CheckCircle2 className="w-5 h-5 text-blue-500" />}
+          {/* Format Selection */}
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <StaggerItem>
+              <button
+                onClick={() => setFormat("json")}
+                className={`w-full p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
+                  format === "json"
+                    ? "border-blue-200 bg-blue-50/50 shadow-md"
+                    : "border-slate-200 hover:border-slate-300 bg-white/80"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileJson className={`w-8 h-8 ${format === "json" ? "text-blue-500" : "text-slate-400"}`} />
+                  <div className="flex-1">
+                    <p className={`font-semibold ${format === "json" ? "text-blue-700" : "text-slate-700"}`}>JSON</p>
+                    <p className="text-xs text-slate-400">结构化数据，适合程序处理</p>
                   </div>
-                </motion.button>
-              </StaggerItem>
+                  {format === "json" && <CheckCircle2 className="w-5 h-5 text-blue-500" />}
+                </div>
+              </button>
+            </StaggerItem>
 
-              <StaggerItem>
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setFormat("markdown")}
-                  className={`w-full p-5 rounded-2xl border text-left transition-all ${
-                    format === "markdown"
-                      ? "border-emerald-200 bg-emerald-50/50 shadow-md"
-                      : "border-slate-200 hover:border-slate-300 bg-white/80"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className={`w-8 h-8 ${format === "markdown" ? "text-emerald-500" : "text-slate-400"}`} />
-                    <div className="flex-1">
-                      <p className={`font-semibold ${format === "markdown" ? "text-emerald-700" : "text-slate-700"}`}>Markdown</p>
-                      <p className="text-xs text-slate-400">可读文档，适合人工阅读</p>
-                    </div>
-                    {format === "markdown" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+            <StaggerItem>
+              <button
+                onClick={() => setFormat("markdown")}
+                className={`w-full p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
+                  format === "markdown"
+                    ? "border-emerald-200 bg-emerald-50/50 shadow-md"
+                    : "border-slate-200 hover:border-slate-300 bg-white/80"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className={`w-8 h-8 ${format === "markdown" ? "text-emerald-500" : "text-slate-400"}`} />
+                  <div className="flex-1">
+                    <p className={`font-semibold ${format === "markdown" ? "text-emerald-700" : "text-slate-700"}`}>Markdown</p>
+                    <p className="text-xs text-slate-400">可读文档，适合人工阅读</p>
                   </div>
-                </motion.button>
-              </StaggerItem>
-            </StaggerContainer>
+                  {format === "markdown" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                </div>
+              </button>
+            </StaggerItem>
+          </StaggerContainer>
 
-            {/* Options */}
-            <ScrollReveal delay={100}>
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-700">导出选项</p>
-                {target === "projects" ? (
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={includeSummaries}
-                        onChange={(e) => setIncludeSummaries(e.target.checked)}
-                        className="w-4 h-4 rounded accent-apple-blue"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">包含需求摘要</p>
-                        <p className="text-xs text-slate-400">导出 AI 生成的需求分析摘要</p>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={includeConversations}
-                        onChange={(e) => setIncludeConversations(e.target.checked)}
-                        className="w-4 h-4 rounded accent-apple-blue"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">包含澄清对话</p>
-                        <p className="text-xs text-slate-400">导出完整的 AI 澄清对话记录</p>
-                      </div>
-                    </label>
-                  </div>
-                ) : (
+          {/* Options */}
+          <ScrollReveal delay={100}>
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-700">导出选项</p>
+              {target === "projects" ? (
+                <div className="space-y-2">
                   <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
                     <input
                       type="checkbox"
-                      checked={includeMetadata}
-                      onChange={(e) => setIncludeMetadata(e.target.checked)}
+                      checked={includeSummaries}
+                      onChange={(e) => setIncludeSummaries(e.target.checked)}
                       className="w-4 h-4 rounded accent-apple-blue"
                     />
                     <div>
-                      <p className="text-sm font-medium">包含元数据</p>
-                      <p className="text-xs text-slate-400">导出领域、框架、标签等元信息</p>
+                      <p className="text-sm font-medium">包含需求摘要</p>
+                      <p className="text-xs text-slate-400">导出 AI 生成的需求分析摘要</p>
                     </div>
                   </label>
-                )}
-              </div>
-            </ScrollReveal>
-          </motion.div>
-        )}
-
-        {step === 3 && (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
-            {isExporting ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                >
-                  <Loader2 className="w-10 h-10 text-apple-blue mb-4" />
-                </motion.div>
-                <p className="text-sm text-slate-500">正在导出数据...</p>
-              </div>
-            ) : exportResult ? (
-              <>
-                <ScrollReveal>
-                  <div className="text-center py-8">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                      className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4"
-                    >
-                      <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                    </motion.div>
-                    <h3 className="text-lg font-semibold text-slate-800 mb-1">导出完成</h3>
-                    <p className="text-sm text-slate-500">
-                      成功导出 <span className="font-semibold text-apple-blue">{exportCount}</span> 条{target === "projects" ? "项目" : "提示词"}
-                    </p>
+                  <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeConversations}
+                      onChange={(e) => setIncludeConversations(e.target.checked)}
+                      className="w-4 h-4 rounded accent-apple-blue"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">包含澄清对话</p>
+                      <p className="text-xs text-slate-400">导出完整的 AI 澄清对话记录</p>
+                    </div>
+                  </label>
+                </div>
+              ) : (
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeMetadata}
+                    onChange={(e) => setIncludeMetadata(e.target.checked)}
+                    className="w-4 h-4 rounded accent-apple-blue"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">包含元数据</p>
+                    <p className="text-xs text-slate-400">导出领域、框架、标签等元信息</p>
                   </div>
-                </ScrollReveal>
+                </label>
+              )}
+            </div>
+          </ScrollReveal>
+        </div>
+      )}
 
-                <ScrollReveal delay={100}>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+      {step === 3 && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300" key="step3">
+          {isExporting ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-10 h-10 text-apple-blue mb-4 animate-spin" />
+              <p className="text-sm text-slate-500">正在导出数据...</p>
+            </div>
+          ) : exportResult ? (
+            <>
+              <ScrollReveal>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-1">导出完成</h3>
+                  <p className="text-sm text-slate-500">
+                    成功导出 <span className="font-semibold text-apple-blue">{exportCount}</span> 条{target === "projects" ? "项目" : "提示词"}
+                  </p>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={100}>
+                <div className="hover:scale-[1.02] active:scale-[0.98] transition-transform">
+                  <Button
+                    onClick={handleDownload}
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-apple-blue to-apple-purple text-white shadow-lg text-base"
                   >
-                    <Button
-                      onClick={handleDownload}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-apple-blue to-apple-purple text-white shadow-lg text-base"
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      下载 {format === "json" ? "JSON" : "Markdown"} 文件
-                    </Button>
-                  </motion.div>
-                </ScrollReveal>
+                    <Download className="w-5 h-5 mr-2" />
+                    下载 {format === "json" ? "JSON" : "Markdown"} 文件
+                  </Button>
+                </div>
+              </ScrollReveal>
 
-                <ScrollReveal delay={200}>
-                  <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 space-y-1">
-                    <p>文件名: tipai-export-{target}-{new Date().toISOString().slice(0, 10)}.{format === "json" ? "json" : "md"}</p>
-                    <p>大小: {(exportResult.length / 1024).toFixed(1)} KB</p>
-                    <p>格式: {format === "json" ? "application/json" : "text/markdown"}</p>
-                  </div>
-                </ScrollReveal>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-sm text-slate-400">点击下方按钮开始导出</p>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <ScrollReveal delay={200}>
+                <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 space-y-1">
+                  <p>文件名: tipai-export-{target}-{new Date().toISOString().slice(0, 10)}.{format === "json" ? "json" : "md"}</p>
+                  <p>大小: {(exportResult.length / 1024).toFixed(1)} KB</p>
+                  <p>格式: {format === "json" ? "application/json" : "text/markdown"}</p>
+                </div>
+              </ScrollReveal>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-sm text-slate-400">点击下方按钮开始导出</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">

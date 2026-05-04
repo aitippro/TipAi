@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { GenerativeArt } from "@/components/effects/GenerativeArt";
 
@@ -20,19 +19,10 @@ export function EmptyState({ icon, title, description, action, className, genera
   return (
     <div className={cn("relative overflow-hidden rounded-2xl", className)}>
       {generative && <GenerativeArt className="z-0" />}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="relative z-10 flex flex-col items-center justify-center text-center py-16 px-6"
-      >
-        <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-apple-blue/20 to-apple-purple/20 flex items-center justify-center mb-4"
-        >
+      <div className="relative z-10 flex flex-col items-center justify-center text-center py-16 px-6 animate-in fade-in duration-500">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-apple-blue/20 to-apple-purple/20 flex items-center justify-center mb-4">
           <div className="text-apple-blue">{icon}</div>
-        </motion.div>
+        </div>
         <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground max-w-xs mb-6">{description}</p>
         {action && (
@@ -43,7 +33,7 @@ export function EmptyState({ icon, title, description, action, className, genera
             {action.label}
           </button>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -11,12 +11,12 @@ export function SplashScreen({ onComplete, duration = 200 }: SplashScreenProps) 
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      const fadeTimer = setTimeout(onComplete, 300);
-      return () => clearTimeout(fadeTimer);
-    }, duration);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => { setVisible(false); }, duration);
+    const fadeTimer = setTimeout(onComplete, duration + 300);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(fadeTimer);
+    };
   }, [duration, onComplete]);
 
   const handleSkipToggle = (checked: boolean) => {

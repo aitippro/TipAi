@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   AlertCircle,
   Filter,
@@ -88,7 +88,7 @@ export default function TemplateMarket() {
   // Empty array from API = genuinely no templates (not fake data).
   const sourceTemplates = isError || apiTemplates === undefined ? DEFAULT_TEMPLATES : apiTemplates
 
-  const filteredTemplates = sourceTemplates.filter((template: { domain?: string; title: string; description?: string }) => {
+  const filteredTemplates = useMemo(() => sourceTemplates.filter((template: { domain?: string; title: string; description?: string }) => {
     if (selectedDomain !== "all" && template.domain !== selectedDomain) {
       return false
     }
@@ -102,15 +102,15 @@ export default function TemplateMarket() {
     }
 
     return true
-  })
+  }), [sourceTemplates, selectedDomain, search])
 
-  const featuredTemplates = [...filteredTemplates]
+  const featuredTemplates = useMemo(() => [...filteredTemplates]
     .sort(
       (left, right) =>
         (right.rating || 0) * (right.useCount || 0) -
         (left.rating || 0) * (left.useCount || 0),
     )
-    .slice(0, 6)
+    .slice(0, 6), [filteredTemplates])
 
   const handleUseTemplate = (id: number) => {
     useMutation.mutate({ id })

@@ -465,6 +465,129 @@ function userFindByUsername(username: string) {
   );
 }
 
+
+// ============================================================================
+// Settings — per-user API key and preference storage
+// ============================================================================
+
+let _settingsTableEnsured = false;
+
+function ensureSettingsTable(): void {
+  if (_settingsTableEnsured) return;
+  getDb().exec(`CREATE TABLE IF NOT EXISTS user_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL UNIQUE,
+    kimiApiKey TEXT,
+    openaiApiKey TEXT,
+    claudeApiKey TEXT,
+    deepseekApiKey TEXT,
+    defaultModel TEXT NOT NULL DEFAULT 'kimi',
+    defaultFramework TEXT NOT NULL DEFAULT 'auto',
+    defaultLanguage TEXT NOT NULL DEFAULT 'zh',
+    createdAt INTEGER,
+    updatedAt INTEGER
+  )`);
+  _settingsTableEnsured = true;
+}
+
+interface SettingsRow {
+  userId: number;
+  defaultModel: string;
+  defaultFramework: string;
+  defaultLanguage: string;
+  kimiApiKey: string | null;
+  openaiApiKey: string | null;
+  claudeApiKey: string | null;
+  deepseekApiKey: string | null;
+}
+
+function settingsGet(userId: number): Record<string, unknown> | null {
+  ensureSettingsTable();
+  const row = getDb()
+    .prepare("SELECT * FROM user_settings WHERE userId = ?")
+    .get(userId) as SettingsRow | undefined;
+
+  if (!row) return null;
+
+  return {
+    userId: row.userId,
+    defaultModel: row.defaultModel ?? "kimi",
+    defaultFramework: row.defaultFramework ?? "auto",
+    defaultLanguage: row.defaultLanguage ?? "zh",
+    hasKimiKey: !!row.kimiApiKey,
+    hasOpenaiKey: !!row.openaiApiKey,
+    hasClaudeKey: !!row.claudeApiKey,
+    hasDeepseekKey: !!row.deepseekApiKey,
+  };
+}
+
+function settingsUpdate(userId: number, data: Record<string, unknown>): void {
+  ensureSettingsTable();
+  const db = getDb();
+  const now = Math.floor(Date.now() / 1000);
+  const existing = db
+    .prepare("SELECT id FROM user_settings WHERE userId = ?")
+    .get(userId) as { id: number } | undefined;
+
+  const allowedFields = [
+    "defaultModel", "defaultFramework", "defaultLanguage",
+    "kimiApiKey", "openaiApiKey", "claudeApiKey", "deepseekApiKey",
+  ];
+
+  if (existing) {
+    const fields: string[] = ["updatedAt = ?"];
+    const values: unknown[] = [now];
+
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        values.push(data[field]);
+      }
+    }
+
+    values.push(userId);
+    db.prepare(
+      `UPDATE user_settings SET ${fields.join(", ")} WHERE userId = ?`,
+    ).run(...values);
+  } else {
+    const cols: string[] = ["userId", "createdAt", "updatedAt"];
+    const vals: unknown[] = [userId, now, now];
+    const placeholders: string[] = ["?", "?", "?"];
+
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        cols.push(field);
+        vals.push(data[field]);
+        placeholders.push("?");
+      }
+    }
+
+    db.prepare(
+      `INSERT INTO user_settings (${cols.join(", ")}) VALUES (${placeholders.join(", ")})`,
+    ).run(...vals);
+  }
+}
+
+function settingsGetApiKey(userId: number, provider: string): string | undefined {
+  ensureSettingsTable();
+  const columnMap: Record<string, string> = {
+    kimi: "kimiApiKey",
+    openai: "openaiApiKey",
+    claude: "claudeApiKey",
+    deepseek: "deepseekApiKey",
+  };
+
+  const column = columnMap[provider];
+  if (!column) return undefined;
+
+  const row = getDb()
+    .prepare(`SELECT ${column} FROM user_settings WHERE userId = ?`)
+    .get(userId) as Record<string, unknown> | undefined;
+
+  if (!row) return undefined;
+  const val = row[column];
+  return val ? String(val) : undefined;
+}
 // ============================================================================
 // Export polyfill object (snake_case API matching native/index.d.ts)
 // ============================================================================
@@ -506,4 +629,7 @@ export const nativePolyfill = {
   optimizerRunCreate,
   optimizerRunList,
   userFindByUsername,
+  settingsGet,
+  settingsUpdate,
+  settingsGetApiKey,
 };

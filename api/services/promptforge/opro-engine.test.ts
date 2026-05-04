@@ -70,18 +70,18 @@ describe("OPRO Engine", () => {
     );
 
     // Batch judge: A=7, B=6
-    // Note: nextId() generates c-1, c-2, etc.
-    vi.mocked(judgeBatch).mockResolvedValue({
+    // Use mockImplementation to match actual IDs from nextId() (now randomUUID)
+    vi.mocked(judgeBatch).mockImplementation(async (_provider, _apiKey, candidates) => ({
       results: new Map(),
       ranked: [
-        { id: "c-1", score: 7, result: mockJudgeResult(7) },
-        { id: "c-2", score: 6, result: mockJudgeResult(6) },
+        { id: candidates[0].id, score: 7, result: mockJudgeResult(7) },
+        { id: candidates[1].id, score: 6, result: mockJudgeResult(6) },
       ],
-      topCandidate: { id: "c-1", score: 7, result: mockJudgeResult(7) },
-      bottomCandidate: { id: "c-2", score: 6, result: mockJudgeResult(6) },
+      topCandidate: { id: candidates[0].id, score: 7, result: mockJudgeResult(7) },
+      bottomCandidate: { id: candidates[1].id, score: 6, result: mockJudgeResult(6) },
       topBottomAnalysis: "gap 1 point",
       avgScore: 6.5,
-    });
+    }));
 
     const result = await runOPRO("original prompt", {
       judgeProvider: "kimi",

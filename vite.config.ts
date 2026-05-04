@@ -11,7 +11,7 @@ export default defineConfig({
     devServer({ entry: "api/boot.ts", exclude: [/^\/(?!api\/).*$/] }),
     inspectAttr(), react()],
   server: {
-    port: 5173,
+    port: parseInt(process.env.VITE_DEV_PORT || "5173", 10),
   },
   resolve: {
     alias: {
@@ -27,6 +27,25 @@ export default defineConfig({
     emptyOutDir: true,
     // Ensure assets use relative paths for Electron
     assetsDir: "assets",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router"],
+          "vendor-framer": ["framer-motion"],
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-tooltip",
+          ],
+          "vendor-trpc": ["@trpc/client", "@trpc/server", "@trpc/react-query", "@tanstack/react-query"],
+          "vendor-i18n": ["i18next", "react-i18next"],
+          "vendor-form": ["react-hook-form", "@hookform/resolvers", "zod"],
+        },
+      },
+    },
   },
   base: "./", // Relative paths for Electron
 });

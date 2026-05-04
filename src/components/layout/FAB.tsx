@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Wand2, FolderOpen, Settings } from "lucide-react";
 import { useNavigate } from "react-router";
 import { cn } from "@/lib/utils";
@@ -38,51 +37,36 @@ export function FAB() {
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      <AnimatePresence>
-        {open && (
-          <>
-            {FAB_ACTIONS.map((action, i) => (
-              <motion.button
-                key={action.id}
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 25,
-                  delay: i * 0.05,
-                }}
-                onClick={() => handleAction(action.path)}
-                className="flex items-center gap-3 px-4 py-2.5 bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 hover:bg-white transition-colors"
-              >
-                <action.icon className="w-4 h-4 text-apple-blue" />
-                <span className="text-sm font-medium text-slate-700">{action.label}</span>
-                <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-100 rounded text-slate-400">{action.shortcut}</kbd>
-              </motion.button>
-            ))}
-          </>
-        )}
-      </AnimatePresence>
+      {open && (
+        <>
+          {FAB_ACTIONS.map((action, i) => (
+            <button
+              key={action.id}
+              onClick={() => handleAction(action.path)}
+              className="flex items-center gap-3 px-4 py-2.5 bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 hover:bg-white transition-colors animate-in fade-in slide-in-from-bottom-2"
+              style={{ animationDelay: `${i * 0.05}s` }}
+            >
+              <action.icon className="w-4 h-4 text-apple-blue" />
+              <span className="text-sm font-medium text-slate-700">{action.label}</span>
+              <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-100 rounded text-slate-400">{action.shortcut}</kbd>
+            </button>
+          ))}
+        </>
+      )}
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.9 }}
+      <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-colors",
+          "w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-[1.05] active:scale-[0.9]",
           open
             ? "bg-slate-800 text-white"
             : "bg-gradient-to-br from-apple-blue to-apple-purple text-white"
         )}
       >
-        <motion.div
-          animate={{ rotate: open ? 45 : 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
+        <div className={`transition-transform duration-300 ${open ? "rotate-45" : "rotate-0"}`}>
           <Plus className="w-6 h-6" />
-        </motion.div>
-      </motion.button>
+        </div>
+      </button>
     </div>
   );
 }

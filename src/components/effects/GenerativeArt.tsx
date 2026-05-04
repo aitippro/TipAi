@@ -66,21 +66,44 @@ export function GenerativeArt({
 
       ctx.clearRect(0, 0, w, h);
 
-      // 连线（星座效果）— O(n²) 但对于小密度可接受
+      // 连线（星座效果）— 空间哈希网格优化，将 O(n²) 降至约 O(n·k)
       ctx.strokeStyle = "rgba(148, 163, 184, 0.08)"; // slate-400 @ low opacity
       ctx.lineWidth = 0.5;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[i].x - nodes[j].x;
-          const dy = nodes[i].y - nodes[j].y;
-          const dist = dx * dx + dy * dy; // skip sqrt for comparison
-          if (dist < 14400) { // 120²
-            const d = Math.sqrt(dist);
-            ctx.globalAlpha = (1 - d / 120) * 0.15;
-            ctx.beginPath();
-            ctx.moveTo(nodes[i].x, nodes[i].y);
-            ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.stroke();
+      const CELL_SIZE = 150;
+      const grid = new Map<string, number[]>();
+      for (let ni = 0; ni < nodes.length; ni++) {
+        const cx = Math.floor(nodes[ni].x / CELL_SIZE);
+        const cy = Math.floor(nodes[ni].y / CELL_SIZE);
+        const key = `${cx},${cy}`;
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key)!.push(ni);
+      }
+      const checked = new Set<string>();
+      for (let ni = 0; ni < nodes.length; ni++) {
+        const cx = Math.floor(nodes[ni].x / CELL_SIZE);
+        const cy = Math.floor(nodes[ni].y / CELL_SIZE);
+        for (let ddx = -1; ddx <= 1; ddx++) {
+          for (let ddy = -1; ddy <= 1; ddy++) {
+            const neighborKey = `${cx + ddx},${cy + ddy}`;
+            const neighbors = grid.get(neighborKey);
+            if (!neighbors) continue;
+            for (const nj of neighbors) {
+              if (ni >= nj) continue;
+              const pairKey = `${ni},${nj}`;
+              if (checked.has(pairKey)) continue;
+              checked.add(pairKey);
+              const ndx = nodes[ni].x - nodes[nj].x;
+              const ndy = nodes[ni].y - nodes[nj].y;
+              const dist = ndx * ndx + ndy * ndy;
+              if (dist < 14400) {
+                const d = Math.sqrt(dist);
+                ctx.globalAlpha = (1 - d / 120) * 0.15;
+                ctx.beginPath();
+                ctx.moveTo(nodes[ni].x, nodes[ni].y);
+                ctx.lineTo(nodes[nj].x, nodes[nj].y);
+                ctx.stroke();
+              }
+            }
           }
         }
       }

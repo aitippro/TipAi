@@ -12,6 +12,7 @@
  *  3. 终止：达到目标分数 / 最大迭代次数 / 连续无提升
  */
 
+import { randomUUID } from "node:crypto";
 import { callAI } from "../../lib/ai-service-v3/client";
 import {
   judgeBatch,
@@ -105,9 +106,8 @@ const DEFAULT_CONFIG: Partial<OPROConfig> = {
   earlyStopPatience: 1,
 };
 
-let _candidateId = 0;
 function nextId(): string {
-  return `c-${++_candidateId}`;
+  return randomUUID();
 }
 
 /**
@@ -273,6 +273,7 @@ export async function runOPRO(
   // console.log(`[OPRO] Baseline score: ${originalScore}/10`);
 
   // 如果原始分已经很高，直接返回
+  // 注意：调用方（runOptimizer）会在返回后正确保存优化历史，无需在此处额外处理
   if (originalScore >= config.targetScore) {
     return {
       finalPrompt: originalPrompt,

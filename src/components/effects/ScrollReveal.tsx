@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ interface ScrollRevealProps {
  * ScrollReveal — 滚动揭示系统
  * 元素进入视口 20% 时自动触发入场动画
  */
-export function ScrollReveal({
+export const ScrollReveal = memo(function ScrollReveal({
   children,
   className,
   delay = 0,
@@ -67,4 +67,4 @@ export function ScrollReveal({
       {children}
     </div>
   );
-}
+});

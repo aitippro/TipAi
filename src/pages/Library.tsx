@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { motion } from "framer-motion"
 import { trpc } from "@/providers/trpc"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -161,17 +160,12 @@ export default function Library() {
                     </div>
 
                     {expandedId === item.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-3 pt-3 border-t border-slate-100"
-                      >
+                      <div className="mt-3 pt-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-1 duration-200">
                         <p className="text-xs font-medium text-slate-500 mb-1.5">生成提示词</p>
                         <div className="bg-slate-50 rounded-lg p-3">
                           <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{item.generatedPrompt}</p>
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
