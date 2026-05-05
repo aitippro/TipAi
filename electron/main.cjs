@@ -378,13 +378,14 @@ if (process.platform === 'win32') {
 app.whenReady().then(async () => {
   log('Starting...');
   try {
-    await startBackend();
+    // Show window immediately, load backend in parallel
+    createWindow();
+    const backendPromise = startBackend();
     if (isDev) {
-      // Clear HTTP cache to prevent stale Vite chunks after rebuilds
       const { session } = require('electron');
       await session.defaultSession.clearCache();
     }
-    createWindow();
+    await backendPromise;
     initUpdater(mainWindow);
     createApplicationMenu();
     log('Ready');

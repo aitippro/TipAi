@@ -65,10 +65,19 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   const generateNextQuestion = trpc.project.generateNextQuestion.useMutation()
   const generateSummaryMutation = trpc.project.generateSummary.useMutation()
 
+  // Stable refs to prevent useEffect infinite loop from unstable useMutation references
+  const saveTurnRef = useRef(saveTurn.mutateAsync)
+  const generateNextRef = useRef(generateNextQuestion.mutateAsync)
+  const generateSummaryRef = useRef(generateSummaryMutation.mutateAsync)
+  // Always update refs to latest (without triggering re-renders)
+  saveTurnRef.current = saveTurn.mutateAsync
+  generateNextRef.current = generateNextQuestion.mutateAsync
+  generateSummaryRef.current = generateSummaryMutation.mutateAsync
+
   const generateSummaryAndShow = useCallback(async () => {
     setIsLoading(true)
     try {
-      const result = await generateSummaryMutation.mutateAsync({ projectId })
+      const result = await generateSummaryRef.current({ projectId })
       setSummary(result)
       // Auto-proceed to results after brief pause
       autoTimerRef.current = setTimeout(() => completeOnce({}, result), 1800)
@@ -80,7 +89,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, generateSummaryMutation, completeOnce])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, completeOnce])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -93,7 +103,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     async function init() {
       setIsLoading(true)
       try {
-        await saveTurn.mutateAsync({
+        await saveTurnRef.current({
           projectId,
           role: "user",
           content: intent || "（用户初始需求）",
@@ -101,7 +111,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
         })
         if (cancelled) return
 
-        const result = await generateNextQuestion.mutateAsync({ id: projectId })
+        const result = await generateNextRef.current({ id: projectId })
 
         if (result.needsMoreClarification && result.question) {
           const q: ClarifyQuestion = {
@@ -139,7 +149,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
 
     init()
     return () => { cancelled = true }
-  }, [projectId, intent, saveTurn, generateNextQuestion, generateSummaryAndShow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, intent])
 
   const handleAnswerSubmit = useCallback(async (forcedOptions?: string[]) => {
     if (!currentQuestion) return
@@ -177,7 +188,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      await saveTurn.mutateAsync({
+      await saveTurnRef.current({
         projectId,
         role: "user",
         content: userMsg.content,
@@ -192,7 +203,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       setAnswerText("")
 
       const nextTurn = turnNumber + 1
-      const result = await generateNextQuestion.mutateAsync({ id: projectId })
+      const result = await generateNextRef.current({ id: projectId })
 
       if (result.needsMoreClarification && result.question) {
         const q: ClarifyQuestion = {
@@ -224,7 +235,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存回答失败")
     }
-  }, [currentQuestion, answerText, selectedOptions, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestion, answerText, selectedOptions, messages.length, projectId])
 
   const handleSkip = useCallback(async () => {
     if (!currentQuestion) return
@@ -242,7 +254,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      await saveTurn.mutateAsync({
+      await saveTurnRef.current({
         projectId,
         role: "user",
         content: "（跳过）",
@@ -256,7 +268,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       setCurrentQuestion(null)
 
       const nextTurn = turnNumber + 1
-      const result = await generateNextQuestion.mutateAsync({ id: projectId })
+      const result = await generateNextRef.current({ id: projectId })
 
       if (result.needsMoreClarification && result.question) {
         const q: ClarifyQuestion = {
@@ -288,7 +300,8 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
       logger.error("ClarifyChat", error instanceof Error ? (error.stack || error.message) : String(error))
       toast.error("保存跳过失败")
     }
-  }, [currentQuestion, messages.length, projectId, saveTurn, generateNextQuestion, generateSummaryAndShow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestion, messages.length, projectId])
 
   const toggleOption = (option: string) => {
     setSelectedOptions((prev) =>
