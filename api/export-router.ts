@@ -45,9 +45,9 @@ export const exportRouter = createRouter({
           intent: project.intent,
           domain: project.domain,
           status: project.status,
-          clarificationStatus: project.clarification_status,
-          createdAt: project.created_at,
-          updatedAt: project.updated_at,
+          clarificationStatus: project.clarificationStatus ?? project.clarification_status,
+          createdAt: project.createdAt ?? project.created_at,
+          updatedAt: project.updatedAt ?? project.updated_at,
         };
 
         if (input.includeSummaries) {
@@ -57,7 +57,7 @@ export const exportRouter = createRouter({
               summary: summary.summary,
               requirements: summary.requirements,
               constraints: summary.constraints,
-              suggestedFrameworks: summary.suggested_frameworks,
+              suggestedFrameworks: summary.suggestedFrameworks ?? summary.suggested_frameworks,
             };
           }
         }
@@ -67,8 +67,8 @@ export const exportRouter = createRouter({
           item.conversations = conversations.map((c: any) => ({
             role: c.role,
             content: c.content,
-            turnNumber: c.turn_number,
-            createdAt: c.created_at,
+            turnNumber: c.turnNumber ?? c.turn_number,
+            createdAt: c.createdAt ?? c.created_at,
           }));
         }
 
@@ -127,12 +127,12 @@ export const exportRouter = createRouter({
       const result = promptList.map((p: any) => ({
         id: p.id,
         title: p.title,
-        content: p.generated_prompt,
-        description: p.original_intent || "",
+        content: p.generatedPrompt ?? p.generated_prompt,
+        description: (p.originalIntent ?? p.original_intent) || "",
         framework: p.framework,
         tags: p.tags,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
+        createdAt: p.createdAt ?? p.created_at,
+        updatedAt: p.updatedAt ?? p.updated_at,
       }));
 
       if (input.format === "markdown") {

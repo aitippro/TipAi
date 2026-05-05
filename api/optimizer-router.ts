@@ -162,13 +162,13 @@ export const optimizerRouter = createRouter({
     const rows = native.optimizerRunList(ctx.user.id, 50) || [];
     return rows.map((r: any) => ({
       id: r.id,
-      userId: r.user_id,
-      originalPrompt: r.original_prompt,
-      optimizedPrompt: r.optimized_prompt,
+      userId: r.userId ?? r.user_id,
+      originalPrompt: r.originalPrompt ?? r.original_prompt,
+      optimizedPrompt: r.optimizedPrompt ?? r.optimized_prompt,
       improvements: r.improvements ? safeJsonParse(r.improvements) : null,
       domain: r.domain,
       model: r.model,
-      createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+      createdAt: (r.createdAt ?? r.created_at) ? new Date(r.createdAt ?? r.created_at) : new Date(),
     }));
   }),
 });

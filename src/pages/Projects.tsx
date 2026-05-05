@@ -16,7 +16,7 @@ import {
   ChevronRight,
   Clock,
   Sparkles,
-  Loader2,
+  Loader2, AlertCircle,
 } from "lucide-react"
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -70,7 +70,7 @@ export default function Projects() {
     completed: t("projects.clarificationStatus.completed"),
   }
 
-  const { data: items, isLoading } = trpc.project.list.useQuery(undefined, {
+  const { data: items, isLoading, isError } = trpc.project.list.useQuery(undefined, {
     enabled: isAuthenticated,
   })
 
@@ -123,7 +123,13 @@ export default function Projects() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <div className="flex flex-col items-center justify-center py-32">
+          <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
+          <p className="text-sm text-slate-600 mb-2">加载失败</p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>重试</Button>
+        </div>
+      ) : isLoading ? (
         <div className="flex flex-col items-center justify-center py-32">
           <Loader2 className="w-8 h-8 animate-spin text-violet-400 mb-3" />
           <p className="text-sm text-slate-400">{t("common.loading")}</p>

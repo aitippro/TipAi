@@ -74,8 +74,8 @@ export async function updateProject(
     description: input.description,
     status: input.status,
     intent: input.intent,
-    clarification_status: input.clarificationStatus,
-    turn_count: input.turnCount,
+    clarificationStatus: input.clarificationStatus,
+    turnCount: input.turnCount,
   });
   return mapNativeProject(result);
 }
@@ -109,13 +109,13 @@ export async function saveConversationTurn(
 
   // Update project turn count
   native.projectUpdate(input.projectId, userId, {
-    turn_count: (project.turnCount || 0) + 1,
+    turnCount: (project.turnCount || 0) + 1,
   });
 
   return {
     id: turn.id,
-    projectId: turn.project_id,
-    userId: turn.user_id,
+    projectId: turn.projectId ?? turn.project_id,
+    userId: turn.userId ?? turn.user_id,
     role: turn.role,
     content: turn.content,
     questionId: turn.questionId ?? turn.question_id,

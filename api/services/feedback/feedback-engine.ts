@@ -15,13 +15,13 @@ import { native } from "../../lib/native";
 function mapNativeEvaluation(row: NativeEvalEntry): FeedbackHistoryItem {
   return {
     id: row.id,
-    projectId: row.project_id,
-    stepId: row.step_id ?? null,
-    userId: row.user_id,
+    projectId: (row as any).projectId ?? row.project_id,
+    stepId: (row as any).stepId ?? row.step_id ?? null,
+    userId: (row as any).userId ?? row.user_id,
     dimension: row.dimension as FeedbackDimension,
     score: row.score,
     feedback: row.feedback ?? null,
-    createdAt: row.created_at ? new Date(row.created_at) : null,
+    createdAt: ((row as any).createdAt ?? row.created_at) ? new Date((row as any).createdAt ?? row.created_at) : null,
   };
 }
 
@@ -257,8 +257,8 @@ export async function quickRate(
 ): Promise<number> {
   try {
     const entry = native.evaluationCreate({
-      project_id: projectId,
-      user_id: userId,
+      projectId,
+      userId,
       dimension,
       score: Math.max(1, Math.min(10, score)),
       feedback: comment ?? null,

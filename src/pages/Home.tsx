@@ -107,7 +107,7 @@ export default function Home() {
   const userToggledRef = useRef(false)
 
   const analyzeMutation = trpc.promptForge.analyze.useMutation({
-    onError: (e) => console.error("[Home] Intent analysis failed:", e.message),
+    onError: (e) => console.warn("[Home] AI complexity analysis unavailable, using heuristic fallback:", e.message),
   })
   const analyzeData = analyzeMutation.data
   const isAnalyzing = analyzeMutation.isPending

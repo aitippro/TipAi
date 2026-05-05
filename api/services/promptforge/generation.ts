@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
   DEFAULT_FRAMEWORK_KEY,
   analyzeIntent,
@@ -75,14 +76,10 @@ export async function generatePromptForgeResult(
         results = [prompt];
       } catch (fallbackError) {
         console.error("Fallback generation also failed:", fallbackError);
-        results = [{
-          title: "生成失败",
-          framework: selectedFramework,
-          prompt: `【生成失败】\n无法为您的请求生成提示词。请检查 API Key 是否有效，或稍后重试。\n\n原始需求：${finalIntent.slice(0, 200)}`,
-          explanation: "AI 服务调用失败，已返回降级提示。",
-          tips: ["检查 API Key 配置", "稍后重试", "尝试简化需求"],
-          usageExample: "",
-        }];
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `AI 生成失败：${fallbackError instanceof Error ? fallbackError.message : "未知错误"}。请检查 API Key 和网络连接。`,
+        });
       }
     }
   } else {

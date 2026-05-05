@@ -151,7 +151,7 @@ export async function createLifecycleStep(
     parentStepId: input.parentStepId || undefined,
     model: input.model || "kimi",
     temperature: input.temperature ?? 0.7,
-    decode_strategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : undefined,
+    decodeStrategy: input.decodeStrategy ? JSON.stringify(input.decodeStrategy) : undefined,
   });
 
   return mapNativeStep(inserted);

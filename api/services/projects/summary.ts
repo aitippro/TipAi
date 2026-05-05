@@ -81,14 +81,14 @@ export async function getProjectConversations(projectId: number): Promise<
   const rows = native.conversationListByProject(projectId) || [];
   return rows.map((r: any) => ({
     id: r.id,
-    userId: r.user_id,
+    userId: r.userId ?? r.user_id,
     role: r.role,
     content: r.content,
-    questionId: r.question_id || undefined,
-    questionData: r.question_data ? safeJsonParse<Record<string, string>>(r.question_data) : undefined,
-    answerData: r.answer_data ? safeJsonParse<Record<string, string>>(r.answer_data) : undefined,
-    turnNumber: r.turn_number,
-    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+    questionId: (r.questionId ?? r.question_id) || undefined,
+    questionData: (r.questionData ?? r.question_data) ? safeJsonParse<Record<string, string>>(r.questionData ?? r.question_data) : undefined,
+    answerData: (r.answerData ?? r.answer_data) ? safeJsonParse<Record<string, string>>(r.answerData ?? r.answer_data) : undefined,
+    turnNumber: r.turnNumber ?? r.turn_number,
+    createdAt: (r.createdAt ?? r.created_at) ? new Date(r.createdAt ?? r.created_at) : new Date(),
   }));
 }
 
@@ -116,8 +116,8 @@ export async function getProjectSummary(projectId: number): Promise<
     suggestedFrameworks: (row.suggestedFrameworks ?? row.suggested_frameworks) || undefined,
     rawContext: (row.rawContext ?? row.raw_context) || undefined,
     isFinalized: (row.isFinalized ?? row.is_finalized) === 1,
-    createdAt: row.createdAt ? new Date(row.createdAt) : row.created_at ? new Date(row.created_at) : new Date(),
-    updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.updated_at ? new Date(row.updated_at) : new Date(),
+    createdAt: (row.createdAt ?? row.created_at) ? new Date(row.createdAt ?? row.created_at) : new Date(),
+    updatedAt: (row.updatedAt ?? row.updated_at) ? new Date(row.updatedAt ?? row.updated_at) : new Date(),
   };
 }
 
@@ -141,14 +141,14 @@ export async function upsertProjectSummary(
     constraints: data.constraints ? JSON.stringify(data.constraints) : undefined,
     suggestedFrameworks: data.suggestedFrameworks ? JSON.stringify(data.suggestedFrameworks) : undefined,
     rawContext: data.rawContext || undefined,
-    is_finalized: data.isFinalized ? 1 : 0,
+    isFinalized: data.isFinalized ? 1 : 0,
   });
 
   return {
     id: row.id,
     summary: row.summary,
-    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
-    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+    createdAt: (row.createdAt ?? row.created_at) ? new Date(row.createdAt ?? row.created_at) : new Date(),
+    updatedAt: (row.updatedAt ?? row.updated_at) ? new Date(row.updatedAt ?? row.updated_at) : new Date(),
   };
 }
 
