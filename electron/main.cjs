@@ -4,6 +4,12 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { initUpdater, getUpdateMenuItems } = require('./updater.cjs');
 
+// ── Memory / performance flags ──────────────────────────────
+app.commandLine.appendSwitch('enable-low-end-device-mode');
+app.commandLine.appendSwitch('disable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-breakpad'); // disable crash reporting to save memory
+
 const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 // Portable mode: all app data lives next to the .exe
 // PORTABLE_EXECUTABLE_DIR is set by electron-builder portable builds

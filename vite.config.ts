@@ -30,8 +30,10 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
-    // Ensure assets use relative paths for Electron
     assetsDir: "assets",
+    minify: "esbuild",
+    target: "chrome131", // Electron 41 uses Chromium 131 — smaller output
+    sourcemap: false,    // no sourcemaps in production
     rollupOptions: {
       output: {
         manualChunks: {
