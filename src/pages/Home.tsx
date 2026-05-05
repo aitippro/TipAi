@@ -188,8 +188,10 @@ export default function Home() {
   // Stable refs to prevent useCallback churn from unstable mutation references
   const createProjectRef = useRef(createProject.mutateAsync)
   const updateProjectRef = useRef(updateProject.mutateAsync)
-  createProjectRef.current = createProject.mutateAsync
-  updateProjectRef.current = updateProject.mutateAsync
+  useEffect(() => {
+    createProjectRef.current = createProject.mutateAsync
+    updateProjectRef.current = updateProject.mutateAsync
+  })
 
   useEffect(() => {
     textareaRef.current?.focus()

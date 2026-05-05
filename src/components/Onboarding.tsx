@@ -31,7 +31,7 @@ export function Onboarding({ onComplete }: Props) {
   const [saving, setSaving] = useState(false);
   const updateSettings = trpc.promptForge.updateSettings.useMutation();
   const updateSettingsRef = useRef(updateSettings.mutateAsync);
-  updateSettingsRef.current = updateSettings.mutateAsync;
+  useEffect(() => { updateSettingsRef.current = updateSettings.mutateAsync })
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);

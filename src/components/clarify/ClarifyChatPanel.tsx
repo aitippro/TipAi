@@ -69,10 +69,11 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
   const saveTurnRef = useRef(saveTurn.mutateAsync)
   const generateNextRef = useRef(generateNextQuestion.mutateAsync)
   const generateSummaryRef = useRef(generateSummaryMutation.mutateAsync)
-  // Always update refs to latest (without triggering re-renders)
-  saveTurnRef.current = saveTurn.mutateAsync
-  generateNextRef.current = generateNextQuestion.mutateAsync
-  generateSummaryRef.current = generateSummaryMutation.mutateAsync
+  useEffect(() => {
+    saveTurnRef.current = saveTurn.mutateAsync
+    generateNextRef.current = generateNextQuestion.mutateAsync
+    generateSummaryRef.current = generateSummaryMutation.mutateAsync
+  })
 
   const generateSummaryAndShow = useCallback(async () => {
     setIsLoading(true)

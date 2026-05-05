@@ -86,9 +86,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
 
   const mutateRef = useRef(generateMutation.mutate)
   const generateMutationRef = useRef(generateMutation)
-  // Stable refs updated in render body — avoids useEffect churn from unstable mutation refs
-  mutateRef.current = generateMutation.mutate
-  generateMutationRef.current = generateMutation
+  useEffect(() => { mutateRef.current = generateMutation.mutate; generateMutationRef.current = generateMutation })
 
   useEffect(() => {
     if (hasStartedRef.current) return
@@ -122,7 +120,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
     onError: (e) => toast.error(e.message),
   })
   const saveMutateRef = useRef(saveMutation.mutate)
-  saveMutateRef.current = saveMutation.mutate
+  useEffect(() => { saveMutateRef.current = saveMutation.mutate })
 
   const autoSaveMutation = trpc.promptForge.saveToLibrary.useMutation({
     onSuccess: () => {
