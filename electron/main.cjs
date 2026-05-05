@@ -166,33 +166,11 @@ function runMigrations(migrationsDir) {
 // Start backend — in dev Vite handles everything; in prod we load Hono in-process
 async function startBackend() {
   process.env.NODE_ENV = isDev ? 'development' : 'production';
-  process.env.DATABASE_URL = `file:${dbPath}`;
   process.env.APP_ID = process.env.APP_ID || 'tipai-desktop';
   process.env.APP_URL = 'http://localhost:0';
 
-  // Ensure persistent API_KEY_SECRET so encrypted API keys survive app restarts
-  if (!process.env.API_KEY_SECRET) {
-    const keyFile = path.join(dataDir, '.key');
-    if (fs.existsSync(keyFile)) {
-      process.env.API_KEY_SECRET = fs.readFileSync(keyFile, 'utf-8').trim();
-    } else {
-      const { randomBytes } = require('crypto');
-      const key = randomBytes(32).toString('hex');
-      fs.writeFileSync(keyFile, key, { mode: 0o600 });
-      process.env.API_KEY_SECRET = key;
-    }
-  }
-
-  // Open database via Native Addon or polyfill (dev + prod)
-  const n = getNative();
-  if (n) {
-    try {
-      n.dbOpen(dbPath, process.env.API_KEY_SECRET);
-      log(`Native DB opened: ${dbPath}`);
-    } catch (err) {
-      logError('Native dbOpen failed', err);
-    }
-  }
+  // DATABASE_URL, API_KEY_SECRET, and dbOpen are already set before window creation.
+  // This function only handles the remaining backend initialization.
 
   if (isDev) {
     backendBaseUrl = 'http://localhost:5173';
@@ -377,7 +355,29 @@ if (process.platform === 'win32') {
 app.whenReady().then(async () => {
   log('Starting...');
   try {
-    // Show window immediately, load backend in parallel
+    // Open DB and set env vars BEFORE showing window (must be ready for queries)
+    process.env.DATABASE_URL = `file:${dbPath}`;
+    if (!process.env.API_KEY_SECRET) {
+      const keyFile = path.join(dataDir, '.key');
+      if (fs.existsSync(keyFile)) {
+        process.env.API_KEY_SECRET = fs.readFileSync(keyFile, 'utf-8').trim();
+      } else {
+        const { randomBytes } = require('crypto');
+        const key = randomBytes(32).toString('hex');
+        fs.writeFileSync(keyFile, key, { mode: 0o600 });
+        process.env.API_KEY_SECRET = key;
+      }
+    }
+    const n = getNative();
+    if (n) {
+      try {
+        n.dbOpen(dbPath, process.env.API_KEY_SECRET);
+        log(`Native DB opened: ${dbPath}`);
+      } catch (err) {
+        logError('Native dbOpen failed', err);
+      }
+    }
+    // Show window immediately, load rest of backend in parallel
     createWindow();
     const backendPromise = startBackend();
     if (isDev) {
