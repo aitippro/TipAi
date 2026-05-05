@@ -13,6 +13,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: (failureCount) => failureCount < 2,
+      staleTime: 30_000, // 30s — local-first app, data rarely changes
     },
   },
 });

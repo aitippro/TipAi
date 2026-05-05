@@ -1,7 +1,7 @@
 /**
  * 多模态文件解析器 — 支持 .txt / .docx / .pdf
  */
-import mammoth from "mammoth";
+// mammoth is dynamically imported to avoid bundling ~200KB for non-docx users
 
 export interface FileParseResult {
   text: string;
@@ -25,6 +25,7 @@ export async function parseTextFile(
   const ext = fileName.split(".").pop()?.toLowerCase();
 
   if (ext === "docx") {
+    const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
     return {
       text: result.value,

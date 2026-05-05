@@ -375,9 +375,11 @@ app.whenReady().then(async () => {
   log('Starting...');
   try {
     await startBackend();
-    // Clear HTTP cache on every start to prevent stale Vite chunks after rebuilds
-    const defaultSession = require('electron').session.defaultSession;
-    await defaultSession.clearCache();
+    if (isDev) {
+      // Clear HTTP cache to prevent stale Vite chunks after rebuilds
+      const { session } = require('electron');
+      await session.defaultSession.clearCache();
+    }
     createWindow();
     initUpdater(mainWindow);
     createApplicationMenu();
