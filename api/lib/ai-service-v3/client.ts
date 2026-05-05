@@ -40,6 +40,17 @@ const MODEL_CONFIGS: Record<
 
 const AI_CALL_TIMEOUT_MS = 20000
 
+/** Wrap any promise with a JS-level timeout — protects against native/Rust hangs */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v) },
+      (e) => { clearTimeout(timer); reject(e) },
+    )
+  })
+}
+
 function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -76,7 +87,7 @@ async function runSelfConsistencyCallAI(
     maxTokens: 4000,
     timeoutMs: AI_CALL_TIMEOUT_MS,
   };
-  const result = await native.aiCallSelfConsistency(req, sampleCount);
+  const result = await withTimeout(native.aiCallSelfConsistency(req, sampleCount) as Promise<{ content?: string; error?: string; results?: Array<{ content?: string }>; successfulCount?: number }>, AI_CALL_TIMEOUT_MS + 5000, "aiCallSelfConsistency");
   // Normalize: Rust returns {content, error}, polyfill returns {results[], count, successfulCount}
   const content = result.content ?? result.results?.[0]?.content;
   const error = result.error ?? (result.successfulCount === 0 ? "All self-consistency paths failed" : undefined);
@@ -168,7 +179,7 @@ async function callAISingle(
       maxTokens: 4000,
       timeoutMs: AI_CALL_TIMEOUT_MS,
     };
-    const result = await native.aiCall(req);
+    const result = await withTimeout(native.aiCall(req) as Promise<{ content?: string; error?: string }>, AI_CALL_TIMEOUT_MS, "aiCall");
     if (result.error) {
       console.error(`${provider} error: ${result.error}`);
       return null;
