@@ -435,4 +435,5 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   logError('UnhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
+  process.exit(1);
 });
