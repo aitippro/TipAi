@@ -198,9 +198,12 @@ export default function Home() {
     try {
       const title = intent.trim().length > 30 ? intent.trim().substring(0, 30) + "..." : intent.trim()
       const project = await createProject.mutateAsync({ title, intent: intent.trim(), domain: undefined })
-      await updateProject.mutateAsync({ id: project.id, clarificationStatus: "in_progress" })
       setClarifyProjectId(project.id)
       setStage("clarify")
+      // Non-critical: best-effort status update, don't block the flow
+      updateProject.mutateAsync({ id: project.id, clarificationStatus: "in_progress" }).catch(
+        (e) => console.error("[Home] Failed to set clarification status:", e),
+      )
     } catch {
       toast.error(t("home.toastCreateFailed"))
     } finally {

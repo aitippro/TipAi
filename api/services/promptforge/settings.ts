@@ -92,21 +92,27 @@ function buildSettingsUpdateData(
   let newClaudeKey: string | undefined;
   let newDeepSeekKey: string | undefined;
 
-  if (input.kimiApiKey && input.kimiApiKey.trim().length > 0 && input.kimiApiKey !== API_KEY_UNCHANGED) {
-    newKimiKey = input.kimiApiKey.trim();
-    updateData.kimiApiKey = newKimiKey;
+  const setOrClearKey = (key: string | undefined): string | null | undefined => {
+    if (key === undefined || key === API_KEY_UNCHANGED) return undefined; // not included
+    const trimmed = key.trim();
+    return trimmed.length > 0 ? trimmed : null; // null = clear existing key
+  };
+
+  if (input.kimiApiKey !== undefined) {
+    const val = setOrClearKey(input.kimiApiKey);
+    if (val !== undefined) { newKimiKey = val ?? undefined; updateData.kimiApiKey = val; }
   }
-  if (input.openaiApiKey && input.openaiApiKey.trim().length > 0 && input.openaiApiKey !== API_KEY_UNCHANGED) {
-    newOpenAIKey = input.openaiApiKey.trim();
-    updateData.openaiApiKey = newOpenAIKey;
+  if (input.openaiApiKey !== undefined) {
+    const val = setOrClearKey(input.openaiApiKey);
+    if (val !== undefined) { newOpenAIKey = val ?? undefined; updateData.openaiApiKey = val; }
   }
-  if (input.claudeApiKey && input.claudeApiKey.trim().length > 0 && input.claudeApiKey !== API_KEY_UNCHANGED) {
-    newClaudeKey = input.claudeApiKey.trim();
-    updateData.claudeApiKey = newClaudeKey;
+  if (input.claudeApiKey !== undefined) {
+    const val = setOrClearKey(input.claudeApiKey);
+    if (val !== undefined) { newClaudeKey = val ?? undefined; updateData.claudeApiKey = val; }
   }
-  if (input.deepseekApiKey && input.deepseekApiKey.trim().length > 0 && input.deepseekApiKey !== API_KEY_UNCHANGED) {
-    newDeepSeekKey = input.deepseekApiKey.trim();
-    updateData.deepseekApiKey = newDeepSeekKey;
+  if (input.deepseekApiKey !== undefined) {
+    const val = setOrClearKey(input.deepseekApiKey);
+    if (val !== undefined) { newDeepSeekKey = val ?? undefined; updateData.deepseekApiKey = val; }
   }
 
   // Auto-sync defaultModel when a new key is configured and current default has no key
@@ -177,7 +183,8 @@ export async function getPromptForgeSettingsRecord(userId: number): Promise<User
   try {
     const s = native.settingsGet(userId);
     return mapNativeSettings(userId, s);
-  } catch {
+  } catch (e) {
+    console.error("[settings] Failed to get settings record:", e);
     return undefined;
   }
 }

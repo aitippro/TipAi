@@ -57,9 +57,23 @@ export default function Library() {
   })
 
   const handleCopy = async (text: string, id: number) => {
-    await navigator.clipboard.writeText(text)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      // Fallback for environments where clipboard API is unavailable
+      const ta = document.createElement("textarea")
+      ta.value = text
+      ta.style.position = "fixed"
+      ta.style.opacity = "0"
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    }
   }
 
   const filtered = items?.filter((item: { title: string; generatedPrompt: string }) =>

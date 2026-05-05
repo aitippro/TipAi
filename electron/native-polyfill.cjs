@@ -174,32 +174,43 @@ function settingsGet(userId) {
   };
 }
 
+function getEncryptionKey() {
+  return process.env.APP_SECRET || process.env.API_KEY_SECRET || '';
+}
+
 function settingsUpdate(userId, data) {
   const now = nowUnix();
   const existing = getDb().prepare('SELECT id FROM user_settings WHERE userId = ?').get(userId);
-  const map = { defaultModel: 'defaultModel', defaultFramework: 'defaultFramework',
-    defaultLanguage: 'defaultLanguage', kimiApiKey: 'kimiApiKey', openaiApiKey: 'openaiApiKey',
-    claudeApiKey: 'claudeApiKey', deepseekApiKey: 'deepseekApiKey' };
+  const nonKeyFields = ['defaultModel', 'defaultFramework', 'defaultLanguage'];
+  const keyFields = ['kimiApiKey', 'openaiApiKey', 'claudeApiKey', 'deepseekApiKey'];
+  const allFields = [...nonKeyFields, ...keyFields];
 
   if (existing) {
     const fields = ['updatedAt = ?'];
     const values = [now];
-    for (const [k, col] of Object.entries(map)) {
+    for (const k of allFields) {
       if (data[k] !== undefined && data[k] !== '***') {
-        fields.push(col + ' = ?');
-        values.push(data[k] || null);
+        let val = data[k];
+        // Encrypt API keys (null means clear the key)
+        if (keyFields.includes(k) && val != null && val !== '') {
+          val = rustEncrypt(val, getEncryptionKey());
+        }
+        fields.push(k + ' = ?');
+        values.push(val === '' ? null : val);
       }
     }
     values.push(userId);
     getDb().prepare('UPDATE user_settings SET ' + fields.join(', ') + ' WHERE userId = ?').run(...values);
   } else {
+    const encKey = getEncryptionKey();
+    const enc = (v) => (v && v !== '' ? rustEncrypt(v, encKey) : null);
     getDb().prepare(
       `INSERT INTO user_settings (userId, defaultModel, defaultFramework, defaultLanguage,
         kimiApiKey, openaiApiKey, claudeApiKey, deepseekApiKey, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(userId, data.defaultModel ?? 'kimi', data.defaultFramework ?? 'auto',
-      data.defaultLanguage ?? 'zh', data.kimiApiKey || null, data.openaiApiKey || null,
-      data.claudeApiKey || null, data.deepseekApiKey || null, now, now);
+      data.defaultLanguage ?? 'zh', enc(data.kimiApiKey), enc(data.openaiApiKey),
+      enc(data.claudeApiKey), enc(data.deepseekApiKey), now, now);
   }
 }
 
@@ -208,7 +219,9 @@ function settingsGetApiKey(userId, provider) {
   const col = map[provider];
   if (!col) return undefined;
   const row = getDb().prepare('SELECT ' + col + ' FROM user_settings WHERE userId = ?').get(userId);
-  return row ? row[col] || undefined : undefined;
+  if (!row || !row[col]) return undefined;
+  // Decrypt stored API key
+  return rustDecrypt(row[col], getEncryptionKey());
 }
 
 // ============================================================================

@@ -88,7 +88,7 @@ export default function SettingsPage() {
     savingRef.current = true
 
     const payload: Record<string, string> = { defaultModel, defaultLanguage: getDbLanguage(uiLanguage) }
-    MODELS.forEach((m) => { const v = keys[m.key]; if (v?.trim()) payload[`${m.key}ApiKey`] = v.trim() })
+    MODELS.forEach((m) => { payload[`${m.key}ApiKey`] = keys[m.key]?.trim() ?? "" })
 
     try {
       await updateMutation.mutateAsync(payload)

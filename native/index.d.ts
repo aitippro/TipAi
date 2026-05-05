@@ -400,7 +400,7 @@ export interface EvaluationStats {
 
 export function evaluationCreate(data: InsertEvaluation): EvaluationEntry
 export function evaluationStats(projectId?: number): EvaluationStats
-export function evaluationList(projectId?: number, limit?: number): EvaluationEntry[]
+export function evaluationList(projectId?: number, limit: number): EvaluationEntry[]
 
 // ============================================================================
 // Optimizations
@@ -427,7 +427,7 @@ export interface InsertOptimization {
 }
 
 export function optimizerRunCreate(data: InsertOptimization): OptimizationEntry
-export function optimizerRunList(userId: number, limit?: number): OptimizationEntry[]
+export function optimizerRunList(userId: number, limit: number): OptimizationEntry[]
 
 // ============================================================================
 // Quality Gate (v2.0+ 下沉 Rust)
@@ -477,9 +477,26 @@ export interface DriftResult {
 export function detectDrift(versions: string[], baselineIndex?: number): DriftResult
 
 /** Compare two text versions and return similarity + token differences. */
-export function compareVersions(a: string, b: string): {
+export function compareVersions(a: string, b: string): CompareResult
+
+export interface CompareResult {
   similarity: number
   commonTokens: string[]
   uniqueToA: string[]
   uniqueToB: string[]
 }
+
+/** Delete a step by ID (polyfill; may be patched into Rust). */
+export function stepDelete(id: number, projectId: number): void
+
+/** Upsert a domain knowledge package (polyfill; may be patched into Rust). */
+export function domainPackageUpsert(data: {
+  domain: string
+  label: string
+  frameworks: string
+  templates: string
+  bestPractices: string
+  keyInfo: string
+  outputFormats: string
+  suggestedTools: string
+}): { id: number }
