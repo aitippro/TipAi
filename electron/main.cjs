@@ -63,10 +63,15 @@ function logError(msg, err) {
 
 function createWindow() {
   const isMacOS = process.platform === 'darwin';
+  const iconPath = isMacOS
+    ? path.join(__dirname, '../public/icon.png')
+    : path.join(__dirname, '../public/icon.ico');
+
   mainWindow = new BrowserWindow({
     width: 1280, height: 800, minWidth: 900, minHeight: 600,
     titleBarStyle: isMacOS ? 'hiddenInset' : 'default',
     show: false,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -359,6 +364,11 @@ function createApplicationMenu() {
     ]},
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+// Windows: set AppUserModelId for proper taskbar icon grouping
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.tipai.desktop');
 }
 
 app.whenReady().then(async () => {
