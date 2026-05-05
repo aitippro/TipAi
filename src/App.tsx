@@ -96,16 +96,16 @@ export default function App() {
   // Check API Key status (public query — works even when not logged in)
   const { data: keyStatus, isLoading: keyStatusLoading } =
     trpc.promptForge.apiKeyStatus.useQuery(undefined, {
-      retry: 5,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      retry: 10,
+      retryDelay: (attempt) => Math.min(500 * attempt, 3000),
       refetchOnWindowFocus: false,
     })
 
   // Check user settings (authed query — requires login)
   const { data: settings, isLoading: settingsLoading } =
     trpc.promptForge.getSettings.useQuery(undefined, {
-      retry: 5,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      retry: 10,
+      retryDelay: (attempt) => Math.min(500 * attempt, 3000),
       refetchOnWindowFocus: false,
     })
 
