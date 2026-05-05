@@ -110,11 +110,10 @@ function createWindow() {
 }
 
 // Run SQL migrations — prefer Native/Polyfill, fallback to better-sqlite3
-function runMigrations(dbPath, migrationsDir) {
+function runMigrations(migrationsDir) {
   const n = getNative();
   if (n) {
     try {
-      n.dbOpen(dbPath, process.env.API_KEY_SECRET || null);
       n.dbMigrate(migrationsDir);
       log('Migrations completed via Native Addon');
       return;
@@ -208,7 +207,7 @@ async function startBackend() {
   const migrationsDir = isDev
     ? path.join(__dirname, '../db/migrations')
     : path.join(process.resourcesPath, 'db', 'migrations');
-  runMigrations(dbPath, migrationsDir);
+  runMigrations(migrationsDir);
 
   const bootPath = path.join(__dirname, '../dist/boot.js');
   const bootUrl = pathToFileURL(bootPath).href;
