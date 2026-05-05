@@ -178,7 +178,6 @@ function runMigrations(migrationsDir) {
 ipcMain.handle('api:fetch', async (_e, { path: reqPath, method, headers, body }) => {
   try {
     if (honoApp) {
-      // Production: direct in-process call, no HTTP round-trip
       const url = new URL(reqPath, 'http://localhost');
       const req = new Request(url, {
         method: method || 'GET',
@@ -192,16 +191,20 @@ ipcMain.handle('api:fetch', async (_e, { path: reqPath, method, headers, body })
       return { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody };
     }
 
-    // Dev mode: forward to Vite dev server
-    const res = await fetch(`${backendBaseUrl}${reqPath}`, {
-      method: method || 'GET',
-      headers: headers || {},
-      body: body || undefined,
-    });
-    const resBody = await res.text();
-    const resHeaders = {};
-    res.headers.forEach((v, k) => { resHeaders[k] = v; });
-    return { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody };
+    if (isDev) {
+      const res = await fetch(`${backendBaseUrl}${reqPath}`, {
+        method: method || 'GET',
+        headers: headers || {},
+        body: body || undefined,
+      });
+      const resBody = await res.text();
+      const resHeaders = {};
+      res.headers.forEach((v, k) => { resHeaders[k] = v; });
+      return { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody };
+    }
+
+    // Backend not ready yet — signal frontend to retry
+    return { status: 503, statusText: 'Starting up...', headers: {}, body: '{"error":"Backend initializing, retry"}' };
   } catch (err) {
     logError('api:fetch error', err);
     return { status: 500, statusText: 'Internal Server Error', headers: {}, body: JSON.stringify({ error: err.message }) };
