@@ -58,10 +58,12 @@ function mapSettingsResponse(settings?: UserSettings): PromptForgeSettingsRespon
     };
   }
 
-  // Always use the first available model with a valid key as default.
-  // This ensures users who configured e.g. DeepSeek don't get stuck on
-  // an old invalid Kimi key sitting in the database.
-  const defaultModel = inferDefaultModel(settings);
+  // Use stored defaultModel if it has a valid key; otherwise fall back to inference.
+  // This respects the user's explicit choice while still auto-correcting when
+  // the stored model no longer has a configured key.
+  const storedDefault = settings.defaultModel;
+  const storedHasKey = storedDefault ? !!resolveStoredApiKey(storedDefault, settings) : false;
+  const defaultModel = storedHasKey ? storedDefault : inferDefaultModel(settings);
 
   return {
     defaultModel,

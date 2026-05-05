@@ -73,6 +73,7 @@ export default function SettingsPage() {
   const utils = trpc.useUtils()
   const updateMutation = trpc.promptForge.updateSettings.useMutation({
     onSuccess: () => {
+      settingsSyncedRef.current = false // allow re-sync after save
       utils.promptForge.getSettings.invalidate()
       toast.success(t("settings.saveSuccess"), { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> })
     },
