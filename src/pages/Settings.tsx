@@ -55,7 +55,8 @@ export default function SettingsPage() {
   const [devMode, setDevMode] = useState(() => localStorage.getItem("tipai_dev_mode") === "true")
   const [uiLanguage, setUiLanguage] = useState(() => localStorage.getItem("tipai-language") || "zh-CN")
 
-  const { data: settings, isLoading } = trpc.promptForge.getSettings.useQuery(undefined)
+  const { data: settings, isLoading, isError } = trpc.promptForge.getSettings.useQuery(undefined)
+  if (isError) console.error("[Settings] Failed to load settings from server")
   const settingsSyncedRef = useRef(false)
   useEffect(() => {
     if (settings && !settingsSyncedRef.current) {

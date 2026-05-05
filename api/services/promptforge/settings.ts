@@ -28,7 +28,8 @@ function inferDefaultModel(settings?: UserSettings): string {
     const key = resolveStoredApiKey(model, settings) || process.env[`${model.toUpperCase()}_API_KEY`] || "";
     if (key) return model;
   }
-  return ""; // no key configured — caller must handle
+  // ollama is always available as local fallback
+  return "ollama";
 }
 
 const DEFAULT_SETTINGS = {
@@ -61,8 +62,11 @@ function mapSettingsResponse(settings?: UserSettings): PromptForgeSettingsRespon
   // Use stored defaultModel if it has a valid key; otherwise fall back to inference.
   // This respects the user's explicit choice while still auto-correcting when
   // the stored model no longer has a configured key.
+  // Ollama is a local model — always valid if explicitly chosen.
   const storedDefault = settings.defaultModel;
-  const storedHasKey = storedDefault ? !!resolveStoredApiKey(storedDefault, settings) : false;
+  const storedHasKey = storedDefault === "ollama"
+    ? true
+    : storedDefault ? !!resolveStoredApiKey(storedDefault, settings) : false;
   const defaultModel = storedHasKey ? storedDefault : inferDefaultModel(settings);
 
   return {
