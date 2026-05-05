@@ -185,6 +185,11 @@ export default function Home() {
 
   const createProject = trpc.project.create.useMutation()
   const updateProject = trpc.project.update.useMutation()
+  // Stable refs to prevent useCallback churn from unstable mutation references
+  const createProjectRef = useRef(createProject.mutateAsync)
+  const updateProjectRef = useRef(updateProject.mutateAsync)
+  createProjectRef.current = createProject.mutateAsync
+  updateProjectRef.current = updateProject.mutateAsync
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -197,11 +202,11 @@ export default function Home() {
     setIsCreating(true)
     try {
       const title = intent.trim().length > 30 ? intent.trim().substring(0, 30) + "..." : intent.trim()
-      const project = await createProject.mutateAsync({ title, intent: intent.trim(), domain: undefined })
+      const project = await createProjectRef.current({ title, intent: intent.trim(), domain: undefined })
       setClarifyProjectId(project.id)
       setStage("clarify")
       // Non-critical: best-effort status update, don't block the flow
-      updateProject.mutateAsync({ id: project.id, clarificationStatus: "in_progress" }).catch(
+      updateProjectRef.current({ id: project.id, clarificationStatus: "in_progress" }).catch(
         (e) => console.error("[Home] Failed to set clarification status:", e),
       )
     } catch {
@@ -209,19 +214,21 @@ export default function Home() {
     } finally {
       setIsCreating(false)
     }
-  }, [intent, isAuthenticated, navigate, createProject, updateProject, t])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent, isAuthenticated, navigate, t])
 
   const handleClarifyComplete = useCallback(async (answers: Record<string, string>, _summary: RequirementSummary) => {
     if (clarifyProjectId) {
       try {
-        await updateProject.mutateAsync({ id: clarifyProjectId, clarificationStatus: "completed", status: "ready" })
+        await updateProjectRef.current({ id: clarifyProjectId, clarificationStatus: "completed", status: "ready" })
       } catch (e) {
         console.error("[Home] Failed to update project status:", e);
       }
     }
     setPendingAnswers(answers)
     setStage("results")
-  }, [clarifyProjectId, updateProject])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clarifyProjectId])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

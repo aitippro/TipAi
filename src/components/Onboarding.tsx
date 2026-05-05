@@ -30,6 +30,8 @@ export function Onboarding({ onComplete }: Props) {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const updateSettings = trpc.promptForge.updateSettings.useMutation();
+  const updateSettingsRef = useRef(updateSettings.mutateAsync);
+  updateSettingsRef.current = updateSettings.mutateAsync;
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
@@ -55,7 +57,7 @@ export function Onboarding({ onComplete }: Props) {
         // Auto-set default model to the first provider with a key
         const firstKey = Object.keys(payload)[0];
         payload.defaultModel = firstKey.replace('ApiKey', '');
-        await updateSettings.mutateAsync(payload);
+        await updateSettingsRef.current(payload);
       }
     } catch (e) {
       toast.error("API Key 保存失败，请稍后重试");
@@ -68,7 +70,8 @@ export function Onboarding({ onComplete }: Props) {
       setExiting(true);
       exitTimerRef.current = setTimeout(onComplete, 600);
     }
-  }, [keys, step, onComplete, updateSettings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keys, step, onComplete]);
 
   const handleNext = () => {
     if (step < STEPS.length - 1) { setStep(s => s + 1); }
