@@ -15,25 +15,30 @@ import { native } from "../../lib/native";
 function mapNativeEvaluation(row: NativeEvalEntry): FeedbackHistoryItem {
   return {
     id: row.id,
-    projectId: (row as any).projectId ?? row.project_id,
-    stepId: (row as any).stepId ?? row.step_id ?? null,
-    userId: (row as any).userId ?? row.user_id,
+    projectId: row.projectId ?? row.project_id,
+    stepId: row.stepId ?? row.step_id ?? null,
+    userId: row.userId ?? row.user_id,
     dimension: row.dimension as FeedbackDimension,
     score: row.score,
     feedback: row.feedback ?? null,
-    createdAt: ((row as any).createdAt ?? row.created_at) ? new Date((row as any).createdAt ?? row.created_at) : null,
+    createdAt: (row.createdAt ?? row.created_at) ? new Date(row.createdAt ?? row.created_at as string) : null,
   };
 }
 
 // 复用 index.d.ts 中的类型（运行时从 native 模块获取）
+// NAPI-RS returns camelCase, polyfill returns snake_case — handle both
 interface NativeEvalEntry {
   id: number;
+  projectId?: number;
   project_id: number;
+  stepId?: number;
   step_id?: number;
+  userId?: number;
   user_id: number;
   dimension: string;
   score: number;
   feedback?: string;
+  createdAt?: string;
   created_at?: string;
 }
 
