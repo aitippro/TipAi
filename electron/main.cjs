@@ -334,6 +334,8 @@ app.whenReady().then(async () => {
   try {
     // 1. Setup env + DB (fast, ~30ms)
     process.env.DATABASE_URL = `file:${dbPath}`;
+    // Single source of truth for encryption key — uses the .key file in TipAi-data
+    // Both APP_SECRET and API_KEY_SECRET must be identical to prevent encrypt/decrypt mismatch
     if (!process.env.API_KEY_SECRET) {
       const keyFile = path.join(dataDir, '.key');
       if (fs.existsSync(keyFile)) {
@@ -345,6 +347,7 @@ app.whenReady().then(async () => {
         process.env.API_KEY_SECRET = key;
       }
     }
+    process.env.APP_SECRET = process.env.API_KEY_SECRET; // Unify keys: polyfill uses APP_SECRET first
     const n = getNative();
     if (n) {
       try { n.dbOpen(dbPath, process.env.API_KEY_SECRET); log(`Native DB opened: ${dbPath}`); }
