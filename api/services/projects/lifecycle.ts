@@ -104,7 +104,7 @@ export async function getChildSteps(userId: number, stepId: number) {
   if (!project) return [];
   const children = (native.stepList((parent.projectId ?? parent.project_id)) || [])
     .filter((s: any) => (s.parentStepId ?? s.parent_step_id) === stepId)
-    .sort((a: any, b: any) => (a.order_num || 0) - (b.order_num || 0))
+    .sort((a: any, b: any) => ((a.orderNum ?? a.order_num) || 0) - ((b.orderNum ?? b.order_num) || 0))
     .map(mapNativeStep);
   return children;
 }

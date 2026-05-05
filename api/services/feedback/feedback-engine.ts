@@ -151,7 +151,7 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
     throw new Error(`反馈统计查询失败: ${msg}`);
   }
 
-  if (stats.total_count === 0 && rows.length === 0) {
+  if ((stats.totalCount ?? stats.total_count) === 0 && rows.length === 0) {
     return {
       totalCount: 0,
       avgScores: { clarity: null, relevance: null, completeness: null, actionability: null, overall: null },
@@ -165,11 +165,11 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
 
   // 平均值从 Rust stats 获取
   const avgScores: Record<string, number | null> = {
-    clarity: stats.avg_clarity ?? null,
-    relevance: stats.avg_relevance ?? null,
-    completeness: stats.avg_completeness ?? null,
-    actionability: stats.avg_actionability ?? null,
-    overall: stats.avg_overall ?? null,
+    clarity: stats.avgClarity ?? stats.avg_clarity ?? null,
+    relevance: stats.avgRelevance ?? stats.avg_relevance ?? null,
+    completeness: stats.avgCompleteness ?? stats.avg_completeness ?? null,
+    actionability: stats.avgActionability ?? stats.avg_actionability ?? null,
+    overall: stats.avgOverall ?? stats.avg_overall ?? null,
   };
 
   // 趋势分析：最近 30% vs 之前 70%
@@ -178,7 +178,7 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
     const dimRows = rows
       .filter((r: NativeEvalEntry) => r.dimension === dim)
       .sort((a: NativeEvalEntry, b: NativeEvalEntry) =>
-        (a.created_at ? new Date(a.created_at).getTime() : 0) - (b.created_at ? new Date(b.created_at).getTime() : 0)
+        (a.createdAt ?? a.created_at ? new Date((a.createdAt ?? a.created_at) as string).getTime() : 0) - (b.createdAt ?? b.created_at ? new Date((b.createdAt ?? b.created_at) as string).getTime() : 0)
       );
 
     if (dimRows.length < 4) {
@@ -221,7 +221,7 @@ export async function getFeedbackStats(projectId?: number): Promise<FeedbackStat
   }
 
   return {
-    totalCount: stats.total_count,
+    totalCount: stats.totalCount ?? stats.total_count,
     avgScores: avgScores as Record<FeedbackDimension, number | null>,
     trends: trends as Record<FeedbackDimension, "up" | "down" | "stable">,
     topIssues,
