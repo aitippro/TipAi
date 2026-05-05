@@ -11,11 +11,11 @@ const exeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execP
 const userDataPath = path.join(exeDir, 'TipAi-data');
 process.env.USER_DATA_PATH = userDataPath;
 const dataDir = path.join(userDataPath, 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+try { if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true }); } catch (_) {}
 const dbPath = path.join(dataDir, 'tipai.db');
 const LOG_FILE = path.join(dataDir, 'tipai.log');
 const EXPORT_DIR = path.join(dataDir, 'exports');
-if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
+try { if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true }); } catch (_) {}
 
 let mainWindow;
 
@@ -400,10 +400,12 @@ app.whenReady().then(async () => {
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
+  process.exit(0);
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_e, _argv, _cwd) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
     }
   });
@@ -428,6 +430,7 @@ app.on('web-contents-created', (_e, contents) => {
 process.on('uncaughtException', (err) => {
   logError('UncaughtException', err);
   dialog.showErrorBox('程序错误', `${err.message}\n\n日志: ${LOG_FILE}`);
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
