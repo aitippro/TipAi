@@ -83,6 +83,7 @@ export default function TemplateMarket() {
       toast.success("评分已提交")
       utils.template.list.invalidate()
     },
+    onError: (e) => toast.error(e.message || "评分失败"),
   })
 
   // Only fallback to DEFAULT_TEMPLATES when API fails or hasn't loaded yet.

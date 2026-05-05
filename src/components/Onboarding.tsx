@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,7 +57,10 @@ export function Onboarding({ onComplete }: Props) {
         payload.defaultModel = firstKey.replace('ApiKey', '');
         await updateSettings.mutateAsync(payload);
       }
-    } catch { /* optional */ }
+    } catch (e) {
+      toast.error("API Key 保存失败，请稍后重试");
+      console.error("[Onboarding] Failed to save API keys:", e);
+    }
     setSaving(false);
     if (step < STEPS.length - 1) {
       setStep(s => s + 1);

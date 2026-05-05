@@ -48,7 +48,7 @@ export default function QualityGatePage() {
   const handleCheck = () => {
     if (!prompt.trim()) return;
     setSubmitted(true);
-    checkQuery.refetch().catch(() => {});
+    checkQuery.refetch().catch((e) => console.error("[QualityGate] Check failed:", e));
   };
 
   const result = checkQuery.data;

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { trpc } from "@/providers/trpc";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +59,9 @@ export default function MultimodalPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const modesQuery = trpc.multimodal.modes.useQuery();
-  const generateMutation = trpc.multimodal.generate.useMutation();
+  const generateMutation = trpc.multimodal.generate.useMutation({
+    onError: (e) => toast.error(e.message || "生成失败，请检查 API Key 和网络"),
+  });
 
   const handleGenerate = () => {
     if (!request.trim()) return;

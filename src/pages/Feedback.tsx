@@ -62,10 +62,10 @@ export default function FeedbackPage() {
       statsQuery.refetch();
       historyQuery.refetch();
       toast.success("反馈提交成功");
-      // Auto-reset after 3 seconds
       clearTimeout(submitTimerRef.current);
       submitTimerRef.current = setTimeout(() => setSubmitted(false), 3000);
     },
+    onError: (e) => toast.error(e.message || "反馈提交失败"),
   });
 
   // Cleanup timer on unmount

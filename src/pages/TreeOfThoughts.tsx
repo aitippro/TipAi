@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,8 @@ export default function TreeOfThoughtsPage() {
 
   const solveMutation = trpc.tot.solve.useMutation({
     onMutate: () => setElapsed(0),
+    onSuccess: () => toast.success("推理完成"),
+    onError: (e) => toast.error(e.message || "推理失败"),
   });
 
   useEffect(() => {

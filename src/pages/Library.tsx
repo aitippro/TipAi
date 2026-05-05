@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/Skeleton"
 import { TiltCard } from "@/components/effects/TiltCard"
 import {
   BookOpen, Search, Trash2, Copy, Clock,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, AlertCircle,
 } from "lucide-react"
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -44,7 +44,7 @@ export default function Library() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
 
-  const { data: items, isLoading } = trpc.promptForge.getLibrary.useQuery(undefined, {
+  const { data: items, isLoading, isError } = trpc.promptForge.getLibrary.useQuery(undefined, {
     retry: 1,
   })
   const utils = trpc.useUtils()
@@ -53,6 +53,7 @@ export default function Library() {
       utils.promptForge.getLibrary.invalidate()
       toast.success("已删除")
     },
+    onError: (e) => toast.error(e.message || "删除失败"),
   })
 
   const handleCopy = async (text: string, id: number) => {
@@ -85,7 +86,14 @@ export default function Library() {
         </div>
       </ScrollReveal>
 
-      {isLoading ? (
+      {isError ? (
+        <EmptyState
+          icon={<AlertCircle className="w-10 h-10 text-red-400" />}
+          title="加载失败"
+          description="无法获取提示词库，请检查网络后重试"
+          action={{ label: "重试", onClick: () => window.location.reload() }}
+        />
+      ) : isLoading ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-32 rounded-2xl" />

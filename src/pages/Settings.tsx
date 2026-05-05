@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
   const [keys, setKeys] = useState<Record<string, string>>({})
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
-  const [defaultModel, setDefaultModel] = useState("kimi")
+  const [defaultModel, setDefaultModel] = useState("")
   const [globalPrompt, setGlobalPrompt] = useState(() => localStorage.getItem("tipai_global_prompt") || "")
   const [theme, setTheme] = useState(() => localStorage.getItem("tipai_theme") || "light")
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("tipai_reduced_motion") === "true")
@@ -60,7 +60,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings && !settingsSyncedRef.current) {
       queueMicrotask(() => {
-        if (settings.defaultModel) setDefaultModel(settings.defaultModel)
+        // Always sync defaultModel even when empty (server infers from available keys)
+        if (settings.defaultModel !== undefined) setDefaultModel(settings.defaultModel)
         if (settings.defaultLanguage) {
           const i18nLang = getI18nLanguage(settings.defaultLanguage)
           setUiLanguage(i18nLang)

@@ -106,7 +106,9 @@ export default function Home() {
   const [detectedComplexity, setDetectedComplexity] = useState<"simple" | "medium" | "complex" | null>(null)
   const userToggledRef = useRef(false)
 
-  const analyzeMutation = trpc.promptForge.analyze.useMutation()
+  const analyzeMutation = trpc.promptForge.analyze.useMutation({
+    onError: (e) => console.error("[Home] Intent analysis failed:", e.message),
+  })
   const analyzeData = analyzeMutation.data
   const isAnalyzing = analyzeMutation.isPending
 
@@ -210,7 +212,9 @@ export default function Home() {
     if (clarifyProjectId) {
       try {
         await updateProject.mutateAsync({ id: clarifyProjectId, clarificationStatus: "completed", status: "ready" })
-      } catch { /* non-blocking */ }
+      } catch (e) {
+        console.error("[Home] Failed to update project status:", e);
+      }
     }
     setPendingAnswers(answers)
     setStage("results")

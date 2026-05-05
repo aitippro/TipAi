@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,8 @@ export default function AgentSwarmPage() {
   const modesQuery = trpc.swarm.modes.useQuery();
   const runMutation = trpc.swarm.run.useMutation({
     onMutate: () => setElapsed(0),
+    onSuccess: () => toast.success("任务执行完成"),
+    onError: (e) => toast.error(e.message || "任务执行失败"),
   });
 
   useEffect(() => {
