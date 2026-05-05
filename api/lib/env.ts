@@ -17,7 +17,7 @@ function getDatabaseUrl(): string {
     fs.mkdirSync(userDataPath, { recursive: true });
   }
 
-  return `file:${path.join(userDataPath, "data.db")}`;
+  return `file:${path.join(userDataPath, "data", "tipai.db")}`;
 }
 
 /**
@@ -35,13 +35,15 @@ function getDatabaseUrl(): string {
 function getMachineSecret(): string {
   if (process.env.APP_SECRET) return process.env.APP_SECRET;
 
-  // Persist a random secret in user data dir so it survives restarts
+  // Persist a random secret in data dir so it survives restarts
   const userDataPath = process.env.USER_DATA_PATH ||
     (process.platform === "win32"
       ? path.join(os.homedir(), "AppData", "Roaming", "TipAi")
       : path.join(os.homedir(), ".config", "TipAi"));
+  const dataDir = path.join(userDataPath, "data");
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-  const secretFile = path.join(userDataPath, ".app-secret");
+  const secretFile = path.join(dataDir, ".app-secret");
   if (fs.existsSync(secretFile)) {
     return fs.readFileSync(secretFile, "utf-8").trim();
   }

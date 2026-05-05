@@ -9,7 +9,7 @@ import { native } from "./native";
 export function encrypt(text: string): string {
   if (!text) return "";
   try {
-    return native.encrypt(text, process.env.API_KEY_SECRET || "");
+    return native.encrypt(text, process.env.API_KEY_SECRET || process.env.APP_SECRET || "");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Encryption failed: ${message}`);
@@ -19,7 +19,7 @@ export function encrypt(text: string): string {
 export function decrypt(encrypted: string): string {
   if (!encrypted) return "";
   try {
-    return native.decrypt(encrypted, process.env.API_KEY_SECRET || "");
+    return native.decrypt(encrypted, process.env.API_KEY_SECRET || process.env.APP_SECRET || "");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Decryption failed: ${message}`);

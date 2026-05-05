@@ -23,7 +23,7 @@ if (!process.env.TIPAI_ELECTRON && native.dbOpen) {
     const dbPath = dbUrl.startsWith("file:")
       ? dbUrl.slice(5)
       : path.join(process.env.USER_DATA_PATH || process.cwd(), "data", "tipai.db");
-    const secret = process.env.API_KEY_SECRET || undefined;
+    const secret = process.env.API_KEY_SECRET || process.env.APP_SECRET || undefined;
     native.dbOpen(dbPath, secret);
     native.dbMigrate(path.join(process.cwd(), "db", "migrations"));
   } catch (err) {
