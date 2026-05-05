@@ -33,6 +33,8 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
   const hasStartedRef = useRef(false)
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   // Stable refs for values that mutate too often to be effect dependencies
   const answersRef = useRef(answers)
@@ -45,6 +47,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
 
   const generateMutation = trpc.promptForge.generate.useMutation({
     onSuccess: (rawData) => {
+      if (!mountedRef.current) return
       setIsGenerating(false)
       const validated = validateGenResult(rawData)
       if (!validated) {
@@ -69,6 +72,7 @@ export default function GenerateModal({ intent, answers, stepMode, inline, onClo
       }
     },
     onError: (error) => {
+      if (!mountedRef.current) return
       setIsGenerating(false)
       const msg = error.message || t("generate.errorTitle")
       setErrorMsg(msg)

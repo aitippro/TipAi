@@ -149,8 +149,7 @@ export function ClarifyChatPanel({ projectId, intent, onComplete }: ClarifyChatP
 
     init()
     return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, intent])
+  }, [projectId, intent, generateSummaryAndShow])
 
   const handleAnswerSubmit = useCallback(async (forcedOptions?: string[]) => {
     if (!currentQuestion) return
