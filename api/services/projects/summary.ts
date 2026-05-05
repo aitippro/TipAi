@@ -6,6 +6,7 @@
 
 import { TRPCError } from "@trpc/server";
 
+import { safeJsonParse } from "../../lib/json-utils";
 import {
   analyzeIntent,
   parseAIJsonResponse,
@@ -32,15 +33,6 @@ interface RequirementSummary {
   constraints: string[];
   suggestedFrameworks: string[];
   intentAnalysis: IntentAnalysis;
-}
-
-function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
 }
 
 function buildConversationContext(turns: ConversationTurn[]): string {

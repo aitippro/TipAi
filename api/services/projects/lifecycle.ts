@@ -11,15 +11,7 @@ import type { DecodeStrategy } from "../ai/decoding-strategies";
 
 // ── Native Addon (Electron/Node main process) ─────────────
 import { native } from "../../lib/native";
-
-function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from "../../lib/json-utils";
 
 function mapNativeStep(entry: any) {
   const ds = entry.decodeStrategy ?? entry.decode_strategy;

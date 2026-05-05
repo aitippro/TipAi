@@ -227,6 +227,9 @@ function projectCreate(data: Record<string, unknown>) {
 function projectDelete(id: number, userId: number) {
   const d = getDb();
   const del = d.transaction((pid: number, uid: number) => {
+    d.prepare("DELETE FROM evaluations WHERE projectId = ?").run(pid);
+    d.prepare("DELETE FROM project_conversations WHERE projectId = ?").run(pid);
+    d.prepare("DELETE FROM project_summaries WHERE projectId = ?").run(pid);
     d.prepare("DELETE FROM steps WHERE projectId = ?").run(pid);
     d.prepare("DELETE FROM projects WHERE id = ? AND userId = ?").run(pid, uid);
   });

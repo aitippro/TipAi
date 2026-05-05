@@ -400,7 +400,7 @@ export interface EvaluationStats {
 
 export function evaluationCreate(data: InsertEvaluation): EvaluationEntry
 export function evaluationStats(projectId?: number): EvaluationStats
-export function evaluationList(projectId?: number, limit: number): EvaluationEntry[]
+export function evaluationList(projectId: number | null, limit: number): EvaluationEntry[]
 
 // ============================================================================
 // Optimizations

@@ -9,15 +9,7 @@ import type { ProjectEntry as Project } from "@db/schema";
 
 // ── Native Addon (Electron/Node main process) ─────────────
 import { native } from "../../lib/native";
-
-function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from "../../lib/json-utils";
 
 /** Map native ProjectEntry (Rust camelCase or polyfill snake_case) → Project */
 function mapNativeProject(entry: any): Project | null {

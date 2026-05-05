@@ -263,7 +263,11 @@ ipcMain.handle('app:getInfo', () => ({
 }));
 ipcMain.handle('dialog:showSave', async (_e, opts) => dialog.showSaveDialog(mainWindow, opts));
 ipcMain.handle('dialog:showOpen', async (_e, opts) => dialog.showOpenDialog(mainWindow, opts));
-ipcMain.handle('shell:openExternal', async (_e, url) => shell.openExternal(url));
+ipcMain.handle('shell:openExternal', async (_e, url) => {
+  if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+    return shell.openExternal(url);
+  }
+});
 ipcMain.handle('db:getPath', () => dbPath);
 
 // ── Native Addon IPC Handlers ───────────────────────────────

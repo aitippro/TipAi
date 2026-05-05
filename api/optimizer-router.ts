@@ -1,13 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-function safeJsonParse<T>(value: string | undefined | null, fallback?: T): T | undefined {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from "./lib/json-utils";
 
 import { native } from "./lib/native";
 import { z } from "zod";
