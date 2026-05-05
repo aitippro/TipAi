@@ -1,57 +1,21 @@
-# TipAi 非商业使用许可协议
+MIT License
 
-Copyright © 2026 TipAi
+Copyright (c) 2026 TipAi
 
----
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-## 授权
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-在遵守本协议的条件下，您可以：
-
-- **个人使用** — 用于学习、研究、教学、非盈利项目
-- **修改源码** — 出于个人学习目的
-- **分发分享** — 以非商业目的分享源代码
-
----
-
-## 禁止
-
-未经书面授权，严格禁止：
-
-- 商业使用（产生直接或间接经济收益）
-- 嵌入商业产品或 SaaS 服务
-- 转售、出租、转让
-- 用于训练商业 AI 模型
-- 使用 "TipAi" 标识进行商业宣传
-
----
-
-## 衍生作品
-
-基于本软件创建的衍生作品必须：
-
-1. 采用相同的非商业许可
-2. 保留本协议完整内容
-3. 标注原作者和原始项目链接
-
----
-
-## 免责声明
-
-本软件按"原样"提供，不提供任何明示或暗示的担保。作者不对因使用或无法使用本软件导致的任何损失承担责任。
-
----
-
-## 商业授权
-
-如需商业使用，请联系项目维护者申请书面授权。
-
----
-
-## 适用法律
-
-本协议受中华人民共和国法律管辖。
-
----
-
-*最后更新：2026-04-28*
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
