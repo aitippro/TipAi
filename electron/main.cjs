@@ -164,38 +164,6 @@ function runMigrations(migrationsDir) {
 }
 
 // Start backend — in dev Vite handles everything; in prod we load Hono in-process
-async function startBackend() {
-  process.env.NODE_ENV = isDev ? 'development' : 'production';
-  process.env.APP_ID = process.env.APP_ID || 'tipai-desktop';
-  process.env.APP_URL = 'http://localhost:0';
-
-  // DATABASE_URL, API_KEY_SECRET, and dbOpen are already set before window creation.
-  // This function only handles the remaining backend initialization.
-
-  if (isDev) {
-    backendBaseUrl = 'http://localhost:5173';
-    process.env.VITE_DEV_SERVER_URL = backendBaseUrl;
-    return;
-  }
-
-  // Production: load Hono app in-process for IPC-based API calls (no HTTP server)
-  process.env.TIPAI_ELECTRON = '1';
-
-  // Production: ensure database tables exist before starting backend
-  const migrationsDir = isDev
-    ? path.join(__dirname, '../db/migrations')
-    : path.join(process.resourcesPath, 'db', 'migrations');
-  runMigrations(migrationsDir);
-
-  const bootPath = path.join(__dirname, '../dist/boot.js');
-  const bootUrl = pathToFileURL(bootPath).href;
-
-  const mod = await import(bootUrl);
-
-  honoApp = mod.default;
-  log('Backend loaded in-process (IPC mode, no HTTP port)');
-}
-
 // ── IPC Handlers ────────────────────────────────────────────
 
 // api:fetch — core IPC channel for all tRPC calls
@@ -355,7 +323,7 @@ if (process.platform === 'win32') {
 app.whenReady().then(async () => {
   log('Starting...');
   try {
-    // Open DB and set env vars BEFORE showing window (must be ready for queries)
+    // 1. Setup env + DB (fast, ~30ms)
     process.env.DATABASE_URL = `file:${dbPath}`;
     if (!process.env.API_KEY_SECRET) {
       const keyFile = path.join(dataDir, '.key');
@@ -370,21 +338,26 @@ app.whenReady().then(async () => {
     }
     const n = getNative();
     if (n) {
-      try {
-        n.dbOpen(dbPath, process.env.API_KEY_SECRET);
-        log(`Native DB opened: ${dbPath}`);
-      } catch (err) {
-        logError('Native dbOpen failed', err);
-      }
+      try { n.dbOpen(dbPath, process.env.API_KEY_SECRET); log(`Native DB opened: ${dbPath}`); }
+      catch (err) { logError('Native dbOpen failed', err); }
     }
-    // Show window immediately, load rest of backend in parallel
+
+    // 2. Start loading backend ESM bundle in background (slowest step: ~200-500ms)
+    if (!isDev) process.env.TIPAI_ELECTRON = '1';
+    const migrationsDir = isDev
+      ? path.join(__dirname, '../db/migrations')
+      : path.join(process.resourcesPath, 'db', 'migrations');
+    const bootPath = path.join(__dirname, '../dist/boot.js');
+    const backendReady = isDev
+      ? Promise.resolve()
+      : import(pathToFileURL(bootPath).href).then(mod => { honoApp = mod.default; runMigrations(migrationsDir); });
+
+    // 3. Show window IMMEDIATELY (before backend is ready)
     createWindow();
-    const backendPromise = startBackend();
-    if (isDev) {
-      const { session } = require('electron');
-      await session.defaultSession.clearCache();
-    }
-    await backendPromise;
+    if (isDev) { const { session } = require('electron'); await session.defaultSession.clearCache(); }
+
+    // 4. Wait for backend, then setup the rest
+    await backendReady;
     initUpdater(mainWindow);
     createApplicationMenu();
     log('Ready');

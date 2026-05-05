@@ -22,6 +22,18 @@
         src: local('.SFNSText'), local('SF Pro Text'), local('Segoe UI'), local('Helvetica Neue');
         font-weight: 400;
       }
+      /* Instant loading indicator — shown before React mounts */
+      #root:empty::before {
+        content: '';
+        display: block;
+        width: 32px; height: 32px;
+        margin: 40vh auto 0;
+        border: 3px solid #e2e8f0;
+        border-top-color: #7c3aed;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
